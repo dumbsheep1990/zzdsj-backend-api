@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { StatsCardProps } from '../../utils/types';
 
-const StatsCard: React.FC<StatsCardProps> = ({ icon, title, value, color, bgGradient }) => {
+const StatsCard: FC<StatsCardProps> = ({ icon, title, value, color, bgGradient }) => {
     return (
         <div className={`${bgGradient} rounded-xl p-4 border`}>
             <div className="flex justify-between items-start">

@@ -24,36 +24,78 @@ const Sidebar: React.FC = () => {
     const { state, setActiveSection, toggleSidebar } = useAppContext();
     const { activeSection, sidebarExpanded } = state;
 
+    const sidebarStyle = {
+        background: 'linear-gradient(180deg, #f0f9ff 0%, #e6f7ff 50%, #dcf2ff 100%)',
+        borderRight: '1px solid #e5e7eb',
+        width: sidebarExpanded ? '16rem' : '5rem',
+        display: 'flex',
+        flexDirection: 'column' as const,
+        transition: 'width 0.3s ease'
+    };
+
+    const logoContainerStyle = {
+        display: 'flex',
+        alignItems: 'center',
+        padding: '1rem',
+        borderBottom: '1px solid #e5e7eb'
+    };
+
+    const navStyle = {
+        flex: 1,
+        paddingTop: '1rem',
+        paddingBottom: '1rem'
+    };
+
+    const navItemStyle = (isActive: boolean) => ({
+        display: 'flex',
+        alignItems: 'center',
+        width: '100%',
+        padding: '0.75rem 1rem',
+        backgroundColor: isActive ? '#eff6ff' : 'transparent',
+        color: isActive ? '#2563eb' : '#4b5563',
+        borderRight: isActive ? '4px solid #2563eb' : 'none',
+        cursor: 'pointer'
+    });
+
+    const iconContainerStyle = {
+        display: 'flex',
+        alignItems: 'center'
+    };
+
+    const footerStyle = {
+        padding: '1rem',
+        borderTop: '1px solid #e5e7eb'
+    };
+
     return (
-        <div className={`bg-white border-r ${sidebarExpanded ? 'w-64' : 'w-20'} flex flex-col transition-all duration-300`}>
+        <div style={sidebarStyle}>
             {/* 顶部Logo */}
-            <div className="flex items-center p-4 border-b">
-                <Database className="text-blue-600 mr-2" size={24} />
-                {sidebarExpanded && <h1 className="text-lg font-semibold">智政知脑</h1>}
+            <div style={logoContainerStyle}>
+                <Database color="#2563eb" style={{ marginRight: '0.5rem' }} size={24} />
+                {sidebarExpanded && <h1 style={{ fontSize: '1.125rem', fontWeight: 600 }}>智政知脑</h1>}
                 <button
-                    className="ml-auto text-gray-400 hover:text-gray-600"
+                    style={{ marginLeft: 'auto', color: '#9ca3af', cursor: 'pointer' }}
                     onClick={toggleSidebar}
                 >
-                    <ChevronRight size={20} className={`transform transition-transform ${sidebarExpanded ? '' : 'rotate-180'}`} />
+                    <ChevronRight size={20} style={{ 
+                        transform: sidebarExpanded ? 'none' : 'rotate(180deg)',
+                        transition: 'transform 0.3s ease'
+                    }} />
                 </button>
             </div>
 
             {/* 导航菜单 */}
-            <nav className="flex-1 py-4">
-                <ul>
+            <nav style={navStyle}>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                     {navigationItems.map((item) => (
                         <li key={item.id}>
                             <button
-                                className={`flex items-center w-full px-4 py-3 ${
-                                    activeSection === item.id
-                                        ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600'
-                                        : 'text-gray-600 hover:bg-gray-50'
-                                }`}
+                                style={navItemStyle(activeSection === item.id)}
                                 onClick={() => setActiveSection(item.id)}
                             >
-                <span className="flex items-center">
+                <span style={iconContainerStyle}>
                   {getIconByType(item.iconType)}
-                    {sidebarExpanded && <span className="ml-3">{item.label}</span>}
+                    {sidebarExpanded && <span style={{ marginLeft: '0.75rem' }}>{item.label}</span>}
                 </span>
                             </button>
                         </li>
@@ -62,20 +104,38 @@ const Sidebar: React.FC = () => {
             </nav>
 
             {/* 底部用户信息 */}
-            <div className="p-4 border-t">
+            <div style={footerStyle}>
                 {sidebarExpanded ? (
-                    <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ 
+                            width: '2rem', 
+                            height: '2rem', 
+                            borderRadius: '9999px', 
+                            backgroundColor: '#2563eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                        }}>
                             A
                         </div>
-                        <div className="ml-3">
-                            <div className="text-sm font-medium">管理员</div>
-                            <div className="text-xs text-gray-500">admin@example.com</div>
+                        <div style={{ marginLeft: '0.75rem' }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>管理员</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>admin@example.com</div>
                         </div>
                     </div>
                 ) : (
-                    <div className="flex justify-center">
-                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <div style={{ 
+                            width: '2.5rem', 
+                            height: '2.5rem', 
+                            borderRadius: '9999px', 
+                            backgroundColor: '#2563eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                        }}>
                             A
                         </div>
                     </div>

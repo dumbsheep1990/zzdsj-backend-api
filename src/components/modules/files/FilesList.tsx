@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { FileText, Share2, Download, MoreHorizontal } from 'lucide-react';
 import { FileItem } from '../../../utils/types';
 
@@ -8,7 +8,7 @@ interface FilesListProps {
     setSelectedItem: (item: FileItem | null) => void;
 }
 
-const FilesList: React.FC<FilesListProps> = ({ files, selectedItem, setSelectedItem }) => {
+const FilesList: FC<FilesListProps> = ({ files, selectedItem, setSelectedItem }) => {
     return (
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">

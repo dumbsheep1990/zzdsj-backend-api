@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Search, ChevronDown, Filter, Upload, PlusCircle } from 'lucide-react';
 import { FileItem } from '../../../utils/types';
 
@@ -6,7 +6,7 @@ interface FilesHeaderProps {
     files: FileItem[];
 }
 
-const FilesHeader: React.FC<FilesHeaderProps> = ({ files }) => {
+const FilesHeader: FC<FilesHeaderProps> = ({ files }) => {
     return (
         <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
             <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-700">

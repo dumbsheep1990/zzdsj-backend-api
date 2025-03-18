@@ -1,4 +1,4 @@
-// 定义应用中使用的类型
+// 关键词管理和搜索记录类型
 
 // 文件类型
 export interface FileItem {
@@ -9,6 +9,14 @@ export interface FileItem {
     date: string;
     status: string;
     category: string;
+    keywords?: KeywordRelevance[];
+}
+
+// 关键词关联度类型
+export interface KeywordRelevance {
+    keywordId: number;
+    keyword: string;
+    relevance: number; // 0-100的关联度分数
 }
 
 // 模型类型
@@ -31,6 +39,27 @@ export interface VectorItem {
     lastUpdated: string;
     size: string;
     status: string;
+}
+
+// 关键词类型
+export interface KeywordItem {
+    id: number;
+    keyword: string;
+    frequency: number;
+    lastUsed: string;
+    category: string;
+    importance: 'high' | 'medium' | 'low';
+}
+
+// 搜索记录类型
+export interface SearchRecordItem {
+    id: number;
+    query: string;
+    timestamp: string;
+    results: number;
+    duration: string;
+    user: string;
+    source: string;
 }
 
 // 元数据模板类型
@@ -60,7 +89,7 @@ export interface StatsCardProps {
 
 // 通用详情面板Props
 export interface DetailPanelProps {
-    selectedItem: FileItem | ModelItem | VectorItem | MetadataItem | null;
+    selectedItem: FileItem | ModelItem | VectorItem | MetadataItem | KeywordItem | SearchRecordItem | null;
     setSelectedItem: React.Dispatch<React.SetStateAction<any | null>>;
     activeSection: string;
 }

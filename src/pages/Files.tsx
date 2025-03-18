@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import FilesHeader from '../components/modules/files/FilesHeader';
 import FilesList from '../components/modules/files/FilesList';
 import DetailPanel from '../components/layout/DetailPanel';
@@ -7,25 +7,90 @@ import { FileItem } from '../utils/types';
 
 const Files: React.FC = () => {
     const [selectedItem, setSelectedItem] = useState<FileItem | null>(null);
+    const [activeCategory, setActiveCategory] = useState<string>('all');
+
+    // 从文件数据中提取所有唯一的类别
+    const categories = useMemo(() => {
+        const uniqueCategories = new Set(fileData.map(file => file.category));
+        return ['all', ...Array.from(uniqueCategories)];
+    }, []);
+
+    // 样式定义
+    const containerStyle = {
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden'
+    };
+
+    const mainContentStyle = {
+        width: selectedItem ? '50%' : '100%',
+        overflow: 'auto',
+        transition: 'width 0.3s ease',
+        padding: '1.5rem'
+    };
+
+    const detailPanelStyle = {
+        width: '50%',
+        borderLeft: '1px solid #e5e7eb',
+        backgroundColor: 'white',
+        overflow: 'auto',
+        transition: 'all 0.3s ease'
+    };
+
+    const categoryTabStyle = {
+        display: 'flex',
+        marginBottom: '1rem',
+        borderBottom: '1px solid #e5e7eb',
+        overflow: 'auto'
+    };
+
+    const tabItemStyle = (isActive: boolean) => ({
+        padding: '0.75rem 1.25rem',
+        cursor: 'pointer',
+        borderBottom: isActive ? '2px solid #4f46e5' : '2px solid transparent',
+        color: isActive ? '#4f46e5' : '#6b7280',
+        fontWeight: isActive ? 600 : 400,
+        whiteSpace: 'nowrap' as const
+    });
+
+    const filteredFiles = activeCategory === 'all' 
+        ? fileData 
+        : fileData.filter(file => file.category === activeCategory);
 
     return (
-        <div className="flex-1 flex overflow-hidden">
-            <div className={`${selectedItem ? 'w-1/2' : 'w-full'} overflow-auto transition-all duration-300 p-6`}>
-                <h1 className="text-2xl font-semibold mb-6">文件管理</h1>
+        <div style={containerStyle}>
+            <div style={mainContentStyle}>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1.5rem' }}>文件管理</h1>
 
-                <FilesHeader files={fileData} />
+                <FilesHeader files={filteredFiles} />
 
-                <FilesList
-                    files={fileData}
-                    selectedItem={selectedItem}
-                    setSelectedItem={setSelectedItem}
+                {/* 类别选项卡 */}
+                <div style={categoryTabStyle}>
+                    {categories.map((category) => (
+                        <div 
+                            key={category} 
+                            style={tabItemStyle(activeCategory === category)}
+                            onClick={() => setActiveCategory(category)}
+                        >
+                            {category === 'all' ? '全部文件' : category}
+                            {category === 'all' 
+                                ? ` (${fileData.length})` 
+                                : ` (${fileData.filter(f => f.category === category).length})`}
+                        </div>
+                    ))}
+                </div>
+
+                <FilesList 
+                    files={filteredFiles} 
+                    selectedItem={selectedItem} 
+                    setSelectedItem={setSelectedItem} 
                 />
             </div>
 
             {selectedItem && (
-                <div className="w-1/2 border-l bg-white overflow-auto transition-all duration-300">
-                    <DetailPanel
-                        selectedItem={selectedItem}
+                <div style={detailPanelStyle}>
+                    <DetailPanel 
+                        selectedItem={selectedItem} 
                         setSelectedItem={setSelectedItem}
                         activeSection="files"
                     />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Database, BarChart, RefreshCw, MoreHorizontal } from 'lucide-react';
 import { VectorItem } from '../../../utils/types';
 
@@ -8,7 +8,7 @@ interface VectorsListProps {
     setSelectedItem: (item: VectorItem | null) => void;
 }
 
-const VectorsList: React.FC<VectorsListProps> = ({ vectors, selectedItem, setSelectedItem }) => {
+const VectorsList: FC<VectorsListProps> = ({ vectors, selectedItem, setSelectedItem }) => {
     return (
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">

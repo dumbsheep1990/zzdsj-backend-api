@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { Search, ChevronDown, PlusCircle, Grid, FileText, Database, BarChart } from 'lucide-react';
 import { VectorItem } from '../../../utils/types';
 import StatsCard from '../../ui/StatsCard';
@@ -7,7 +7,7 @@ interface VectorsHeaderProps {
     vectors: VectorItem[];
 }
 
-const VectorsHeader: React.FC<VectorsHeaderProps> = ({ vectors }) => {
+const VectorsHeader: FC<VectorsHeaderProps> = ({ vectors }) => {
     return (
         <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
             <div className="p-4 bg-gradient-to-r from-blue-500 to-indigo-700">

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, FC } from 'react';
 import ModelsHeader from '../components/modules/models/ModelsHeader';
 import ModelsList from '../components/modules/models/ModelsList';
 import DetailPanel from '../components/layout/DetailPanel';
 import { modelData } from '../utils/mockData';
 import { ModelItem } from '../utils/types';
 
-const Models: React.FC = () => {
+const Models: FC = () => {
     const [selectedItem, setSelectedItem] = useState<ModelItem | null>(null);
 
     return (

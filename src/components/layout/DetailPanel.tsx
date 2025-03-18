@@ -1,5 +1,5 @@
 import React from 'react';
-import { Share2, Download, X, Info, PlusCircle } from 'lucide-react';
+import { Share2, Download, X, Info, PlusCircle, Tag, Search } from 'lucide-react';
 import { DetailPanelProps } from '../../utils/types';
 
 const PencilIcon = ({ size = 20, className = "" }) => (
@@ -45,6 +45,10 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ selectedItem, setSelectedItem
             return `${selectedItem.fileCount} 个文件`;
         } else if ('fields' in selectedItem && selectedItem.fields !== undefined) {
             return `${selectedItem.fields} 个字段`;
+        } else if ('frequency' in selectedItem && selectedItem.frequency !== undefined) {
+            return `${selectedItem.frequency} 次使用`;
+        } else if ('results' in selectedItem && selectedItem.results !== undefined) {
+            return `${selectedItem.results} 个结果`;
         } else {
             return '—';
         }
@@ -57,6 +61,8 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ selectedItem, setSelectedItem
             return selectedItem.lastUsed;
         } else if ('lastUpdated' in selectedItem && selectedItem.lastUpdated) {
             return selectedItem.lastUpdated;
+        } else if ('timestamp' in selectedItem && selectedItem.timestamp) {
+            return selectedItem.timestamp;
         } else {
             return '—';
         }
@@ -80,6 +86,19 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ selectedItem, setSelectedItem
             } else if (selectedItem.usage === '部分使用') {
                 statusClass = 'bg-blue-100 text-blue-800';
             }
+        } else if ('importance' in selectedItem && selectedItem.importance) {
+            statusText = selectedItem.importance === 'high' ? '高重要性' : 
+                        selectedItem.importance === 'medium' ? '中重要性' : '低重要性';
+            if (selectedItem.importance === 'high') {
+                statusClass = 'bg-red-100 text-red-800';
+            } else if (selectedItem.importance === 'medium') {
+                statusClass = 'bg-yellow-100 text-yellow-800';
+            } else {
+                statusClass = 'bg-green-100 text-green-800';
+            }
+        } else if ('source' in selectedItem && selectedItem.source) {
+            statusText = selectedItem.source;
+            statusClass = selectedItem.source === 'Web来源' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
         }
 
         return { text: statusText, className: statusClass };
@@ -87,11 +106,38 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ selectedItem, setSelectedItem
 
     const statusInfo = getStatusInfo();
 
+    // 获取标题
+    const getTitle = (): string => {
+        if ('name' in selectedItem && selectedItem.name) {
+            return selectedItem.name;
+        } else if ('keyword' in selectedItem && selectedItem.keyword) {
+            return selectedItem.keyword;
+        } else if ('query' in selectedItem && selectedItem.query) {
+            return selectedItem.query;
+        } else {
+            return `ID-${selectedItem.id}`;
+        }
+    };
+
+    // 获取标题图标
+    const getTitleIcon = () => {
+        if ('keyword' in selectedItem) {
+            return <Tag size={18} className="text-indigo-500 mr-2" />;
+        } else if ('query' in selectedItem) {
+            return <Search size={18} className="text-indigo-500 mr-2" />;
+        } else {
+            return null;
+        }
+    };
+
     return (
         <div className="p-0 h-full overflow-auto">
             <div className="sticky top-0 z-10 bg-white border-b">
                 <div className="flex justify-between items-center p-4">
-                    <h2 className="text-xl font-semibold">{selectedItem.name}</h2>
+                    <h2 className="text-xl font-semibold flex items-center">
+                        {getTitleIcon()}
+                        {getTitle()}
+                    </h2>
                     <div className="flex items-center space-x-2">
                         <button className="p-2 hover:bg-gray-100 rounded-full">
                             <Share2 size={18} className="text-gray-500" />
@@ -197,47 +243,19 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ selectedItem, setSelectedItem
                                     </button>
                                 </td>
                             </tr>
-                            <tr>
-                                <td className="p-3 bg-gray-50 text-gray-600">标签</td>
-                                <td className="p-3 flex justify-between items-center">
-                                    <div className="flex gap-2 flex-wrap">
-                                        <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md text-xs">重要</span>
-                                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs">已审核</span>
-                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs">政务相关</span>
-                                    </div>
-                                    <button className="text-gray-400 hover:text-indigo-600">
-                                        <PlusCircle size={14} />
-                                    </button>
-                                </td>
-                            </tr>
-                            {/* 模型特有字段 */}
-                            {'provider' in selectedItem && activeSection === 'models' && (
-                                <>
-                                    <tr>
-                                        <td className="p-3 bg-gray-50 text-gray-600">提供商</td>
-                                        <td className="p-3">{selectedItem.provider}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="p-3 bg-gray-50 text-gray-600">版本</td>
-                                        <td className="p-3">{selectedItem.version}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="p-3 bg-gray-50 text-gray-600">使用次数</td>
-                                        <td className="p-3">{selectedItem.usageCount}</td>
-                                    </tr>
-                                </>
-                            )}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
+                {/* 根据页面特定内容 */}
                 {renderPageSpecificContent(activeSection, selectedItem)}
             </div>
         </div>
     );
 };
 
+// 根据页面特定内容
 const renderPageSpecificContent = (activeSection: string, selectedItem: any) => {
     switch (activeSection) {
         case 'files':

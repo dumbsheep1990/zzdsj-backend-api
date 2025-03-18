@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import Files from './pages/Files';
@@ -6,7 +6,7 @@ import Models from './pages/Models';
 import Vectors from './pages/Vectors';
 import { AppProvider, useAppContext } from './context/AppContext';
 
-const AppContent: React.FC = () => {
+const AppContent: FC = () => {
     const { state } = useAppContext();
     const { activeSection } = state;
 
@@ -28,7 +28,7 @@ const AppContent: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen" style={{ display: 'flex', height: '100vh', backgroundColor: '#f3f4f6' }}>
             <Sidebar />
 
             {renderContent()}
