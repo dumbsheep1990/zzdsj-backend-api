@@ -19,7 +19,6 @@ interface ForceGraphNode extends GraphNode {
   label: string;
   type: 'keyword' | 'file';
   value?: number;
-  color?: string;
 }
 
 const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
@@ -28,26 +27,20 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   selectedKeywordId,
   onNodeClick
 }) => {
-  const [graphData, setGraphData] = useState<{ nodes: ForceGraphNode[], links: GraphLink[] }>({ nodes: [], links: [] });
   const graphRef = useRef<any>(null);
+  const [graphData, setGraphData] = useState<{ nodes: ForceGraphNode[], links: GraphLink[] }>({ nodes: [], links: [] });
 
   useEffect(() => {
-    // 
     const data = generateKnowledgeGraphData();
     setGraphData(data);
 
-    // 
+    // u5982u679cu6709u9009u4e2du7684u5173u952eu8bcduff0cu5c06u5176u9ad8u4eaeu663eu793a
     if (selectedKeywordId && graphRef.current) {
-      const selectedNode = data.nodes.find(node => 
-        node.id === `keyword-${selectedKeywordId}`) as ForceGraphNode;
-      
+      // u5c06u9009u4e2du8282u70b9u7c7bu578bu8f6cu6362u4e3a ForceGraphNode
+      const selectedNode = data.nodes.find(node => node.id === selectedKeywordId.toString()) as ForceGraphNode;
       if (selectedNode && selectedNode.x !== undefined && selectedNode.y !== undefined) {
-        graphRef.current.centerAt(
-          selectedNode.x,
-          selectedNode.y,
-          1000
-        );
-        graphRef.current.zoom(2.5, 1000);
+        graphRef.current.centerAt(selectedNode.x, selectedNode.y, 1000);
+        graphRef.current.zoom(2, 1000);
       }
     }
   }, [selectedKeywordId]);
@@ -59,44 +52,31 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   };
 
   return (
-    <div className="knowledge-graph-container bg-white rounded-lg shadow-md p-4">
-      <h3 className="text-lg font-semibold mb-4">知识图谱</h3>
-      <div className="border rounded-lg overflow-hidden" style={{ height }}>
-        {graphData.nodes.length > 0 && (
-          <ForceGraph2D
-            ref={graphRef}
-            graphData={graphData}
-            nodeLabel="label"
-            nodeColor={(node: ForceGraphNode) => node.color || '#1f77b4'}
-            nodeVal={(node: ForceGraphNode) => node.value || 1}
-            linkWidth={(link: GraphLink) => link.value || 1}
-            linkColor={() => '#999'}
-            width={width}
-            height={height}
-            onNodeClick={handleNodeClick}
-            cooldownTicks={100}
-            onEngineStop={() => graphRef.current?.zoomToFit(400, 30)}
-          />
-        )}
-      </div>
-      <div className="flex mt-4 text-sm">
-        <div className="legend-item flex items-center mr-4">
-          <span className="w-3 h-3 rounded-full bg-red-500 mr-1"></span>
-          <span>高重要度关键词</span>
+    <div className="knowledge-graph-container" style={{ width, height }}>
+      {graphData.nodes.length > 0 ? (
+        <ForceGraph2D
+          ref={graphRef}
+          graphData={graphData}
+          nodeLabel="label"
+          nodeColor={(node: ForceGraphNode) => {
+            if (selectedKeywordId && node.id === selectedKeywordId.toString()) {
+              return '#ff6600'; 
+            }
+            return node.type === 'keyword' ? '#4299e1' : '#48bb78'; 
+          }}
+          nodeRelSize={width < 400 ? 5 : 8}
+          linkWidth={1}
+          linkColor={() => '#999'}
+          cooldownTicks={100}
+          onNodeClick={handleNodeClick}
+          width={width}
+          height={height}
+        />
+      ) : (
+        <div className="flex items-center justify-center h-full text-gray-500">
+          ...
         </div>
-        <div className="legend-item flex items-center mr-4">
-          <span className="w-3 h-3 rounded-full bg-amber-500 mr-1"></span>
-          <span>中重要度关键词</span>
-        </div>
-        <div className="legend-item flex items-center mr-4">
-          <span className="w-3 h-3 rounded-full bg-emerald-500 mr-1"></span>
-          <span>低重要度关键词</span>
-        </div>
-        <div className="legend-item flex items-center">
-          <span className="w-3 h-3 rounded-full bg-blue-500 mr-1"></span>
-          <span>文件</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

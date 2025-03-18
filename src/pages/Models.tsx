@@ -8,9 +8,23 @@ import { ModelItem } from '../utils/types';
 const Models: FC = () => {
     const [selectedItem, setSelectedItem] = useState<ModelItem | null>(null);
 
+    // 容器样式
+    const containerStyle = {
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden'
+    };
+
+    const mainContentStyle = {
+        width: selectedItem ? 'calc(100% - 384px)' : '100%',
+        overflow: 'auto',
+        transition: 'width 0.3s ease',
+        padding: '1.5rem'
+    };
+
     return (
-        <div className="flex-1 flex overflow-hidden">
-            <div className={`${selectedItem ? 'w-1/2' : 'w-full'} overflow-auto transition-all duration-300 p-6`}>
+        <div style={containerStyle}>
+            <div style={mainContentStyle}>
                 <h1 className="text-2xl font-semibold mb-6">模型管理</h1>
 
                 <ModelsHeader models={modelData} />
@@ -23,11 +37,10 @@ const Models: FC = () => {
             </div>
 
             {selectedItem && (
-                <div className="w-1/2 border-l bg-white overflow-auto transition-all duration-300">
-                    <DetailPanel
-                        selectedItem={selectedItem}
-                        setSelectedItem={setSelectedItem}
-                        activeSection="models"
+                <div className="fixed right-0 top-0 h-screen z-10">
+                    <DetailPanel 
+                        selectedItem={selectedItem} 
+                        onClose={() => setSelectedItem(null)}
                     />
                 </div>
             )}

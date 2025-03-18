@@ -23,18 +23,10 @@ const Files: React.FC = () => {
     };
 
     const mainContentStyle = {
-        width: selectedItem ? '50%' : '100%',
+        width: selectedItem ? 'calc(100% - 384px)' : '100%',
         overflow: 'auto',
         transition: 'width 0.3s ease',
         padding: '1.5rem'
-    };
-
-    const detailPanelStyle = {
-        width: '50%',
-        borderLeft: '1px solid #e5e7eb',
-        backgroundColor: 'white',
-        overflow: 'auto',
-        transition: 'all 0.3s ease'
     };
 
     const categoryTabStyle = {
@@ -88,11 +80,10 @@ const Files: React.FC = () => {
             </div>
 
             {selectedItem && (
-                <div style={detailPanelStyle}>
+                <div className="fixed right-0 top-0 h-screen z-10">
                     <DetailPanel 
                         selectedItem={selectedItem} 
-                        setSelectedItem={setSelectedItem}
-                        activeSection="files"
+                        onClose={() => setSelectedItem(null)}
                     />
                 </div>
             )}

@@ -85,8 +85,8 @@ const Keywords: React.FC = () => {
       </div>
 
       <KeywordsManager 
-        onSelectKeyword={setSelectedKeyword} 
-        onSelectFile={setSelectedFile} 
+        onSelectKeyword={(keyword) => setSelectedKeyword(keyword)} 
+        onSelectFile={(file) => setSelectedFile(file)} 
       />
     </div>
   );

@@ -82,18 +82,11 @@ const Vectors: React.FC = () => {
     };
 
     const mainContentStyle = {
-        width: getSelectedItem() ? '50%' : '100%',
-        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column' as const,
+        width: getSelectedItem() ? 'calc(100% - 384px)' : '100%',
         transition: 'width 0.3s ease',
         padding: '1.5rem'
-    };
-
-    const detailPanelStyle = {
-        width: '50%',
-        borderLeft: '1px solid #e5e7eb',
-        backgroundColor: 'white',
-        overflow: 'auto',
-        transition: 'all 0.3s ease'
     };
 
     return (
@@ -129,11 +122,10 @@ const Vectors: React.FC = () => {
             </div>
 
             {getSelectedItem() && (
-                <div style={detailPanelStyle}>
+                <div className="fixed right-0 top-0 h-screen z-10">
                     <DetailPanel 
                         selectedItem={getSelectedItem()} 
-                        setSelectedItem={setSelectedItem}
-                        activeSection="vectors"
+                        onClose={() => setSelectedItem(null)}
                     />
                 </div>
             )}
