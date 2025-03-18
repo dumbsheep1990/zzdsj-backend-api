@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, ChevronRight, FileText, Code, Grid, Settings } from 'lucide-react';
+import { Database, ChevronRight, FileText, Code, Grid, Settings, Tag } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { navigationItems } from '../../utils/mockData';
 
@@ -15,6 +15,8 @@ const getIconByType = (iconType: string, size: number = 20) => {
             return <Database size={size} />;
         case 'Settings':
             return <Settings size={size} />;
+        case 'Tag':
+            return <Tag size={size} />;
         default:
             return <FileText size={size} />;
     }

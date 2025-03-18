@@ -49,6 +49,7 @@ export interface KeywordItem {
     lastUsed: string;
     category: string;
     importance: 'high' | 'medium' | 'low';
+    relatedKeywords?: number[]; // 相关的其他关键词ID
 }
 
 // 搜索记录类型
@@ -99,4 +100,20 @@ export interface AppState {
     activeSection: string;
     sidebarExpanded: boolean;
     darkMode: boolean;
+}
+
+// 知识图节点类型
+export interface GraphNode {
+    id: string;
+    label: string;
+    type: 'keyword' | 'file';
+    value?: number; // 节点大小/权重
+    color?: string; // 节点颜色
+}
+
+// 知识图链接类型
+export interface GraphLink {
+    source: string;
+    target: string;
+    value: number; // 链接权重/关联度
 }

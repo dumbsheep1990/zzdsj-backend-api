@@ -1,4 +1,4 @@
-import { FileItem, ModelItem, VectorItem, MetadataItem, KeywordItem, SearchRecordItem, KeywordRelevance } from "./types";
+import { FileItem, ModelItem, VectorItem, MetadataItem, KeywordItem, SearchRecordItem, KeywordRelevance, GraphNode, GraphLink } from "./types";
 
 export const fileData: FileItem[] = [
     { 
@@ -184,14 +184,15 @@ export const navigationItems = [
     { id: 'files', label: '文件管理', iconType: 'FileText' },
     { id: 'models', label: '模型管理', iconType: 'Code' },
     { id: 'vectors', label: '向量化管理', iconType: 'Grid' },
+    { id: 'keywords', label: '关键词管理', iconType: 'Tag' },
     { id: 'metadata', label: '元数据管理', iconType: 'Database' },
     { id: 'settings', label: '系统设置', iconType: 'Settings' }
 ];
 
 // 生成知识图谱数据的辅助函数
 export const generateKnowledgeGraphData = () => {
-    const nodes = [];
-    const links = [];
+    const nodes: GraphNode[] = [];
+    const links: GraphLink[] = [];
     
     // 添加关键词节点
     keywordsData.forEach(keyword => {

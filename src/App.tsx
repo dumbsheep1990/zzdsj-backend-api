@@ -4,6 +4,7 @@ import Sidebar from './components/layout/Sidebar';
 import Files from './pages/Files';
 import Models from './pages/Models';
 import Vectors from './pages/Vectors';
+import Keywords from './pages/Keywords';
 import { AppProvider, useAppContext } from './context/AppContext';
 
 const AppContent: FC = () => {
@@ -18,6 +19,8 @@ const AppContent: FC = () => {
                 return <Models />;
             case 'vectors':
                 return <Vectors />;
+            case 'keywords':
+                return <Keywords />;
             case 'metadata':
                 return <div className="flex-1 p-6"><h1 className="text-2xl font-semibold">元数据管理（开发中）</h1></div>;
             case 'settings':
@@ -31,7 +34,9 @@ const AppContent: FC = () => {
         <div className="flex h-screen" style={{ display: 'flex', height: '100vh', backgroundColor: '#f3f4f6' }}>
             <Sidebar />
 
-            {renderContent()}
+            <div className="flex-1 overflow-auto p-6">
+                {renderContent()}
+            </div>
         </div>
     );
 };
