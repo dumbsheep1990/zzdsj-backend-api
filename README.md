@@ -1,189 +1,189 @@
-# Knowledge Base Q&A System Backend
+# 知识库问答系统后端
 
-A Python-based backend service for a knowledge base Q&A system with assistant management, similar to Dify. This system provides fine-grained control over knowledge base question and answer capabilities.
+智政智脑后端服务，提供对知识库问答能力的细粒度控制。
 
-## Architecture Overview
+## 架构概述
 
-The backend is designed with a modular architecture that integrates multiple frameworks and services:
+该后端采用模块化架构设计，集成了多个框架和服务：
 
-### Core Components
+### 核心组件
 
-- **FastAPI**: High-performance REST API framework
-- **PostgreSQL**: Relational database for structured data
-- **Milvus**: Vector database for embeddings and similarity search
-- **Redis**: Caching and pub/sub messaging
-- **MinIO**: Object storage for document files
-- **RabbitMQ**: Message queue for asynchronous processing
-- **Nacos**: Service discovery and configuration management
-- **Celery**: Distributed task queue for background processing
+- **FastAPI**：高性能REST API框架
+- **PostgreSQL**：用于结构化数据的关系型数据库
+- **Milvus**：用于嵌入和相似度搜索的向量数据库
+- **Redis**：缓存和发布/订阅消息
+- **MinIO**：文档文件的对象存储
+- **RabbitMQ**：用于异步处理的消息队列
+- **Nacos**：服务发现和配置管理
+- **Celery**：用于后台处理的分布式任务队列
 
-### AI/ML Integration
+### AI/ML集成
 
-- **LangChain**: Framework for LLM application development
-- **HayStack**: Framework for question-answering systems
-- **LlamaIndex**: Data framework for LLM applications
-- **Agno**: Agent framework for autonomous actions
+- **LangChain**：LLM应用开发框架
+- **HayStack**：问答系统框架
+- **LlamaIndex**：LLM应用的数据框架
+- **Agno**：用于自主操作的代理框架
 
-## Directory Structure
+## 目录结构
 
 ```
 zz-backend-lite/
 ├── app/
-│   ├── api/                # FastAPI routes
-│   │   ├── assistants.py   # Assistant management endpoints
-│   │   ├── knowledge.py    # Knowledge base management endpoints
-│   │   └── chat.py         # Chat interface endpoints
-│   ├── core/               # Core business logic
-│   │   ├── assistants/     # Assistant management logic
-│   │   ├── knowledge/      # Knowledge base management
-│   │   └── chat/           # Chat interaction logic
-│   ├── frameworks/         # AI framework integrations
-│   │   ├── haystack/       # Haystack integration
-│   │   ├── langchain/      # LangChain integration
-│   │   ├── llamaindex/     # LlamaIndex integration
-│   │   └── agents/         # Agent framework (Agno)
-│   ├── models/             # Database models
-│   │   ├── assistants.py   # Assistant models
-│   │   ├── knowledge.py    # Knowledge base models
-│   │   └── chat.py         # Chat models
-│   ├── schemas/            # Pydantic schemas
-│   ├── utils/              # Utility functions
-│   │   ├── database.py     # Database utilities
-│   │   ├── vector_store.py # Milvus integration
-│   │   ├── redis_client.py # Redis integration
-│   │   ├── object_storage.py # MinIO integration
-│   │   ├── message_queue.py # RabbitMQ integration
-│   │   └── service_discovery.py # Nacos integration
-│   └── worker.py           # Celery worker tasks
-│   └── config.py           # Application configuration
-├── main.py                 # Application entry point
-├── .env.example            # Environment variable template
-├── docker-compose.yml      # Infrastructure setup
-└── requirements.txt        # Dependencies
+│   ├── api/                # FastAPI路由
+│   │   ├── assistants.py   # 助手管理端点
+│   │   ├── knowledge.py    # 知识库管理端点
+│   │   └── chat.py         # 聊天接口端点
+│   ├── core/               # 核心业务逻辑
+│   │   ├── assistants/     # 助手管理逻辑
+│   │   ├── knowledge/      # 知识库管理
+│   │   └── chat/           # 聊天交互逻辑
+│   ├── frameworks/         # AI框架集成
+│   │   ├── haystack/       # Haystack集成
+│   │   ├── langchain/      # LangChain集成
+│   │   ├── llamaindex/     # LlamaIndex集成
+│   │   └── agents/         # 代理框架(Agno)
+│   ├── models/             # 数据库模型
+│   │   ├── assistants.py   # 助手模型
+│   │   ├── knowledge.py    # 知识库模型
+│   │   └── chat.py         # 聊天模型
+│   ├── schemas/            # Pydantic模式
+│   ├── utils/              # 实用函数
+│   │   ├── database.py     # 数据库工具
+│   │   ├── vector_store.py # Milvus集成
+│   │   ├── redis_client.py # Redis集成
+│   │   ├── object_storage.py # MinIO集成
+│   │   ├── message_queue.py # RabbitMQ集成
+│   │   └── service_discovery.py # Nacos集成
+│   └── worker.py           # Celery工作任务
+│   └── config.py           # 应用程序配置
+├── main.py                 # 应用程序入口点
+├── .env.example            # 环境变量模板
+├── docker-compose.yml      # 基础设施设置
+└── requirements.txt        # 依赖项
 ```
 
-## Getting Started
+## 入门指南
 
-### Prerequisites
+### 前提条件
 
 - Python 3.9+
-- Docker and Docker Compose (for infrastructure)
+- Docker和Docker Compose（用于基础设施）
 
-### Setup Infrastructure
+### 设置基础设施
 
-1. Start the required infrastructure services:
+1. 启动所需的基础设施服务：
 
 ```bash
 docker-compose up -d
 ```
 
-This will launch PostgreSQL, Milvus, Redis, MinIO, RabbitMQ, and Nacos.
+这将启动PostgreSQL、Milvus、Redis、MinIO、RabbitMQ和Nacos。
 
-2. Configure environment variables:
+2. 配置环境变量：
 
 ```bash
 cp .env.example .env
-# Edit .env with your specific settings, especially API keys
+# 使用您的特定设置编辑.env文件，特别是API密钥
 ```
 
-3. Install dependencies:
+3. 安装依赖项：
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Initialize database schema (first run):
+4. 初始化数据库模式（首次运行）：
 
 ```bash
 alembic upgrade head
 ```
 
-5. Start the backend service:
+5. 启动后端服务：
 
 ```bash
 python main.py
 ```
 
-6. Start the Celery worker for background tasks:
+6. 启动用于后台任务的Celery工作器：
 
 ```bash
 celery -A app.worker worker --loglevel=info
 ```
 
-## API Endpoints
+## API端点
 
-The service exposes several RESTful API endpoints:
+该服务提供了几个RESTful API端点：
 
-### Assistant Management
+### 助手管理
 
-- `GET /api/assistants/` - List all assistants
-- `POST /api/assistants/` - Create a new assistant
-- `GET /api/assistants/{assistant_id}` - Get assistant details
-- `PUT /api/assistants/{assistant_id}` - Update assistant
-- `DELETE /api/assistants/{assistant_id}` - Delete/deactivate assistant
+- `GET /api/assistants/` - 列出所有助手
+- `POST /api/assistants/` - 创建新助手
+- `GET /api/assistants/{assistant_id}` - 获取助手详情
+- `PUT /api/assistants/{assistant_id}` - 更新助手
+- `DELETE /api/assistants/{assistant_id}` - 删除/停用助手
 
-### Knowledge Base Management
+### 知识库管理
 
-- `GET /api/knowledge/` - List all knowledge bases
-- `POST /api/knowledge/` - Create a new knowledge base
-- `GET /api/knowledge/{knowledge_base_id}` - Get knowledge base details
-- `PUT /api/knowledge/{knowledge_base_id}` - Update knowledge base
-- `DELETE /api/knowledge/{knowledge_base_id}` - Delete knowledge base
-- `GET /api/knowledge/{knowledge_base_id}/documents` - List documents
-- `POST /api/knowledge/{knowledge_base_id}/documents` - Add a document
+- `GET /api/knowledge/` - 列出所有知识库
+- `POST /api/knowledge/` - 创建新知识库
+- `GET /api/knowledge/{knowledge_base_id}` - 获取知识库详情
+- `PUT /api/knowledge/{knowledge_base_id}` - 更新知识库
+- `DELETE /api/knowledge/{knowledge_base_id}` - 删除知识库
+- `GET /api/knowledge/{knowledge_base_id}/documents` - 列出文档
+- `POST /api/knowledge/{knowledge_base_id}/documents` - 添加文档
 
-### Chat Interface
+### 聊天接口
 
-- `GET /api/chat/conversations` - List conversations
-- `POST /api/chat/conversations` - Create a new conversation
-- `GET /api/chat/conversations/{conversation_id}` - Get conversation with messages
-- `POST /api/chat/` - Send a message and get AI response
+- `GET /api/chat/conversations` - 列出对话
+- `POST /api/chat/conversations` - 创建新对话
+- `GET /api/chat/conversations/{conversation_id}` - 获取带有消息的对话
+- `POST /api/chat/` - 发送消息并获取AI响应
 
-## Assistant Capabilities
+## 助手能力
 
-Each assistant can be configured with different capabilities:
+每个助手可以配置不同的能力：
 
-- **Customer Support**: Handle customer service queries
-- **Question Answering**: Respond to general knowledge questions
-- **Service Introduction**: Provide information about services
+- **客户支持**：处理客户服务查询
+- **问答**：回答通用知识问题
+- **服务介绍**：提供有关服务的信息
 
-## Knowledge Base Integration
+## 知识库集成
 
-Assistants can be linked to multiple knowledge bases, enabling them to answer questions based on specific document collections. Documents are automatically processed:
+助手可以链接到多个知识库，使其能够基于特定文档集合回答问题。文档自动处理流程：
 
-1. Documents are uploaded and parsed based on file type
-2. Content is chunked into manageable segments
-3. Embeddings are generated for each chunk
-4. Chunks are stored in Milvus for vector similarity search
-5. When questions are asked, relevant chunks are retrieved to inform the AI response
+1. 根据文件类型上传和解析文档
+2. 将内容分块成可管理的片段
+3. 为每个块生成嵌入向量
+4. 将块存储在Milvus中进行向量相似度搜索
+5. 当提出问题时，检索相关块以为AI响应提供信息
 
-## Advanced Features
+## 高级功能
 
-### Distributed Processing
+### 分布式处理
 
-Long-running tasks like document processing are handled asynchronously using Celery and RabbitMQ, preventing API timeouts.
+使用Celery和RabbitMQ异步处理长时间运行的任务（如文档处理），防止API超时。
 
-### Service Discovery
+### 服务发现
 
-The service registers itself with Nacos, enabling other services to discover and communicate with it dynamically.
+服务向Nacos注册自身，使其他服务能够动态发现并与之通信。
 
-### Scalability
+### 可扩展性
 
-The architecture supports horizontal scaling:
-- Stateless API servers can be deployed behind a load balancer
-- Multiple Celery workers can process tasks in parallel
-- Infrastructure components like Milvus and PostgreSQL support clustering
+该架构支持水平扩展：
+- 无状态API服务器可以部署在负载均衡器后面
+- 多个Celery工作器可以并行处理任务
+- Milvus和PostgreSQL等基础设施组件支持集群
 
-## Customization
+## 定制化
 
-The system can be extended in several ways:
+系统可以通过多种方式扩展：
 
-- Add new document parsers in `app/core/knowledge/document_processor.py`
-- Implement additional AI frameworks in the `app/frameworks/` directory
-- Create new assistant capabilities by extending the data models and core service logic
+- 在`app/core/knowledge/document_processor.py`中添加新的文档解析器
+- 在`app/frameworks/`目录中实现其他AI框架
+- 通过扩展数据模型和核心服务逻辑创建新的助手能力
 
-## Security Considerations
+## 安全考虑
 
-- API keys and sensitive data should be properly secured in the `.env` file
-- MinIO bucket permissions should be carefully configured
-- Consider implementing proper authentication and authorization for production use
+- API密钥和敏感数据应在`.env`文件中妥善保护
+- MinIO桶权限应仔细配置
+- 考虑为生产环境实施适当的身份验证和授权

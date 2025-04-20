@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
 
-# Base Assistant Schema
+# 基础助手模式
 class AssistantBase(BaseModel):
     name: str
     description: Optional[str] = None
@@ -13,11 +13,11 @@ class AssistantBase(BaseModel):
         "service_intro": True
     }
 
-# Create Assistant Schema
+# 创建助手模式
 class AssistantCreate(AssistantBase):
     pass
 
-# Update Assistant Schema
+# 更新助手模式
 class AssistantUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
@@ -25,7 +25,7 @@ class AssistantUpdate(BaseModel):
     is_active: Optional[bool] = None
     capabilities: Optional[Dict[str, bool]] = None
 
-# Assistant Schema (for responses)
+# 助手模式（用于响应）
 class Assistant(AssistantBase):
     id: int
     is_active: bool
@@ -35,11 +35,11 @@ class Assistant(AssistantBase):
     class Config:
         orm_mode = True
 
-# Assistant with Knowledge Bases
+# 带知识库的助手
 class AssistantWithKnowledgeBases(Assistant):
     knowledge_bases: List["KnowledgeBaseInfo"] = []
 
-# Knowledge Base Info (for nested relationships)
+# 知识库信息（用于嵌套关系）
 class KnowledgeBaseInfo(BaseModel):
     id: int
     name: str
@@ -47,5 +47,5 @@ class KnowledgeBaseInfo(BaseModel):
     class Config:
         orm_mode = True
 
-# Update references to handle circular imports
+# 更新引用以处理循环导入
 AssistantWithKnowledgeBases.update_forward_refs()

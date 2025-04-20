@@ -2,23 +2,23 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
 
-# Base Conversation Schema
+# 基础会话模式
 class ConversationBase(BaseModel):
     assistant_id: int
     user_id: Optional[str] = None
-    title: Optional[str] = "New Conversation"
+    title: Optional[str] = "新会话"
     metadata: Optional[Dict[str, Any]] = {}
 
-# Create Conversation Schema
+# 创建会话模式
 class ConversationCreate(ConversationBase):
     pass
 
-# Update Conversation Schema
+# 更新会话模式
 class ConversationUpdate(BaseModel):
     title: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
-# Conversation Schema (for responses)
+# 会话模式（用于响应）
 class Conversation(ConversationBase):
     id: int
     created_at: datetime
@@ -27,17 +27,17 @@ class Conversation(ConversationBase):
     class Config:
         orm_mode = True
 
-# Message Base Schema
+# 消息基础模式
 class MessageBase(BaseModel):
-    role: str  # user, assistant, system
+    role: str  # 用户、助手、系统
     content: str
     metadata: Optional[Dict[str, Any]] = {}
 
-# Create Message Schema
+# 创建消息模式
 class MessageCreate(MessageBase):
     conversation_id: int
 
-# Message Schema (for responses)
+# 消息模式（用于响应）
 class Message(MessageBase):
     id: int
     conversation_id: int
@@ -46,14 +46,14 @@ class Message(MessageBase):
     class Config:
         orm_mode = True
 
-# Conversation with Messages
+# 带消息的会话
 class ConversationWithMessages(Conversation):
     messages: List[Message] = []
     
     class Config:
         orm_mode = True
 
-# Reference Schema (for citation information)
+# 引用模式（用于引用信息）
 class MessageReference(BaseModel):
     id: int
     message_id: int
@@ -63,14 +63,14 @@ class MessageReference(BaseModel):
     class Config:
         orm_mode = True
 
-# Chat Request Schema
+# 聊天请求模式
 class ChatRequest(BaseModel):
     conversation_id: Optional[int] = None
     assistant_id: int
     message: str
     user_id: Optional[str] = None
 
-# Chat Response Schema
+# 聊天响应模式
 class ChatResponse(BaseModel):
     conversation_id: int
     message: Message

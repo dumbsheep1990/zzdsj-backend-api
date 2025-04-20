@@ -1,5 +1,5 @@
 """
-Assistant Schemas Module: Pydantic models for assistant API requests and responses
+助手模式模块: 助手API请求和响应的Pydantic模型
 """
 
 from typing import List, Dict, Any, Optional
@@ -9,7 +9,7 @@ from enum import Enum
 
 
 class AssistantCapability(str, Enum):
-    """Enum for assistant capabilities"""
+    """助手能力的枚举类型"""
     TEXT = "text"
     MULTIMODAL = "multimodal"
     VOICE = "voice"
@@ -20,86 +20,86 @@ class AssistantCapability(str, Enum):
 
 
 class AssistantBase(BaseModel):
-    """Base assistant schema with common attributes"""
-    name: str = Field(..., description="Name of the assistant", max_length=100)
-    description: Optional[str] = Field(None, description="Description of the assistant's purpose")
-    model: str = Field(..., description="Model used by the assistant", max_length=100)
+    """具有共同属性的基础助手模式"""
+    name: str = Field(..., description="助手名称", max_length=100)
+    description: Optional[str] = Field(None, description="助手目的的描述")
+    model: str = Field(..., description="助手使用的模型", max_length=100)
     capabilities: List[str] = Field(
         default=["text"],
-        description="List of assistant capabilities (text, multimodal, voice, etc.)"
+        description="助手能力列表（文本、多模态、语音等）"
     )
     configuration: Optional[Dict[str, Any]] = Field(
         None,
-        description="Assistant-specific configuration"
+        description="助手特定配置"
     )
     system_prompt: Optional[str] = Field(
         None,
-        description="System prompt to guide assistant behavior"
+        description="引导助手行为的系统提示"
     )
 
 
 class AssistantCreate(AssistantBase):
-    """Schema for creating a new assistant"""
+    """创建新助手的模式"""
     knowledge_base_ids: Optional[List[int]] = Field(
         None,
-        description="List of knowledge base IDs to associate with the assistant"
+        description="要与助手关联的知识库ID列表"
     )
 
 
 class AssistantUpdate(BaseModel):
-    """Schema for updating an assistant"""
-    name: Optional[str] = Field(None, description="Name of the assistant", max_length=100)
-    description: Optional[str] = Field(None, description="Description of the assistant's purpose")
-    model: Optional[str] = Field(None, description="Model used by the assistant", max_length=100)
+    """更新助手的模式"""
+    name: Optional[str] = Field(None, description="助手名称", max_length=100)
+    description: Optional[str] = Field(None, description="助手目的的描述")
+    model: Optional[str] = Field(None, description="助手使用的模型", max_length=100)
     capabilities: Optional[List[str]] = Field(
         None,
-        description="List of assistant capabilities (text, multimodal, voice, etc.)"
+        description="助手能力列表（文本、多模态、语音等）"
     )
     configuration: Optional[Dict[str, Any]] = Field(
         None,
-        description="Assistant-specific configuration"
+        description="助手特定配置"
     )
     system_prompt: Optional[str] = Field(
         None,
-        description="System prompt to guide assistant behavior"
+        description="引导助手行为的系统提示"
     )
     knowledge_base_ids: Optional[List[int]] = Field(
         None,
-        description="List of knowledge base IDs to associate with the assistant"
+        description="要与助手关联的知识库ID列表"
     )
 
 
 class AssistantResponse(AssistantBase):
-    """Schema for assistant response"""
+    """助手响应的模式"""
     id: int
-    access_url: Optional[str] = Field(None, description="URL for accessing the assistant's web interface")
+    access_url: Optional[str] = Field(None, description="访问助手Web界面的URL")
     created_at: datetime
     updated_at: Optional[datetime] = None
-    knowledge_base_ids: List[int] = Field([], description="IDs of associated knowledge bases")
+    knowledge_base_ids: List[int] = Field([], description="关联知识库ID列表")
     
     class Config:
         orm_mode = True
 
 
 class AssistantList(BaseModel):
-    """Schema for listing assistants"""
+    """助手列表的模式"""
     assistants: List[AssistantResponse]
     total: int
 
 
 class ConversationBase(BaseModel):
-    """Base conversation schema"""
-    title: Optional[str] = Field(None, description="Title of the conversation")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Arbitrary metadata")
+    """会话基础模式"""
+    title: Optional[str] = Field(None, description="会话标题")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="任意元数据")
 
 
 class ConversationCreate(ConversationBase):
-    """Schema for creating a new conversation"""
+    """创建新会话的模式"""
     pass
 
 
 class ConversationResponse(ConversationBase):
-    """Schema for conversation response"""
+    """会话响应的模式"""
     id: int
     assistant_id: int
     created_at: datetime
@@ -111,18 +111,18 @@ class ConversationResponse(ConversationBase):
 
 
 class MessageBase(BaseModel):
-    """Base message schema"""
-    content: str = Field(..., description="Message content")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Message metadata")
+    """消息基础模式"""
+    content: str = Field(..., description="消息内容")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="消息元数据")
 
 
 class MessageCreate(MessageBase):
-    """Schema for creating a new message"""
+    """创建新消息的模式"""
     pass
 
 
 class MessageResponse(MessageBase):
-    """Schema for message response"""
+    """消息响应的模式"""
     id: int
     conversation_id: int
     role: str
@@ -133,7 +133,7 @@ class MessageResponse(MessageBase):
 
 
 class AssistantSummary(BaseModel):
-    """Summary of an assistant for listing and display"""
+    """助手摘要模式"""
     id: int
     name: str
     description: Optional[str] = None
@@ -146,14 +146,14 @@ class AssistantSummary(BaseModel):
 
 
 class ApiKeyCreate(BaseModel):
-    """Schema for creating an API key"""
-    name: str = Field(..., description="Name for the API key")
-    assistant_id: Optional[int] = Field(None, description="Optionally restrict key to a specific assistant")
-    expires_at: Optional[datetime] = Field(None, description="Optional expiration date")
+    """创建API密钥的模式"""
+    name: str = Field(..., description="API密钥名称")
+    assistant_id: Optional[int] = Field(None, description="可选地限制密钥到特定助手")
+    expires_at: Optional[datetime] = Field(None, description="可选地设置过期日期")
 
 
 class ApiKeyResponse(BaseModel):
-    """Schema for API key response"""
+    """API密钥响应的模式"""
     id: int
     name: str
     key: str

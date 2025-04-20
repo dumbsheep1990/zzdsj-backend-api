@@ -1,6 +1,6 @@
 """
-Rate Limiter: Provides rate limiting functionality for API endpoints
-to prevent abuse and ensure fair resource allocation
+速率限制器: 为API端点提供速率限制功能，
+防止滥用并确保公平的资源分配
 """
 
 import time
@@ -9,69 +9,69 @@ import threading
 
 class RateLimiter:
     """
-    Rate limiter that uses a token bucket algorithm to limit requests
-    Supports burst allowance and per-client rate limits
+    使用令牌桶算法限制请求的速率限制器
+    支持突发请求和按客户端的速率限制
     """
     
     def __init__(self, requests_per_minute: int = 60, burst_limit: int = 10):
         """
-        Initialize a rate limiter
+        初始化速率限制器
         
-        Args:
-            requests_per_minute: Number of requests allowed per minute
-            burst_limit: Maximum number of requests allowed in a burst
+        参数:
+            requests_per_minute: 每分钟允许的请求数
+            burst_limit: 突发请求允许的最大数量
         """
-        self.rate = requests_per_minute / 60.0  # Tokens per second
+        self.rate = requests_per_minute / 60.0  # 每秒令牌数
         self.burst_limit = burst_limit
         self.clients: Dict[str, Tuple[float, float]] = {}  # client_id -> (tokens, last_update)
         self.lock = threading.Lock()
     
     def allow_request(self, client_id: str) -> bool:
         """
-        Check if a request from a client is allowed
+        检查是否允许客户端的请求
         
-        Args:
-            client_id: Client identifier (e.g., IP address)
+        参数:
+            client_id: 客户端标识符（例如IP地址）
             
-        Returns:
-            True if the request is allowed, False otherwise
+        返回:
+            如果允许请求则返回True，否则返回False
         """
         with self.lock:
             current_time = time.time()
             
             if client_id not in self.clients:
-                # New client, initialize with full tokens
+                # 新客户端，初始化为最大令牌数
                 self.clients[client_id] = (self.burst_limit, current_time)
                 return True
             
-            # Get current token count and last update time
+            # 获取当前令牌数和最后更新时间
             tokens, last_update = self.clients[client_id]
             
-            # Calculate tokens to add based on time passed
+            # 根据经过的时间计算要添加的令牌数
             time_passed = current_time - last_update
             tokens_to_add = time_passed * self.rate
             
-            # Update token count, but don't exceed burst limit
+            # 更新令牌数，但不超过突发限制
             new_tokens = min(self.burst_limit, tokens + tokens_to_add)
             
             if new_tokens < 1:
-                # Not enough tokens
+                # 令牌不足
                 self.clients[client_id] = (new_tokens, current_time)
                 return False
             
-            # Consume a token and allow the request
+            # 消耗一个令牌并允许请求
             self.clients[client_id] = (new_tokens - 1, current_time)
             return True
     
     def get_client_status(self, client_id: str) -> Dict[str, Any]:
         """
-        Get the rate limit status for a client
+        获取客户端的速率限制状态
         
-        Args:
-            client_id: Client identifier
+        参数:
+            client_id: 客户端标识符
             
-        Returns:
-            Dictionary with rate limit status
+        返回:
+            包含速率限制状态的字典
         """
         with self.lock:
             current_time = time.time()
@@ -88,7 +88,7 @@ class RateLimiter:
             tokens_to_add = time_passed * self.rate
             new_tokens = min(self.burst_limit, tokens + tokens_to_add)
             
-            # Calculate reset time (when client will have 1 token)
+            # 计算重置时间（客户端将有1个令牌的时间）
             reset_time = current_time
             if new_tokens < 1:
                 reset_time = current_time + (1 - new_tokens) / self.rate
@@ -101,10 +101,10 @@ class RateLimiter:
     
     def clear_stale_clients(self, max_age_seconds: int = 3600):
         """
-        Clear clients that haven't made requests in a while
+        清除长时间未发出请求的客户端
         
-        Args:
-            max_age_seconds: Maximum age of client records to keep
+        参数:
+            max_age_seconds: 保留客户端记录的最大时间（秒）
         """
         with self.lock:
             current_time = time.time()

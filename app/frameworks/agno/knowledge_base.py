@@ -1,57 +1,57 @@
 """
-Agno Knowledge Base Module: Provides integration with Agno's knowledge base capabilities
-for document management, chunking, indexing, and retrieval
+Agno知识库模块：提供与Agno知识库功能的集成，
+用于文档管理、分块、索引和检索
 """
 
 from typing import Dict, List, Any, Optional, Union
 import json
 import os
 
-# Note: These are placeholders for actual Agno imports
-# In a real implementation, you would import:
+# 注意：这些是实际Agno导入的占位符
+# 在实际实现中，您应该导入：
 # from agno.knowledge import KnowledgeBase
 # from agno.embeddings import Embeddings
 
 class KnowledgeBaseProcessor:
     """
-    Integrates with Agno's knowledge base capabilities for document management and retrieval
+    与Agno的知识库功能集成，用于文档管理和检索
     """
     
     def __init__(self, kb_id: str, name: str = None, model: str = None):
         """
-        Initialize a knowledge base processor
+        初始化知识库处理器
         
-        Args:
-            kb_id: Knowledge base ID
-            name: Optional name for the knowledge base
-            model: Optional embedding model to use
+        参数：
+            kb_id: 知识库ID
+            name: 知识库的可选名称
+            model: 可选的嵌入模型
         """
         self.kb_id = kb_id
         self.name = name or f"KB-{kb_id}"
         self.model = model
         
-        # Placeholder for Agno KB initialization
-        # In actual implementation:
+        # Agno KB初始化的占位符
+        # 在实际实现中：
         # from agno.knowledge import KnowledgeBase
         # self.kb = KnowledgeBase(id=kb_id, name=self.name)
         # if model:
         #     from agno.embeddings import Embeddings
         #     self.kb.embedding_model = Embeddings(model_name=model)
         
-        print(f"Initialized Agno knowledge base processor: {self.name}")
+        print(f"初始化Agno知识库处理器: {self.name}")
     
     async def add_document(self, document: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Add a document to the knowledge base
+        向知识库添加文档
         
-        Args:
-            document: Document data with content and metadata
+        参数：
+            document: 包含内容和元数据的文档数据
             
-        Returns:
-            Result of document addition
+        返回：
+            文档添加的结果
         """
-        # Placeholder for actual document addition
-        # In actual implementation:
+        # 实际文档添加的占位符
+        # 在实际实现中：
         # result = await self.kb.add_document(
         #     text=document.get("content", ""),
         #     metadata=document.get("metadata", {})
@@ -62,7 +62,7 @@ class KnowledgeBaseProcessor:
         #     "status": "success"
         # }
         
-        # Simulated response for demo purposes
+        # 用于演示目的的模拟响应
         return {
             "document_id": f"doc-{hash(document.get('content', ''))}",
             "chunks": 5,
@@ -71,17 +71,17 @@ class KnowledgeBaseProcessor:
     
     async def retrieve(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """
-        Retrieve relevant documents from the knowledge base
+        从知识库检索相关文档
         
-        Args:
-            query: Query string
-            top_k: Number of documents to retrieve
+        参数：
+            query: 查询字符串
+            top_k: 要检索的文档数量
             
-        Returns:
-            List of relevant documents
+        返回：
+            相关文档列表
         """
-        # Placeholder for actual document retrieval
-        # In actual implementation:
+        # 实际文档检索的占位符
+        # 在实际实现中：
         # results = await self.kb.retrieve(query, top_k=top_k)
         # return [
         #     {
@@ -92,10 +92,10 @@ class KnowledgeBaseProcessor:
         #     for result in results
         # ]
         
-        # Simulated response for demo purposes
+        # 用于演示目的的模拟响应
         return [
             {
-                "content": f"Document content relevant to: {query}",
+                "content": f"与查询相关的文档内容: {query}",
                 "metadata": {"source": f"document-{i}", "type": "text"},
                 "score": 0.95 - (0.05 * i)
             }
@@ -104,23 +104,23 @@ class KnowledgeBaseProcessor:
 
     async def remove_document(self, document_id: str) -> Dict[str, Any]:
         """
-        Remove a document from the knowledge base
+        从知识库中删除文档
         
-        Args:
-            document_id: Document ID to remove
+        参数：
+            document_id: 要删除的文档ID
             
-        Returns:
-            Result of document removal
+        返回：
+            文档删除的结果
         """
-        # Placeholder for actual document removal
-        # In actual implementation:
+        # 实际文档删除的占位符
+        # 在实际实现中：
         # result = await self.kb.remove_document(document_id)
         # return {
         #     "status": "success" if result else "error",
         #     "document_id": document_id
         # }
         
-        # Simulated response for demo purposes
+        # 用于演示目的的模拟响应
         return {
             "status": "success",
             "document_id": document_id
@@ -128,18 +128,18 @@ class KnowledgeBaseProcessor:
     
     async def search(self, query: str, filter_criteria: Optional[Dict[str, Any]] = None, top_k: int = 5) -> List[Dict[str, Any]]:
         """
-        Search documents in the knowledge base with optional filtering
+        在知识库中搜索文档，可选择应用过滤条件
         
-        Args:
-            query: Search query
-            filter_criteria: Optional metadata filters to apply
-            top_k: Number of results to return
+        参数：
+            query: 搜索查询
+            filter_criteria: 可选的元数据过滤条件
+            top_k: 返回结果的数量
             
-        Returns:
-            List of matching documents
+        返回：
+            匹配文档的列表
         """
-        # Placeholder for actual search implementation
-        # In actual implementation:
+        # 实际搜索实现的占位符
+        # 在实际实现中：
         # results = await self.kb.search(
         #     query=query,
         #     filter=filter_criteria,
@@ -154,10 +154,10 @@ class KnowledgeBaseProcessor:
         #     for result in results
         # ]
         
-        # Simulated response for demo purposes
+        # 用于演示目的的模拟响应
         return [
             {
-                "content": f"Document content matching: {query}",
+                "content": f"匹配查询的文档内容: {query}",
                 "metadata": {"source": f"document-{i}", "type": "text"},
                 "score": 0.95 - (0.05 * i)
             }
@@ -166,16 +166,16 @@ class KnowledgeBaseProcessor:
     
     async def add_documents(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Add multiple documents to the knowledge base in batch
+        批量向知识库添加多个文档
         
-        Args:
-            documents: List of document data with content and metadata
+        参数：
+            documents: 包含内容和元数据的文档数据列表
             
-        Returns:
-            Result of batch document addition
+        返回：
+            批量文档添加的结果
         """
-        # Placeholder for actual batch document addition
-        # In actual implementation:
+        # 实际批量文档添加的占位符
+        # 在实际实现中：
         # results = await self.kb.add_documents([
         #     {
         #         "text": doc.get("content", ""),
@@ -189,22 +189,22 @@ class KnowledgeBaseProcessor:
         #     "status": "success"
         # }
         
-        # Simulated response for demo purposes
+        # 用于演示目的的模拟响应
         return {
             "document_count": len(documents),
-            "chunk_count": len(documents) * 5,  # Simulated 5 chunks per document
+            "chunk_count": len(documents) * 5,  # 模拟每个文档5个块
             "status": "success"
         }
     
     def get_stats(self) -> Dict[str, Any]:
         """
-        Get statistics about the knowledge base
+        获取关于知识库的统计信息
         
-        Returns:
-            Statistics about the knowledge base
+        返回：
+            知识库的统计信息
         """
-        # Placeholder for actual stats retrieval
-        # In actual implementation:
+        # 实际统计信息检索的占位符
+        # 在实际实现中：
         # stats = self.kb.get_stats()
         # return {
         #     "document_count": stats.document_count,
@@ -214,7 +214,7 @@ class KnowledgeBaseProcessor:
         #     "last_updated": stats.last_updated
         # }
         
-        # Simulated response for demo purposes
+        # 用于演示目的的模拟响应
         return {
             "document_count": 10,
             "chunk_count": 50,

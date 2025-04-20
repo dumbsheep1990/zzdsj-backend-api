@@ -1,6 +1,6 @@
 """
-Text Processing Utilities: Functions for text processing, token counting,
-chunking, and other text-related operations
+文本处理工具: 提供文本处理、令牌计数、
+文本分块和其他与文本相关的操作功能
 """
 
 import re
@@ -8,54 +8,54 @@ from typing import List, Dict, Any, Tuple, Optional
 
 def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
     """
-    Count the number of tokens in a text string
+    计算文本字符串中的令牌数量
     
-    Args:
-        text: Text to count tokens for
-        model: Model to use for token counting (determines tokenization strategy)
+    参数:
+        text: 需要计算令牌的文本
+        model: 用于令牌计数的模型（决定分词策略）
         
-    Returns:
-        Number of tokens
+    返回:
+        令牌数量
     """
     if not text:
         return 0
     
     try:
-        # Try to use tiktoken for accurate token counting if available
+        # 尝试使用tiktoken进行精确的令牌计数（如果可用）
         import tiktoken
         
-        # Select encoding based on model
+        # 根据模型选择编码
         if model.startswith("gpt-4"):
             encoding = tiktoken.encoding_for_model("gpt-4")
         elif model.startswith("gpt-3.5"):
             encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
         else:
-            # Default to cl100k_base for newer models
+            # 默认对较新的模型使用cl100k_base
             encoding = tiktoken.get_encoding("cl100k_base")
         
-        # Count tokens
+        # 计算令牌
         return len(encoding.encode(text))
     
     except (ImportError, ModuleNotFoundError):
-        # Fallback to approximate counting if tiktoken not available
-        # This is a very rough approximation
+        # 如果tiktoken不可用，回退到近似计数
+        # 这是一个非常粗略的近似值
         words = len(re.findall(r'\S+', text))
-        # Roughly 4 chars per token on average for English text
+        # 英文文本中平均每个令牌约4个字符
         char_tokens = len(text) // 4
-        # Take the max as a conservative estimate
+        # 取最大值作为保守估计
         return max(words, char_tokens)
 
 def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> List[str]:
     """
-    Split text into overlapping chunks
+    将文本分割为重叠的块
     
-    Args:
-        text: Text to split
-        chunk_size: Maximum size of each chunk in characters
-        chunk_overlap: Overlap between chunks in characters
+    参数:
+        text: 要分割的文本
+        chunk_size: 每个块的最大字符大小
+        chunk_overlap: 块之间的重叠字符数
         
-    Returns:
-        List of text chunks
+    返回:
+        文本块列表
     """
     if not text or chunk_size <= 0:
         return []
@@ -65,12 +65,12 @@ def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> L
     text_len = len(text)
     
     while start < text_len:
-        # Calculate end position accounting for text length
+        # 计算结束位置，考虑文本长度
         end = min(start + chunk_size, text_len)
         
-        # If not at the end of text and not at a good break point, find a good break
+        # 如果不在文本末尾且不在一个好的断点，找一个好的断点
         if end < text_len and text[end] not in [' ', '\n', '.', ',', '!', '?', ';', ':', '-']:
-            # Look for a good break point (whitespace or punctuation)
+            # 寻找一个好的断点（空白或标点符号）
             good_break = max(
                 text.rfind(' ', start, end),
                 text.rfind('\n', start, end),
@@ -83,19 +83,19 @@ def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> L
                 text.rfind('-', start, end)
             )
             
-            # If found a good break, use it
+            # 如果找到好的断点，使用它
             if good_break != -1 and good_break > start:
-                end = good_break + 1  # Include the break character
+                end = good_break + 1  # 包括断点字符
         
-        # Extract chunk
+        # 提取块
         chunk = text[start:end].strip()
         if chunk:
             chunks.append(chunk)
         
-        # Calculate next start position with overlap
+        # 计算下一个起始位置，考虑重叠
         start = end - chunk_overlap if end - chunk_overlap > start else end
         
-        # Prevent infinite loop if we can't move forward
+        # 如果无法前进，防止无限循环
         if start >= end:
             break
     
@@ -103,68 +103,68 @@ def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> L
 
 def detect_language(text: str) -> str:
     """
-    Detect the language of a text string (simple implementation)
+    检测文本字符串的语言（简单实现）
     
-    Args:
-        text: Text to detect language for
+    参数:
+        text: 需要检测语言的文本
         
-    Returns:
-        ISO 639-1 language code
+    返回:
+        ISO 639-1 语言代码
     """
     try:
-        # Try to use langdetect if available
+        # 尝试使用langdetect（如果可用）
         from langdetect import detect
         return detect(text)
     except (ImportError, ModuleNotFoundError):
-        # Very simplistic fallback detection for common languages
-        # This is only a placeholder - real detection would use a proper library
+        # 对常见语言的非常简单的后备检测
+        # 这只是一个占位符 - 真正的检测会使用适当的库
         text = text.lower()
-        # Chinese characters
+        # 中文字符
         if any('\u4e00' <= char <= '\u9fff' for char in text):
             return 'zh'
-        # Japanese characters
+        # 日文字符
         elif any('\u3040' <= char <= '\u30ff' for char in text):
             return 'ja'
-        # Korean characters
+        # 韩文字符
         elif any('\uac00' <= char <= '\ud7a3' for char in text):
             return 'ko'
-        # Cyrillic characters (Russian)
+        # 西里尔字符（俄语）
         elif any('\u0400' <= char <= '\u04ff' for char in text):
             return 'ru'
-        # Arabic characters
+        # 阿拉伯字符
         elif any('\u0600' <= char <= '\u06ff' for char in text):
             return 'ar'
-        # Default to English
+        # 默认为英语
         else:
             return 'en'
 
 def extract_metadata_from_text(text: str) -> Dict[str, Any]:
     """
-    Extract potential metadata from text content
+    从文本内容中提取潜在的元数据
     
-    Args:
-        text: Text to extract metadata from
+    参数:
+        text: 要提取元数据的文本
         
-    Returns:
-        Dictionary of metadata
+    返回:
+        元数据字典
     """
     metadata = {}
     
-    # Try to detect language
+    # 尝试检测语言
     metadata['language'] = detect_language(text)
     
-    # Count tokens
+    # 计算令牌数
     metadata['token_count'] = count_tokens(text)
     
-    # Character and word count
+    # 字符和单词计数
     metadata['char_count'] = len(text)
     metadata['word_count'] = len(re.findall(r'\S+', text))
     
-    # Get summary statistics
+    # 获取汇总统计
     lines = text.split('\n')
     metadata['line_count'] = len(lines)
     
-    # Extract potential title from first line
+    # 从第一行提取潜在标题
     if lines and len(lines[0]) < 100:
         metadata['potential_title'] = lines[0].strip()
     
@@ -172,20 +172,20 @@ def extract_metadata_from_text(text: str) -> Dict[str, Any]:
 
 def extract_keywords(text: str, max_keywords: int = 10) -> List[str]:
     """
-    Extract potential keywords from text
+    从文本中提取潜在关键词
     
-    Args:
-        text: Text to extract keywords from
-        max_keywords: Maximum number of keywords to extract
+    参数:
+        text: 要提取关键词的文本
+        max_keywords: 提取的最大关键词数量
         
-    Returns:
-        List of keywords
+    返回:
+        关键词列表
     """
     try:
-        # Try to use a keyword extraction library if available
+        # 尝试使用关键词提取库（如果可用）
         import yake
         
-        # Simple keyword extraction
+        # 简单关键词提取
         kw_extractor = yake.KeywordExtractor(
             lan=detect_language(text),
             n=1,  # 1-gram
@@ -195,27 +195,27 @@ def extract_keywords(text: str, max_keywords: int = 10) -> List[str]:
             top=max_keywords
         )
         
-        # Extract keywords
+        # 提取关键词
         keywords = kw_extractor.extract_keywords(text)
         return [kw[0] for kw in keywords]
     
     except (ImportError, ModuleNotFoundError):
-        # Fallback to simple frequency-based extraction
-        # This is a very simplistic approach
+        # 如果关键词提取库不可用，回退到简单的频率基于提取
+        # 这是一个非常简单的方法
         words = re.findall(r'\b\w+\b', text.lower())
         
-        # Filter out common stopwords
+        # 过滤掉常见的停用词
         stopwords = {'the', 'a', 'an', 'and', 'or', 'but', 'is', 'are', 'was', 'were', 
                     'in', 'on', 'at', 'to', 'for', 'with', 'by', 'of', 'about', 'from'}
         
-        # Count word frequencies
+        # 计算单词频率
         word_counts = {}
         for word in words:
             if word not in stopwords and len(word) > 2:
                 word_counts[word] = word_counts.get(word, 0) + 1
         
-        # Sort by frequency
+        # 按频率排序
         sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
         
-        # Return top keywords
+        # 返回前max_keywords个关键词
         return [word for word, count in sorted_words[:max_keywords]]

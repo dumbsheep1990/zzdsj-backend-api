@@ -1,6 +1,6 @@
 """
-Agno Framework Integration: Core module for integrating with the Agno framework
-for agent-based knowledge base management, retrieval, and reasoning.
+Agno框架集成：用于集成Agno框架的核心模块，
+用于基于代理的知识库管理、检索和推理。
 """
 
 from app.frameworks.agno.knowledge_base import KnowledgeBaseProcessor

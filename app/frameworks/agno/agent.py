@@ -1,20 +1,20 @@
 """
-Agno Agent Module: Provides integration with the Agno framework's agent capabilities
-for reasoning, planning, and knowledge-based interactions
+Agno代理模块：提供与Agno框架的代理能力集成，
+用于推理、规划和基于知识的交互
 """
 
 import os
 import json
 from typing import List, Dict, Any, Optional, Union
 
-# Note: This is a placeholder for actual Agno imports
-# In a real implementation, you would import:
+# 注意：这是实际Agno导入的占位符
+# 在实际实现中，您应该导入：
 # from agno.core import Agent
 # from agno.memory import Memory
 # from agno.tools import Tool
 
 class AgnoAgent:
-    """Wrapper around Agno framework's Agent implementation"""
+    """Agno框架Agent实现的包装器"""
     
     def __init__(
         self,
@@ -25,14 +25,14 @@ class AgnoAgent:
         tools: List[Any] = None
     ):
         """
-        Initialize an Agno agent with the specified configuration
+        使用指定配置初始化Agno代理
         
-        Args:
-            name: Name of the agent
-            description: Description of the agent's purpose
-            knowledge_bases: List of knowledge base IDs to connect
-            model: LLM model to use
-            tools: List of tools for the agent to use
+        参数：
+            name: 代理名称
+            description: 代理目的的描述
+            knowledge_bases: 要连接的知识库ID列表
+            model: 要使用的LLM模型
+            tools: 代理使用的工具列表
         """
         self.name = name
         self.description = description
@@ -40,8 +40,8 @@ class AgnoAgent:
         self.model = model
         self.tools = tools or []
         
-        # Placeholder for actual Agno agent initialization
-        # In actual implementation:
+        # 实际Agno代理初始化的占位符
+        # 在实际实现中：
         # self.agent = Agent(
         #     name=name,
         #     description=description,
@@ -55,26 +55,26 @@ class AgnoAgent:
         # for tool in tools:
         #     self.agent.add_tool(tool)
         
-        print(f"Initialized Agno agent: {name}")
+        print(f"初始化Agno代理: {name}")
     
     def _load_knowledge_base(self, kb_id: str):
         """
-        Load a knowledge base by ID
+        通过ID加载知识库
         
-        Args:
-            kb_id: Knowledge base ID
+        参数：
+            kb_id: 知识库ID
             
-        Returns:
-            An Agno KnowledgeBase object
+        返回：
+            Agno知识库对象
         """
-        # Placeholder for actual knowledge base loading
-        # In actual implementation:
+        # 实际知识库加载的占位符
+        # 在实际实现中：
         # from app.models.knowledge import KnowledgeBase as DBKnowledgeBase
         # from app.utils.database import SessionLocal
         # db = SessionLocal()
         # kb_record = db.query(DBKnowledgeBase).filter(DBKnowledgeBase.id == kb_id).first()
         # if not kb_record:
-        #     raise ValueError(f"Knowledge base {kb_id} not found")
+        #     raise ValueError(f"知识库 {kb_id} 未找到")
         #
         # docs = db.query(Document).filter(Document.knowledge_base_id == kb_id).all()
         # kb_documents = [{"text": doc.content, "metadata": doc.metadata} for doc in docs]
@@ -87,17 +87,17 @@ class AgnoAgent:
     
     async def query(self, query: str, conversation_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Query the agent
+        查询代理
         
-        Args:
-            query: Question or instruction to the agent
-            conversation_id: Optional conversation ID for context
+        参数：
+            query: 向代理提出的问题或指令
+            conversation_id: 可选的对话ID，用于上下文
             
-        Returns:
-            Response from the agent
+        返回：
+            代理的响应
         """
-        # Placeholder for actual agent query
-        # In actual implementation:
+        # 实际代理查询的占位符
+        # 在实际实现中：
         # response = await self.agent.arun(query, conversation_id=conversation_id)
         # return {
         #     "response": response.content,
@@ -105,43 +105,43 @@ class AgnoAgent:
         #     "conversation_id": response.conversation_id
         # }
         
-        # Simulated response for demo purposes
+        # 用于演示目的的模拟响应
         return {
-            "response": f"[Agno] Response to: {query}",
-            "sources": [{"content": "Sample source", "metadata": {}, "score": 0.95}],
+            "response": f"[Agno] 回复: {query}",
+            "sources": [{"content": "示例来源", "metadata": {}, "score": 0.95}],
             "conversation_id": conversation_id or "new-conversation"
         }
 
 
-def create_knowledge_agent(kb_ids: List[str], agent_name: str = "Knowledge Agent") -> AgnoAgent:
+def create_knowledge_agent(kb_ids: List[str], agent_name: str = "知识代理") -> AgnoAgent:
     """
-    Create an agent with access to multiple knowledge bases
+    创建一个可访问多个知识库的代理
     
-    Args:
-        kb_ids: List of knowledge base IDs
-        agent_name: Name for the agent
+    参数：
+        kb_ids: 知识库ID列表
+        agent_name: 代理名称
         
-    Returns:
-        Configured Agno agent
+    返回：
+        配置好的Agno代理
     """
-    # Define default tools for knowledge agent
+    # 为知识代理定义默认工具
     tools = [
-        # In actual implementation:
+        # 在实际实现中：
         # Tool(
         #     name="search_documents",
-        #     description="Search for documents in the knowledge base",
+        #     description="在知识库中搜索文档",
         #     function=search_documents
         # ),
         # Tool(
         #     name="summarize_document",
-        #     description="Summarize a document",
+        #     description="总结文档",
         #     function=summarize_document
         # )
     ]
     
     return AgnoAgent(
         name=agent_name,
-        description="Agent for querying and reasoning over knowledge bases",
+        description="用于查询和推理知识库的代理",
         knowledge_bases=kb_ids,
         tools=tools
     )

@@ -4,17 +4,20 @@ from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
 
-# Create SQLAlchemy engine
+# 创建SQLAlchemy引擎
 engine = create_engine(settings.DATABASE_URL)
 
-# Create SessionLocal class
+# 创建SessionLocal类
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create Base class
+# 创建Base基类
 Base = declarative_base()
 
-# Database dependency
+# 数据库依赖
 def get_db():
+    """
+    数据库会话依赖项，用于API路由中获取数据库会话
+    """
     db = SessionLocal()
     try:
         yield db

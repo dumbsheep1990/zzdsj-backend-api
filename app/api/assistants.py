@@ -21,7 +21,7 @@ def get_assistants(
     db: Session = Depends(get_db)
 ):
     """
-    Get all assistants with optional filtering.
+    获取所有助手，支持可选过滤。
     """
     query = db.query(Assistant)
     
@@ -36,7 +36,7 @@ def create_assistant(
     db: Session = Depends(get_db)
 ):
     """
-    Create a new assistant.
+    创建新助手。
     """
     db_assistant = Assistant(
         name=assistant.name,
@@ -55,11 +55,11 @@ def get_assistant(
     db: Session = Depends(get_db)
 ):
     """
-    Get assistant by ID with associated knowledge bases.
+    通过ID获取助手及其关联的知识库。
     """
     assistant = db.query(Assistant).filter(Assistant.id == assistant_id).first()
     if not assistant:
-        raise HTTPException(status_code=404, detail="Assistant not found")
+        raise HTTPException(status_code=404, detail="未找到助手")
     return assistant
 
 @router.put("/{assistant_id}", response_model=AssistantSchema)
@@ -69,13 +69,13 @@ def update_assistant(
     db: Session = Depends(get_db)
 ):
     """
-    Update an assistant.
+    更新助手。
     """
     assistant = db.query(Assistant).filter(Assistant.id == assistant_id).first()
     if not assistant:
-        raise HTTPException(status_code=404, detail="Assistant not found")
+        raise HTTPException(status_code=404, detail="未找到助手")
     
-    # Update fields that are provided
+    # 更新提供的字段
     update_data = assistant_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(assistant, field, value)
@@ -90,17 +90,17 @@ def delete_assistant(
     db: Session = Depends(get_db)
 ):
     """
-    Delete or deactivate an assistant.
+    删除或停用助手。
     """
     assistant = db.query(Assistant).filter(Assistant.id == assistant_id).first()
     if not assistant:
-        raise HTTPException(status_code=404, detail="Assistant not found")
+        raise HTTPException(status_code=404, detail="未找到助手")
     
-    # Soft delete by setting is_active to False
+    # 通过设置is_active为False进行软删除
     assistant.is_active = False
     db.commit()
     
-    return {"message": "Assistant deactivated successfully"}
+    return {"message": "助手成功停用"}
 
 @router.post("/{assistant_id}/knowledge-bases/{knowledge_base_id}")
 def link_knowledge_base(
@@ -109,29 +109,29 @@ def link_knowledge_base(
     db: Session = Depends(get_db)
 ):
     """
-    Link a knowledge base to an assistant.
+    将知识库关联到助手。
     """
-    # Check if assistant exists
+    # 检查助手是否存在
     assistant = db.query(Assistant).filter(Assistant.id == assistant_id).first()
     if not assistant:
-        raise HTTPException(status_code=404, detail="Assistant not found")
+        raise HTTPException(status_code=404, detail="未找到助手")
     
-    # Check if knowledge base exists
+    # 检查知识库是否存在
     from app.models.knowledge import KnowledgeBase
     knowledge_base = db.query(KnowledgeBase).filter(KnowledgeBase.id == knowledge_base_id).first()
     if not knowledge_base:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="未找到知识库")
     
-    # Check if the link already exists
+    # 检查关联是否已存在
     existing_link = db.query(AssistantKnowledgeBase).filter(
         AssistantKnowledgeBase.assistant_id == assistant_id,
         AssistantKnowledgeBase.knowledge_base_id == knowledge_base_id
     ).first()
     
     if existing_link:
-        return {"message": "Knowledge base is already linked to this assistant"}
+        return {"message": "该知识库已经关联到此助手"}
     
-    # Create the link
+    # 创建关联
     link = AssistantKnowledgeBase(
         assistant_id=assistant_id,
         knowledge_base_id=knowledge_base_id
@@ -139,4 +139,4 @@ def link_knowledge_base(
     db.add(link)
     db.commit()
     
-    return {"message": "Knowledge base linked to assistant successfully"}
+    return {"message": "知识库成功关联到助手"}

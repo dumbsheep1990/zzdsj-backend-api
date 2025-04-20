@@ -28,7 +28,7 @@ def get_conversations(
     db: Session = Depends(get_db)
 ):
     """
-    Get all conversations with optional filtering.
+    获取所有对话，支持可选过滤。
     """
     query = db.query(Conversation)
     
@@ -46,12 +46,12 @@ def create_conversation(
     db: Session = Depends(get_db)
 ):
     """
-    Create a new conversation.
+    创建新对话。
     """
-    # Check if assistant exists
+    # 检查助手是否存在
     assistant = db.query(Assistant).filter(Assistant.id == conversation.assistant_id).first()
     if not assistant:
-        raise HTTPException(status_code=404, detail="Assistant not found")
+        raise HTTPException(status_code=404, detail="未找到助手")
     
     db_conversation = Conversation(
         assistant_id=conversation.assistant_id,
@@ -70,11 +70,11 @@ def get_conversation(
     db: Session = Depends(get_db)
 ):
     """
-    Get conversation by ID with messages.
+    通过ID获取对话及其消息。
     """
     conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+        raise HTTPException(status_code=404, detail="未找到对话")
     return conversation
 
 @router.put("/conversations/{conversation_id}", response_model=ConversationSchema)
@@ -84,13 +84,13 @@ def update_conversation(
     db: Session = Depends(get_db)
 ):
     """
-    Update a conversation.
+    更新对话。
     """
     conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+        raise HTTPException(status_code=404, detail="未找到对话")
     
-    # Update fields that are provided
+    # 更新提供的字段
     update_data = conversation_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(conversation, field, value)
@@ -105,20 +105,20 @@ def delete_conversation(
     db: Session = Depends(get_db)
 ):
     """
-    Delete a conversation.
+    删除对话。
     """
     conversation = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+        raise HTTPException(status_code=404, detail="未找到对话")
     
-    # Delete all messages first
+    # 首先删除所有消息
     db.query(Message).filter(Message.conversation_id == conversation_id).delete()
     
-    # Delete the conversation
+    # 删除对话
     db.delete(conversation)
     db.commit()
     
-    return {"message": "Conversation deleted successfully"}
+    return {"message": "对话删除成功"}
 
 @router.post("/", response_model=ChatResponse)
 async def chat(
@@ -127,31 +127,31 @@ async def chat(
     db: Session = Depends(get_db)
 ):
     """
-    Send a message to an assistant and get a response.
+    向助手发送消息并获取响应。
     """
-    # Check if assistant exists
+    # 检查助手是否存在
     assistant = db.query(Assistant).filter(Assistant.id == chat_request.assistant_id).first()
     if not assistant:
-        raise HTTPException(status_code=404, detail="Assistant not found")
+        raise HTTPException(status_code=404, detail="未找到助手")
     
-    # Create or get conversation
+    # 创建或获取对话
     conversation = None
     if chat_request.conversation_id:
         conversation = db.query(Conversation).filter(Conversation.id == chat_request.conversation_id).first()
         if not conversation:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+            raise HTTPException(status_code=404, detail="未找到对话")
     else:
-        # Create new conversation
+        # 创建新对话
         conversation = Conversation(
             assistant_id=chat_request.assistant_id,
             user_id=chat_request.user_id,
-            title=f"Conversation {chat_request.message[:30]}..." if len(chat_request.message) > 30 else chat_request.message
+            title=f"对话 {chat_request.message[:30]}..." if len(chat_request.message) > 30 else chat_request.message
         )
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
     
-    # Create user message
+    # 创建用户消息
     user_message = Message(
         conversation_id=conversation.id,
         role="user",
@@ -161,7 +161,7 @@ async def chat(
     db.commit()
     db.refresh(user_message)
     
-    # Process chat request asynchronously to generate AI response
+    # 异步处理聊天请求以生成AI响应
     response = await process_chat_request(
         assistant_id=chat_request.assistant_id,
         conversation_id=conversation.id,

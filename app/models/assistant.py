@@ -1,5 +1,5 @@
 """
-Assistant Models Module: Database models for AI assistants, conversations, and messages
+助手模型模块: AI助手、对话和消息的数据库模型
 """
 
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, JSON, Table
@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 
 from app.models.database import Base
 
-# Association table for many-to-many relationship between assistants and knowledge bases
+# 助手和知识库之间多对多关系的关联表
 assistant_knowledge_base = Table(
     'assistant_knowledge_base',
     Base.metadata,
@@ -19,8 +19,7 @@ assistant_knowledge_base = Table(
 
 class Assistant(Base):
     """
-    Assistant model representing an AI assistant with specific capabilities
-    and knowledge base connections
+    助手模型，表示具有特定能力和知识库连接的AI助手
     """
     __tablename__ = "assistants"
     
@@ -28,14 +27,14 @@ class Assistant(Base):
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
     model = Column(String(100), nullable=False)
-    capabilities = Column(JSON, nullable=False, default=list)  # List of capability strings
-    configuration = Column(JSON, nullable=True)  # Assistant-specific configuration
+    capabilities = Column(JSON, nullable=False, default=list)  # 能力字符串列表
+    configuration = Column(JSON, nullable=True)  # 助手特定配置
     system_prompt = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
-    access_url = Column(String(255), nullable=True)  # URL for accessing this assistant's web interface
+    access_url = Column(String(255), nullable=True)  # 访问此助手web界面的URL
     
-    # Relationships
+    # 关系
     knowledge_bases = relationship(
         "KnowledgeBase",
         secondary=assistant_knowledge_base,
@@ -44,7 +43,7 @@ class Assistant(Base):
     conversations = relationship("Conversation", back_populates="assistant", cascade="all, delete-orphan")
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for API responses"""
+        """转换为API响应的字典"""
         return {
             "id": self.id,
             "name": self.name,
@@ -62,23 +61,23 @@ class Assistant(Base):
 
 class Conversation(Base):
     """
-    Conversation model representing a chat session with an assistant
+    对话模型，表示与助手的聊天会话
     """
     __tablename__ = "conversations"
     
     id = Column(Integer, primary_key=True, index=True)
     assistant_id = Column(Integer, ForeignKey("assistants.id"), nullable=False)
     title = Column(String(255), nullable=False)
-    metadata = Column(JSON, nullable=True)  # Arbitrary metadata about the conversation
+    metadata = Column(JSON, nullable=True)  # 关于对话的任意元数据
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
     
-    # Relationships
+    # 关系
     assistant = relationship("Assistant", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for API responses"""
+        """转换为API响应的字典"""
         return {
             "id": self.id,
             "assistant_id": self.assistant_id,
@@ -92,7 +91,7 @@ class Conversation(Base):
 
 class Message(Base):
     """
-    Message model representing a single message in a conversation
+    消息模型，表示对话中的单条消息
     """
     __tablename__ = "messages"
     
@@ -100,14 +99,14 @@ class Message(Base):
     conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
     role = Column(String(50), nullable=False)  # 'user', 'assistant', 'system'
     content = Column(Text, nullable=False)
-    metadata = Column(JSON, nullable=True)  # Message metadata, including sources, processing status, etc.
+    metadata = Column(JSON, nullable=True)  # 消息元数据，包括来源、处理状态等
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relationships
+    # 关系
     conversation = relationship("Conversation", back_populates="messages")
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for API responses"""
+        """转换为API响应的字典"""
         return {
             "id": self.id,
             "conversation_id": self.conversation_id,

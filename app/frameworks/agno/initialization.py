@@ -1,5 +1,5 @@
 """
-Agno Initialization Module: Handles the initialization and setup of Agno integration
+Agno初始化模块：处理Agno集成的初始化和设置
 """
 
 import logging
@@ -7,23 +7,23 @@ from typing import Dict, Any, Optional
 
 from app.frameworks.agno.config import get_agno_config
 
-# Configure logging
+# 配置日志
 logger = logging.getLogger("agno")
 
 async def initialize_agno():
     """
-    Initialize the Agno framework integration
+    初始化Agno框架集成
     
-    This function should be called during application startup
-    to set up the Agno integration
+    此函数应在应用程序启动期间调用
+    以设置Agno集成
     """
     config = get_agno_config()
     
-    # Configure logging
+    # 配置日志
     log_level = getattr(logging, config.log_level.upper(), logging.INFO)
     logger.setLevel(log_level)
     
-    # Create handler if none exists
+    # 如果不存在则创建处理器
     if not logger.handlers:
         handler = logging.StreamHandler()
         formatter = logging.Formatter(
@@ -32,10 +32,10 @@ async def initialize_agno():
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     
-    logger.info("Initializing Agno framework integration")
+    logger.info("初始化Agno框架集成")
     
-    # In a real implementation, you would initialize the Agno client here
-    # Something like:
+    # 在实际实现中，您将在此处初始化Agno客户端
+    # 类似于：
     # from agno.client import AgnoClient
     # client = AgnoClient(
     #     api_key=config.api_key,
@@ -44,7 +44,7 @@ async def initialize_agno():
     # )
     # await client.initialize()
     
-    logger.info("Agno framework integration initialized")
+    logger.info("Agno框架集成已初始化")
     
     return {
         "status": "success",
@@ -53,21 +53,21 @@ async def initialize_agno():
 
 async def create_agno_knowledge_base(kb_id: str, name: str, description: Optional[str] = None) -> Dict[str, Any]:
     """
-    Create an Agno knowledge base
+    创建Agno知识库
     
-    Args:
-        kb_id: Knowledge base ID (can be the database ID as a string)
-        name: Knowledge base name
-        description: Optional knowledge base description
+    参数：
+        kb_id: 知识库ID（可以是数据库ID的字符串）
+        name: 知识库名称
+        description: 可选的知识库描述
         
-    Returns:
-        Creation result
+    返回：
+        创建结果
     """
     config = get_agno_config()
-    logger.info(f"Creating Agno knowledge base: {name} (ID: {kb_id})")
+    logger.info(f"创建Agno知识库: {name} (ID: {kb_id})")
     
-    # In a real implementation, you would create the Agno KB here
-    # Something like:
+    # 在实际实现中，您将在此处创建Agno KB
+    # 类似于：
     # from agno.knowledge import KnowledgeBase
     # kb = KnowledgeBase(
     #     id=kb_id,
@@ -78,7 +78,7 @@ async def create_agno_knowledge_base(kb_id: str, name: str, description: Optiona
     # )
     # result = await kb.initialize()
     
-    # For now, just return a success response
+    # 目前，只返回成功响应
     return {
         "status": "success",
         "kb_id": kb_id,
@@ -88,25 +88,25 @@ async def create_agno_knowledge_base(kb_id: str, name: str, description: Optiona
 
 async def get_agno_status() -> Dict[str, Any]:
     """
-    Get the status of the Agno framework integration
+    获取Agno框架集成的状态
     
-    Returns:
-        Status information
+    返回：
+        状态信息
     """
     config = get_agno_config()
     
-    # In a real implementation, you would check the Agno client status
-    # Something like:
+    # 在实际实现中，您将检查Agno客户端状态
+    # 类似于：
     # from agno.client import get_client
     # client = get_client()
     # status = await client.get_status()
     
-    # For now, just return a simulated status
+    # 目前，只返回模拟状态
     return {
         "status": "active",
         "version": "0.1.0",
         "api_connected": bool(config.api_key),
-        "kb_count": 5,  # Simulated value
-        "agent_count": 2,  # Simulated value
+        "kb_count": 5,  # 模拟值
+        "agent_count": 2,  # 模拟值
         "config": config.to_dict()
     }

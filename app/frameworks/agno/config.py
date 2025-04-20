@@ -1,5 +1,5 @@
 """
-Agno Configuration Module: Provides configuration management for Agno framework integration
+Agno配置模块：为Agno框架集成提供配置管理
 """
 
 from typing import Dict, Any, Optional
@@ -7,25 +7,25 @@ from app.utils.config_manager import get_config
 
 
 class AgnoConfig:
-    """Configuration manager for Agno framework integration"""
+    """Agno框架集成的配置管理器"""
     
     def __init__(self):
-        """Initialize Agno configuration from global config"""
-        # Load settings from config
+        """从全局配置初始化Agno配置"""
+        # 从配置加载设置
         self.enabled = get_config("frameworks", "agno", "enabled", default=True)
         self.log_level = get_config("frameworks", "agno", "log_level", default="INFO")
         
-        # API configuration
+        # API配置
         self.api_base = get_config("frameworks", "agno", "api_base", default=None)
         self.api_key = get_config("frameworks", "agno", "api_key", default=None)
         self.api_version = get_config("frameworks", "agno", "api_version", default="v1")
         
-        # Default models
+        # 默认模型
         self.default_llm_model = get_config("frameworks", "agno", "default_llm_model", default="gpt-4")
         self.default_embedding_model = get_config("frameworks", "agno", "default_embedding_model", 
                                                 default="text-embedding-ada-002")
         
-        # Knowledge base settings
+        # 知识库设置
         self.kb_settings = {
             "chunk_size": get_config("frameworks", "agno", "kb_chunk_size", default=1000),
             "chunk_overlap": get_config("frameworks", "agno", "kb_chunk_overlap", default=200),
@@ -33,7 +33,7 @@ class AgnoConfig:
             "max_tokens_per_doc": get_config("frameworks", "agno", "kb_max_tokens_per_doc", default=100000)
         }
         
-        # Agent settings
+        # 代理设置
         self.agent_settings = {
             "temperature": get_config("frameworks", "agno", "agent_temperature", default=0.7),
             "max_tokens": get_config("frameworks", "agno", "agent_max_tokens", default=1500),
@@ -42,7 +42,7 @@ class AgnoConfig:
         }
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert configuration to dictionary"""
+        """将配置转换为字典"""
         return {
             "enabled": self.enabled,
             "log_level": self.log_level,
@@ -59,19 +59,19 @@ class AgnoConfig:
         }
     
     def get_kb_settings(self) -> Dict[str, Any]:
-        """Get knowledge base settings"""
+        """获取知识库设置"""
         return self.kb_settings
     
     def get_agent_settings(self) -> Dict[str, Any]:
-        """Get agent settings"""
+        """获取代理设置"""
         return self.agent_settings
 
 
-# Singleton instance
+# 单例实例
 _agno_config = None
 
 def get_agno_config() -> AgnoConfig:
-    """Get Agno configuration singleton"""
+    """获取Agno配置单例"""
     global _agno_config
     if _agno_config is None:
         _agno_config = AgnoConfig()

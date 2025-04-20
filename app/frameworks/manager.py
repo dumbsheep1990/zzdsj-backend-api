@@ -1,6 +1,6 @@
 """
-Framework Manager: Orchestrates and provides access to different AI framework integrations
-This allows the core business logic to be framework-agnostic
+框架管理器: 协调并提供对不同AI框架集成的访问
+这使得核心业务逻辑可以与具体框架无关
 """
 
 from enum import Enum
@@ -9,7 +9,7 @@ from app.config import settings
 
 
 class FrameworkType(Enum):
-    """Enum for supported AI frameworks"""
+    """支持的AI框架枚举"""
     LANGCHAIN = "langchain"
     HAYSTACK = "haystack" 
     LLAMAINDEX = "llamaindex"
@@ -17,7 +17,7 @@ class FrameworkType(Enum):
 
 
 class FrameworkCapability(Enum):
-    """Enum for supported capabilities of AI frameworks"""
+    """AI框架支持的能力枚举"""
     EMBEDDINGS = "embeddings"
     RETRIEVAL = "retrieval"
     QUESTION_ANSWERING = "question_answering"
@@ -28,8 +28,8 @@ class FrameworkCapability(Enum):
 
 class FrameworkManager:
     """
-    Manager for AI frameworks that provides a unified interface to access
-    different framework capabilities based on configuration and use case
+    AI框架管理器，提供统一接口访问
+    不同框架的能力，基于配置和用例
     """
     
     def __init__(self):
@@ -37,12 +37,12 @@ class FrameworkManager:
         self._capability_registry = {}
         self._default_frameworks = {}
         
-        # Initialize the framework registry
+        # 初始化框架注册表
         self._init_registry()
     
     def _init_registry(self):
-        """Initialize the framework registry with available frameworks"""
-        # Register default framework for each capability
+        """使用可用框架初始化框架注册表"""
+        # 为每个能力注册默认框架
         if settings.get_config("frameworks", "langchain", "enabled", default=True):
             self._register_langchain()
         
@@ -56,77 +56,77 @@ class FrameworkManager:
             self._register_agno()
     
     def _register_langchain(self):
-        """Register LangChain framework and capabilities"""
+        """注册LangChain框架及其能力"""
         from app.frameworks.langchain import embeddings, chat, retrieval
         
-        # Register the framework
+        # 注册框架
         self._framework_registry[FrameworkType.LANGCHAIN] = {
             FrameworkCapability.EMBEDDINGS: embeddings,
             FrameworkCapability.CHAT: chat,
             FrameworkCapability.RETRIEVAL: retrieval
         }
         
-        # Register capabilities with LangChain as provider
+        # 注册以LangChain为提供者的能力
         self._register_capability(FrameworkCapability.EMBEDDINGS, FrameworkType.LANGCHAIN)
         self._register_capability(FrameworkCapability.CHAT, FrameworkType.LANGCHAIN)
     
     def _register_haystack(self):
-        """Register Haystack framework and capabilities"""
+        """注册Haystack框架及其能力"""
         from app.frameworks.haystack import document_store, retrieval, reader
         
-        # Register the framework
+        # 注册框架
         self._framework_registry[FrameworkType.HAYSTACK] = {
             FrameworkCapability.RETRIEVAL: retrieval,
             FrameworkCapability.QUESTION_ANSWERING: reader,
             FrameworkCapability.DOCUMENT_PROCESSING: document_store
         }
         
-        # Register capabilities with Haystack as provider
+        # 注册以Haystack为提供者的能力
         self._register_capability(FrameworkCapability.QUESTION_ANSWERING, FrameworkType.HAYSTACK)
     
     def _register_llamaindex(self):
-        """Register LlamaIndex framework and capabilities"""
+        """注册LlamaIndex框架及其能力"""
         from app.frameworks.llamaindex import indexing, retrieval, agent
         
-        # Register the framework
+        # 注册框架
         self._framework_registry[FrameworkType.LLAMAINDEX] = {
             FrameworkCapability.DOCUMENT_PROCESSING: indexing,
             FrameworkCapability.RETRIEVAL: retrieval,
             FrameworkCapability.AGENT: agent
         }
         
-        # Register capabilities with LlamaIndex as provider
+        # 注册以LlamaIndex为提供者的能力
         self._register_capability(FrameworkCapability.DOCUMENT_PROCESSING, FrameworkType.LLAMAINDEX)
     
     def _register_agno(self):
-        """Register Agno framework and capabilities"""
+        """注册Agno框架及其能力"""
         from app.frameworks.agents import agent
         
-        # Register the framework
+        # 注册框架
         self._framework_registry[FrameworkType.AGNO] = {
             FrameworkCapability.AGENT: agent
         }
         
-        # Register capabilities with Agno as provider
+        # 注册以Agno为提供者的能力
         self._register_capability(FrameworkCapability.AGENT, FrameworkType.AGNO)
     
     def _register_capability(self, capability: FrameworkCapability, framework: FrameworkType):
-        """Register a capability with its providing framework"""
+        """注册能力及其提供框架"""
         if capability not in self._capability_registry:
             self._capability_registry[capability] = []
         
-        # Add framework to capability providers if not already registered
+        # 如果尚未注册，将框架添加到能力提供者
         if framework not in self._capability_registry[capability]:
             self._capability_registry[capability].append(framework)
         
-        # Set as default if no default exists or if configured as default
+        # 如果没有默认框架或配置为默认，则设置为默认
         if capability not in self._default_frameworks:
             self._default_frameworks[capability] = framework
     
     def get_framework(self, framework_type: FrameworkType) -> Dict[FrameworkCapability, Any]:
-        """Get all capabilities for a specific framework"""
+        """获取特定框架的所有能力"""
         if framework_type not in self._framework_registry:
-            raise ValueError(f"Framework {framework_type.value} is not registered")
+            raise ValueError(f"框架 {framework_type.value} 未注册")
         
         return self._framework_registry[framework_type]
     
@@ -134,49 +134,49 @@ class FrameworkManager:
                       capability: FrameworkCapability, 
                       framework_type: Optional[FrameworkType] = None) -> Any:
         """
-        Get a specific capability implementation
-        If framework_type is specified, that framework's implementation is returned
-        Otherwise, the default framework for that capability is used
+        获取特定能力的实现
+        如果指定了framework_type，则返回该框架的实现
+        否则，使用该能力的默认框架
         """
-        # If framework is specified, use that implementation
+        # 如果指定了框架，使用该实现
         if framework_type is not None:
             if framework_type not in self._framework_registry:
-                raise ValueError(f"Framework {framework_type.value} is not registered")
+                raise ValueError(f"框架 {framework_type.value} 未注册")
             
             framework_capabilities = self._framework_registry[framework_type]
             if capability not in framework_capabilities:
-                raise ValueError(f"Capability {capability.value} not supported by {framework_type.value}")
+                raise ValueError(f"能力 {capability.value} 不被 {framework_type.value} 支持")
             
             return framework_capabilities[capability]
         
-        # Otherwise use the default framework for this capability
+        # 否则使用此能力的默认框架
         if capability not in self._default_frameworks:
-            raise ValueError(f"No default framework registered for capability {capability.value}")
+            raise ValueError(f"没有为能力 {capability.value} 注册默认框架")
         
         default_framework = self._default_frameworks[capability]
         return self._framework_registry[default_framework][capability]
     
     def list_frameworks(self) -> List[FrameworkType]:
-        """List all registered frameworks"""
+        """列出所有注册的框架"""
         return list(self._framework_registry.keys())
     
     def list_capabilities(self) -> List[FrameworkCapability]:
-        """List all registered capabilities"""
+        """列出所有注册的能力"""
         return list(self._capability_registry.keys())
     
     def get_capability_providers(self, capability: FrameworkCapability) -> List[FrameworkType]:
-        """Get all frameworks that provide a specific capability"""
+        """获取提供特定能力的所有框架"""
         if capability not in self._capability_registry:
             return []
         
         return self._capability_registry[capability]
 
 
-# Singleton instance of the framework manager
+# 框架管理器的单例实例
 _framework_manager = None
 
 def get_framework_manager() -> FrameworkManager:
-    """Get or initialize the framework manager singleton"""
+    """获取或初始化框架管理器单例"""
     global _framework_manager
     
     if _framework_manager is None:

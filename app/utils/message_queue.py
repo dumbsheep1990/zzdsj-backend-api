@@ -4,7 +4,7 @@ from typing import Any, Dict, Callable
 from app.config import settings
 
 def get_rabbitmq_connection():
-    """Get RabbitMQ connection"""
+    """获取RabbitMQ连接"""
     credentials = pika.PlainCredentials(
         username=settings.RABBITMQ_USER,
         password=settings.RABBITMQ_PASSWORD
@@ -20,28 +20,28 @@ def get_rabbitmq_connection():
     return pika.BlockingConnection(parameters)
 
 def publish_message(exchange: str, routing_key: str, message: Any, exchange_type: str = 'direct'):
-    """Publish a message to RabbitMQ"""
+    """向RabbitMQ发布消息"""
     connection = get_rabbitmq_connection()
     channel = connection.channel()
     
-    # Declare exchange
+    # 声明交换机
     channel.exchange_declare(
         exchange=exchange,
         exchange_type=exchange_type,
         durable=True
     )
     
-    # Convert message to JSON if it's a dict or list
+    # 如果消息是字典或列表则转换为JSON
     if isinstance(message, (dict, list)):
         message = json.dumps(message)
     
-    # Publish message
+    # 发布消息
     channel.basic_publish(
         exchange=exchange,
         routing_key=routing_key,
         body=message,
         properties=pika.BasicProperties(
-            delivery_mode=2,  # make message persistent
+            delivery_mode=2,  # 使消息持久化
             content_type='application/json' if isinstance(message, str) and message.startswith('{') else 'text/plain'
         )
     )
@@ -49,24 +49,24 @@ def publish_message(exchange: str, routing_key: str, message: Any, exchange_type
     connection.close()
 
 def init_queue(queue_name: str, exchange: str, routing_key: str, exchange_type: str = 'direct'):
-    """Initialize a RabbitMQ queue"""
+    """初始化RabbitMQ队列"""
     connection = get_rabbitmq_connection()
     channel = connection.channel()
     
-    # Declare exchange
+    # 声明交换机
     channel.exchange_declare(
         exchange=exchange,
         exchange_type=exchange_type,
         durable=True
     )
     
-    # Declare queue
+    # 声明队列
     channel.queue_declare(
         queue=queue_name,
         durable=True
     )
     
-    # Bind queue to exchange
+    # 将队列绑定到交换机
     channel.queue_bind(
         queue=queue_name,
         exchange=exchange,
@@ -76,39 +76,39 @@ def init_queue(queue_name: str, exchange: str, routing_key: str, exchange_type: 
     connection.close()
 
 def start_consumer(queue_name: str, callback: Callable, prefetch_count: int = 1):
-    """Start a RabbitMQ consumer"""
+    """启动RabbitMQ消费者"""
     connection = get_rabbitmq_connection()
     channel = connection.channel()
     
-    # Set prefetch count
+    # 设置预取计数
     channel.basic_qos(prefetch_count=prefetch_count)
     
-    # Define callback wrapper
+    # 定义回调包装器
     def callback_wrapper(ch, method, properties, body):
         try:
-            # Try to parse as JSON
+            # 尝试解析为JSON
             if properties.content_type == 'application/json':
                 message = json.loads(body)
             else:
                 message = body.decode()
             
-            # Call user callback
+            # 调用用户回调
             callback(message)
             
-            # Acknowledge message
+            # 确认消息
             ch.basic_ack(delivery_tag=method.delivery_tag)
         
         except Exception as e:
-            print(f"Error processing message: {e}")
-            # Negative acknowledge message
+            print(f"处理消息时出错: {e}")
+            # 消息负确认
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
     
-    # Start consuming
+    # 开始消费
     channel.basic_consume(
         queue=queue_name,
         on_message_callback=callback_wrapper
     )
     
-    # Start consuming
-    print(f"Starting consumer for queue {queue_name}")
+    # 开始消费
+    print(f"正在为队列 {queue_name} 启动消费者")
     channel.start_consuming()

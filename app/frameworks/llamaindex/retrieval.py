@@ -1,6 +1,6 @@
 """
-LlamaIndex Retrieval Module: Handles advanced context-aware document retrieval
-Leverages LlamaIndex's strengths in hierarchical retrieval and query engines
+LlamaIndex检索模块: 处理高级上下文感知文档检索
+利用LlamaIndex在分层检索和查询引擎方面的优势
 """
 
 from typing import List, Dict, Any, Optional, Union
@@ -17,33 +17,32 @@ from llama_index.core.postprocessor import SimilarityPostprocessor
 from llama_index.core.prompts import PromptTemplate
 from app.config import settings
 
-# Custom prompt templates for better control over response format
+# 自定义提示模板，更好地控制响应格式
 DEFAULT_TEXT_QA_PROMPT_TMPL = (
-    "Context information is below.\n"
+    "以下是上下文信息。\n"
     "---------------------\n"
     "{context_str}\n"
     "---------------------\n"
-    "Given the context information and not prior knowledge, "
-    "answer the question: {query_str}\n"
-    "If the answer cannot be found in the context, "
-    "respond with 'I don't have enough information to answer this question.'\n"
-    "Answer in a concise and helpful manner."
+    "仅根据上下文信息，不使用先验知识，"
+    "回答问题: {query_str}\n"
+    "如果在上下文中找不到答案，"
+    "请回答'我没有足够的信息来回答这个问题。'\n"
+    "以简洁有帮助的方式回答。"
 )
 
 DEFAULT_REFINE_PROMPT_TMPL = (
-    "The original question is: {query_str}\n"
-    "We have provided an existing answer: {existing_answer}\n"
-    "We have the opportunity to refine the existing answer "
-    "with some more context below.\n"
+    "原始问题是: {query_str}\n"
+    "我们已经提供了现有答案: {existing_answer}\n"
+    "我们有机会使用下面的更多上下文来完善现有答案。\n"
     "------------\n"
     "{context_msg}\n"
     "------------\n"
-    "If the context isn't useful, return the existing answer. "
-    "Otherwise, refine the existing answer using the new context."
+    "如果上下文没有用，返回现有答案。"
+    "否则，使用新上下文完善现有答案。"
 )
 
 def get_retriever(index: VectorStoreIndex, similarity_top_k: int = 5):
-    """Get a vector retriever with customized settings"""
+    """获取具有自定义设置的向量检索器"""
     return VectorIndexRetriever(
         index=index,
         similarity_top_k=similarity_top_k
@@ -54,20 +53,20 @@ def get_query_engine(
     similarity_top_k: int = 5,
     similarity_cutoff: Optional[float] = 0.7
 ):
-    """Get a query engine with customized settings"""
-    # Create retriever
+    """获取具有自定义设置的查询引擎"""
+    # 创建检索器
     retriever = get_retriever(index, similarity_top_k)
     
-    # Create prompt templates
+    # 创建提示模板
     text_qa_template = PromptTemplate(DEFAULT_TEXT_QA_PROMPT_TMPL)
     refine_template = PromptTemplate(DEFAULT_REFINE_PROMPT_TMPL)
     
-    # Define postprocessors
+    # 定义后处理器
     postprocessors = []
     if similarity_cutoff is not None:
         postprocessors.append(SimilarityPostprocessor(similarity_cutoff=similarity_cutoff))
     
-    # Create query engine
+    # 创建查询引擎
     query_engine = RetrieverQueryEngine.from_args(
         retriever=retriever,
         text_qa_template=text_qa_template,
@@ -84,31 +83,31 @@ async def retrieve_documents(
     similarity_cutoff: Optional[float] = 0.7
 ) -> List[Dict[str, Any]]:
     """
-    Retrieve relevant documents using LlamaIndex
+    使用LlamaIndex检索相关文档
     
-    Args:
-        query: Query string to search for
-        index: LlamaIndex to search in
-        top_k: Number of documents to retrieve
-        similarity_cutoff: Optional minimum similarity score
+    参数:
+        query: 要搜索的查询字符串
+        index: 要搜索的LlamaIndex
+        top_k: 要检索的文档数量
+        similarity_cutoff: 可选的最小相似度分数
         
-    Returns:
-        List of document dictionaries with content and metadata
+    返回:
+        文档字典列表，包含内容和元数据
     """
-    # Create retriever
+    # 创建检索器
     retriever = get_retriever(index, top_k)
     
-    # Create query bundle
+    # 创建查询包
     query_bundle = QueryBundle(query)
     
-    # Retrieve nodes
+    # 检索节点
     nodes = retriever.retrieve(query_bundle)
     
-    # Filter by similarity cutoff if specified
+    # 如果指定了相似度阈值，则过滤
     if similarity_cutoff is not None:
         nodes = [node for node in nodes if node.score is None or node.score >= similarity_cutoff]
     
-    # Format results
+    # 格式化结果
     results = []
     for node in nodes:
         results.append({
@@ -128,34 +127,34 @@ async def query_documents(
     return_sources: bool = True
 ) -> Dict[str, Any]:
     """
-    Query documents and get a synthesized answer
+    查询文档并获取综合答案
     
-    Args:
-        query: Query string to search for
-        index: LlamaIndex to search in
-        top_k: Number of documents to retrieve
-        similarity_cutoff: Optional minimum similarity score
-        return_sources: Whether to include source documents in response
+    参数:
+        query: 要搜索的查询字符串
+        index: 要搜索的LlamaIndex
+        top_k: 要检索的文档数量
+        similarity_cutoff: 可选的最小相似度分数
+        return_sources: 是否在响应中包含源文档
         
-    Returns:
-        Dictionary with answer and optional source documents
+    返回:
+        包含答案和可选源文档的字典
     """
-    # Get query engine
+    # 获取查询引擎
     query_engine = get_query_engine(index, top_k, similarity_cutoff)
     
-    # Set response mode to include source nodes if requested
+    # 如果请求，设置响应模式以包含源节点
     if return_sources:
-        query_engine.response_mode = "tree_summarize"  # To get source nodes in response
+        query_engine.response_mode = "tree_summarize"  # 在响应中获取源节点
     
-    # Execute query
+    # 执行查询
     response = await query_engine.aquery(query)
     
-    # Prepare result
+    # 准备结果
     result = {
         "answer": response.response,
     }
     
-    # Include sources if requested
+    # 如果请求，包含源
     if return_sources and hasattr(response, "source_nodes"):
         sources = []
         for node in response.source_nodes:
@@ -175,23 +174,23 @@ def create_custom_query_engine(
     stream: bool = False
 ):
     """
-    Create a custom query engine with a specific template
+    创建具有特定模板的自定义查询引擎
     
-    Args:
-        index: LlamaIndex to use
-        query_template: Custom prompt template for query
-        stream: Whether to enable streaming response
+    参数:
+        index: 要使用的LlamaIndex
+        query_template: 自定义查询提示模板
+        stream: 是否启用流式响应
         
-    Returns:
-        Custom query engine
+    返回:
+        自定义查询引擎
     """
-    # Create custom prompt template
+    # 创建自定义提示模板
     custom_prompt = PromptTemplate(query_template)
     
-    # Create retriever
+    # 创建检索器
     retriever = get_retriever(index)
     
-    # Create query engine with custom prompt
+    # 创建具有自定义提示的查询引擎
     query_engine = RetrieverQueryEngine.from_args(
         retriever=retriever,
         text_qa_template=custom_prompt,

@@ -1,62 +1,62 @@
 """
-Agno Tools Module: Implements tools that can be used by Agno agents
-to perform actions and integrate with external systems
+Agno工具模块：实现可被Agno代理使用的工具，
+用于执行操作和与外部系统集成
 """
 
 from typing import Dict, List, Any, Optional, Callable
 import json
 
-# Note: These are placeholders for actual Agno tool imports
-# In a real implementation, you would import:
+# 注意：这些是实际Agno工具导入的占位符
+# 在实际实现中，您应该导入：
 # from agno.tools import Tool, ToolRegistry
 
 class AgnoTool:
-    """A simple wrapper around an Agno tool function"""
+    """Agno工具函数的简单包装器"""
     
     def __init__(self, name: str, description: str, function: Callable):
         """
-        Initialize a tool
+        初始化工具
         
-        Args:
-            name: Tool name
-            description: Tool description
-            function: Function to execute when the tool is called
+        参数：
+            name: 工具名称
+            description: 工具描述
+            function: 工具被调用时执行的函数
         """
         self.name = name
         self.description = description
         self.function = function
     
     async def execute(self, *args, **kwargs):
-        """Execute the tool function"""
+        """执行工具函数"""
         if callable(self.function):
             return await self.function(*args, **kwargs)
         return None
 
 
-# Knowledge base search tool
+# 知识库搜索工具
 async def search_documents(query: str, kb_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
     """
-    Search for documents in a knowledge base
+    在知识库中搜索文档
     
-    Args:
-        query: Search query
-        kb_id: Knowledge base ID (optional if agent has default KB)
-        top_k: Number of results to return
+    参数：
+        query: 搜索查询
+        kb_id: 知识库ID（如果代理有默认KB则可选）
+        top_k: 返回结果的数量
         
-    Returns:
-        Search results
+    返回：
+        搜索结果
     """
     from app.frameworks.agno.knowledge_base import KnowledgeBaseProcessor
     
-    # If no KB ID provided, use agent's default KB
+    # 如果没有提供KB ID，则使用代理的默认KB
     if not kb_id:
-        # This would be handled by the agent's context in the actual implementation
-        raise ValueError("No knowledge base ID provided")
+        # 这在实际实现中将由代理的上下文处理
+        raise ValueError("未提供知识库ID")
     
-    # Create KB processor
+    # 创建KB处理器
     kb_processor = KnowledgeBaseProcessor(kb_id=kb_id)
     
-    # Search
+    # 搜索
     results = await kb_processor.search(query=query, top_k=top_k)
     
     return {
@@ -66,52 +66,52 @@ async def search_documents(query: str, kb_id: Optional[str] = None, top_k: int =
     }
 
 
-# Document summarization tool
+# 文档摘要工具
 async def summarize_document(document_id: str, max_length: int = 200) -> Dict[str, Any]:
     """
-    Summarize a document
+    生成文档摘要
     
-    Args:
-        document_id: Document ID to summarize
-        max_length: Maximum length of summary
+    参数：
+        document_id: 要摘要的文档ID
+        max_length: 摘要的最大长度
         
-    Returns:
-        Document summary
+    返回：
+        文档摘要
     """
-    # In a real implementation, this would retrieve the document
-    # and use an LLM to generate a summary
+    # 在实际实现中，这将检索文档
+    # 并使用LLM生成摘要
     
-    # Placeholder implementation
+    # 占位符实现
     return {
-        "summary": f"This is a summary of document {document_id}...",
+        "summary": f"这是文档 {document_id} 的摘要...",
         "document_id": document_id
     }
 
 
-# File metadata extraction tool
+# 文件元数据提取工具
 async def extract_file_metadata(file_path: str) -> Dict[str, Any]:
     """
-    Extract metadata from a file
+    从文件中提取元数据
     
-    Args:
-        file_path: Path to the file
+    参数：
+        file_path: 文件路径
         
-    Returns:
-        Extracted metadata
+    返回：
+        提取的元数据
     """
     import os
     from datetime import datetime
     
-    # Check if file exists
+    # 检查文件是否存在
     if not os.path.exists(file_path):
-        return {"error": f"File not found: {file_path}"}
+        return {"error": f"文件未找到: {file_path}"}
     
-    # Get basic file info
+    # 获取基本文件信息
     file_stat = os.stat(file_path)
     file_name = os.path.basename(file_path)
     file_ext = os.path.splitext(file_name)[1].lower()
     
-    # Basic metadata
+    # 基本元数据
     metadata = {
         "file_name": file_name,
         "file_extension": file_ext,
@@ -121,10 +121,10 @@ async def extract_file_metadata(file_path: str) -> Dict[str, Any]:
         "accessed_at": datetime.fromtimestamp(file_stat.st_atime).isoformat(),
     }
     
-    # Additional metadata based on file type
+    # 基于文件类型的额外元数据
     if file_ext in ['.pdf', '.docx', '.xlsx', '.pptx', '.txt']:
-        # In a real implementation, you would extract specific metadata
-        # based on the file type using appropriate libraries
+        # 在实际实现中，您将使用适当的库
+        # 根据文件类型提取特定元数据
         metadata["content_type"] = {
             '.pdf': 'application/pdf',
             '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -136,28 +136,28 @@ async def extract_file_metadata(file_path: str) -> Dict[str, Any]:
     return metadata
 
 
-# Get standard tools for knowledge base agents
+# 获取知识库代理的标准工具
 def get_knowledge_tools() -> List[AgnoTool]:
     """
-    Get standard tools for knowledge base agents
+    获取知识库代理的标准工具
     
-    Returns:
-        List of knowledge tools
+    返回：
+        知识工具列表
     """
     return [
         AgnoTool(
             name="search_documents",
-            description="Search for documents in a knowledge base",
+            description="在知识库中搜索文档",
             function=search_documents
         ),
         AgnoTool(
             name="summarize_document",
-            description="Summarize a document",
+            description="生成文档摘要",
             function=summarize_document
         ),
         AgnoTool(
             name="extract_file_metadata",
-            description="Extract metadata from a file",
+            description="从文件中提取元数据",
             function=extract_file_metadata
         )
     ]

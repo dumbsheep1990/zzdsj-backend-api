@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
 
-# Base Knowledge Base Schema
+# 基础知识库模式
 class KnowledgeBaseBase(BaseModel):
     name: str
     description: Optional[str] = None
@@ -10,11 +10,11 @@ class KnowledgeBaseBase(BaseModel):
     type: Optional[str] = "default"
     embedding_model: Optional[str] = "text-embedding-ada-002"
 
-# Create Knowledge Base Schema
+# 创建知识库模式
 class KnowledgeBaseCreate(KnowledgeBaseBase):
     pass
 
-# Update Knowledge Base Schema
+# 更新知识库模式
 class KnowledgeBaseUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
@@ -23,7 +23,7 @@ class KnowledgeBaseUpdate(BaseModel):
     type: Optional[str] = None
     embedding_model: Optional[str] = None
 
-# Knowledge Base Schema (for responses)
+# 知识库模式（用于响应）
 class KnowledgeBase(KnowledgeBaseBase):
     id: int
     is_active: bool
@@ -36,7 +36,7 @@ class KnowledgeBase(KnowledgeBaseBase):
     class Config:
         orm_mode = True
 
-# Knowledge Base with Stats
+# 带统计数据的知识库
 class KnowledgeBaseWithStats(KnowledgeBase):
     document_count: int
     total_tokens: int
@@ -45,7 +45,7 @@ class KnowledgeBaseWithStats(KnowledgeBase):
     class Config:
         orm_mode = True
 
-# Document Base Schema
+# 文档基础模式
 class DocumentBase(BaseModel):
     title: str
     content: Optional[str] = None
@@ -53,18 +53,18 @@ class DocumentBase(BaseModel):
     metadata: Optional[Dict[str, Any]] = {}
     file_path: Optional[str] = None
 
-# Create Document Schema
+# 创建文档模式
 class DocumentCreate(DocumentBase):
     knowledge_base_id: int
 
-# Update Document Schema
+# 更新文档模式
 class DocumentUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     status: Optional[str] = None
 
-# Document Schema (for responses)
+# 文档模式（用于响应）
 class Document(DocumentBase):
     id: int
     knowledge_base_id: int
@@ -77,7 +77,7 @@ class Document(DocumentBase):
     class Config:
         orm_mode = True
 
-# Document Chunk Schema
+# 文档块模式
 class DocumentChunk(BaseModel):
     id: int
     document_id: int
@@ -90,7 +90,7 @@ class DocumentChunk(BaseModel):
     class Config:
         orm_mode = True
 
-# Knowledge Base Stats Schema
+# 知识库统计数据模式
 class KnowledgeBaseStats(BaseModel):
     document_count: int
     total_tokens: int
@@ -99,7 +99,7 @@ class KnowledgeBaseStats(BaseModel):
     error_count: int
     file_types: Dict[str, int] = {}
 
-# Document List Response
+# 文档列表响应
 class DocumentListResponse(BaseModel):
     items: List[Document]
     total: int

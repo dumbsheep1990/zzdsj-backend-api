@@ -11,19 +11,19 @@ from pymilvus import (
 from app.config import settings
 
 def init_milvus():
-    """Initialize connection to Milvus vector database"""
+    """初始化Milvus向量数据库连接"""
     connections.connect(
         alias="default", 
         host=settings.MILVUS_HOST,
         port=settings.MILVUS_PORT
     )
     
-    # Check if collection exists, create if it doesn't
+    # 检查集合是否存在，如果不存在则创建
     if not utility.has_collection(settings.MILVUS_COLLECTION):
         create_collection()
 
-def create_collection(dim=1536):  # Default dimension for OpenAI embeddings
-    """Create the Milvus collection for document embeddings"""
+def create_collection(dim=1536):  # OpenAI嵌入的默认维度
+    """创建用于文档嵌入的Milvus集合"""
     fields = [
         FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
         FieldSchema(name="chunk_id", dtype=DataType.INT64),
@@ -31,10 +31,10 @@ def create_collection(dim=1536):  # Default dimension for OpenAI embeddings
         FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=dim)
     ]
     
-    schema = CollectionSchema(fields=fields, description="Document embeddings collection")
+    schema = CollectionSchema(fields=fields, description="文档嵌入集合")
     collection = Collection(name=settings.MILVUS_COLLECTION, schema=schema)
     
-    # Create index for vector field
+    # 为向量字段创建索引
     index_params = {
         "index_type": "IVF_FLAT",
         "metric_type": "L2",
@@ -45,37 +45,37 @@ def create_collection(dim=1536):  # Default dimension for OpenAI embeddings
     return collection
 
 def get_collection():
-    """Get the Milvus collection, creating it if necessary"""
+    """获取Milvus集合，如有必要则创建"""
     if not utility.has_collection(settings.MILVUS_COLLECTION):
         return create_collection()
     
     return Collection(name=settings.MILVUS_COLLECTION)
 
 def add_vectors(chunk_ids: List[int], document_ids: List[int], vectors: List[List[float]]):
-    """Add vectors to Milvus collection"""
+    """向Milvus集合添加向量"""
     collection = get_collection()
     
-    # Prepare data for insertion
+    # 准备插入数据
     data = [
-        chunk_ids,      # chunk_id field
-        document_ids,   # document_id field
-        vectors         # embedding field
+        chunk_ids,      # chunk_id字段
+        document_ids,   # document_id字段
+        vectors         # embedding字段
     ]
     
-    # Insert data
+    # 插入数据
     collection.insert(data)
     collection.flush()
 
 def search_similar_vectors(query_vector: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
-    """Search for similar vectors in Milvus"""
+    """在Milvus中搜索相似向量"""
     collection = get_collection()
     collection.load()
     
-    # Convert to numpy array if needed
+    # 如需要转换为numpy数组
     if not isinstance(query_vector, np.ndarray):
         query_vector = np.array([query_vector])
     
-    # Perform search
+    # 执行搜索
     search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
     results = collection.search(
         data=query_vector, 
@@ -85,7 +85,7 @@ def search_similar_vectors(query_vector: List[float], top_k: int = 5) -> List[Di
         output_fields=["chunk_id", "document_id"]
     )
     
-    # Format results
+    # 格式化结果
     formatted_results = []
     for hits in results:
         for hit in hits:

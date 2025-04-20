@@ -33,7 +33,7 @@ def get_knowledge_bases(
     db: Session = Depends(get_db)
 ):
     """
-    Get all knowledge bases with statistics, supporting search and filtering.
+    获取所有知识库及其统计信息，支持搜索和过滤。
     """
     query = db.query(KnowledgeBase)
     
@@ -44,18 +44,18 @@ def get_knowledge_bases(
         query = query.filter(KnowledgeBase.name.ilike(f"%{search}%") | 
                            KnowledgeBase.description.ilike(f"%{search}%"))
     
-    # Get basic knowledge base data
+    # 获取基本知识库数据
     knowledge_bases = query.offset(skip).limit(limit).all()
     
-    # Enrich with stats
+    # 用统计信息丰富数据
     result = []
     for kb in knowledge_bases:
-        # Get document count and file type distribution
+        # 获取文档数量和文件类型分布
         doc_count = db.query(func.count(Document.id)).filter(
             Document.knowledge_base_id == kb.id
         ).scalar()
         
-        # Get file type distribution
+        # 获取文件类型分布
         file_types_query = db.query(
             Document.mime_type, 
             func.count(Document.id)
@@ -65,14 +65,14 @@ def get_knowledge_bases(
         
         file_types = {mime_type: count for mime_type, count in file_types_query}
         
-        # Get token count
+        # 获取令牌计数
         token_count = db.query(func.sum(DocumentChunk.token_count)).join(
             Document, DocumentChunk.document_id == Document.id
         ).filter(
             Document.knowledge_base_id == kb.id
         ).scalar() or 0
         
-        # Create enriched model
+        # 创建增强模型
         kb_with_stats = KnowledgeBaseWithStats(
             **{k: getattr(kb, k) for k in kb.__table__.columns.keys()},
             document_count=doc_count,
@@ -91,9 +91,9 @@ async def create_knowledge_base(
     db: Session = Depends(get_db)
 ):
     """
-    Create a new knowledge base, initializing Agno integration.
+    创建新知识库，初始化Agno集成。
     """
-    # Create database record
+    # 创建数据库记录
     db_knowledge_base = KnowledgeBase(
         name=knowledge_base.name,
         description=knowledge_base.description,
@@ -105,7 +105,7 @@ async def create_knowledge_base(
     db.commit()
     db.refresh(db_knowledge_base)
     
-    # Initialize Agno knowledge base in background
+    # 在后台初始化Agno知识库
     background_tasks.add_task(
         initialize_agno_knowledge_base,
         db_knowledge_base.id,
@@ -115,31 +115,31 @@ async def create_knowledge_base(
     return db_knowledge_base
 
 async def initialize_agno_knowledge_base(kb_id: int, db: Session):
-    """Initialize an Agno knowledge base for the given database record"""
+    """为给定的数据库记录初始化Agno知识库"""
     kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == kb_id).first()
     if not kb:
-        print(f"Knowledge base {kb_id} not found for Agno initialization")
+        print(f"未找到知识库 {kb_id} 用于Agno初始化")
         return
     
     try:
-        # Initialize Agno KB processor
+        # 初始化Agno KB处理器
         kb_processor = KnowledgeBaseProcessor(
             kb_id=str(kb_id),
             name=kb.name
         )
         
-        # Generate a unique Agno KB ID
+        # 生成唯一的Agno KB ID
         import uuid
         agno_kb_id = f"agno-kb-{uuid.uuid4()}"
         
-        # Update database record with Agno KB ID
+        # 使用Agno KB ID更新数据库记录
         kb.agno_kb_id = agno_kb_id
         db.commit()
         
-        print(f"Initialized Agno knowledge base for {kb.name} with ID {agno_kb_id}")
+        print(f"已为 {kb.name} 初始化Agno知识库，ID为 {agno_kb_id}")
     except Exception as e:
-        print(f"Error initializing Agno knowledge base: {e}")
-        # Update record with error
+        print(f"初始化Agno知识库时出错: {e}")
+        # 用错误更新记录
         kb.settings = {**kb.settings, "initialization_error": str(e)}
         db.commit()
 
@@ -149,19 +149,19 @@ def get_knowledge_base(
     db: Session = Depends(get_db)
 ):
     """
-    Get knowledge base by ID with detailed statistics.
+    通过ID获取知识库及其详细统计信息。
     """
-    # Get knowledge base
+    # 获取知识库
     knowledge_base = db.query(KnowledgeBase).filter(KnowledgeBase.id == knowledge_base_id).first()
     if not knowledge_base:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="未找到知识库")
     
-    # Get document stats
+    # 获取文档统计
     doc_count = db.query(func.count(Document.id)).filter(
         Document.knowledge_base_id == knowledge_base_id
     ).scalar()
     
-    # Get file type distribution
+    # 获取文件类型分布
     file_types_query = db.query(
         Document.mime_type, 
         func.count(Document.id)
@@ -171,14 +171,14 @@ def get_knowledge_base(
     
     file_types = {mime_type: count for mime_type, count in file_types_query}
     
-    # Get token count
+    # 获取令牌计数
     token_count = db.query(func.sum(DocumentChunk.token_count)).join(
         Document, DocumentChunk.document_id == Document.id
     ).filter(
         Document.knowledge_base_id == knowledge_base_id
     ).scalar() or 0
     
-    # Create enriched response
+    # 创建增强响应
     kb_with_stats = KnowledgeBaseWithStats(
         **{k: getattr(knowledge_base, k) for k in knowledge_base.__table__.columns.keys()},
         document_count=doc_count,
@@ -194,18 +194,19 @@ def get_knowledge_base_stats(
     db: Session = Depends(get_db)
 ):
     """
-    Get detailed knowledge base statistics.
+    获取详细的知识库统计信息。
     """
-    # Check if knowledge base exists
+    # 检查知识库是否存在
     knowledge_base = db.query(KnowledgeBase).filter(KnowledgeBase.id == knowledge_base_id).first()
     if not knowledge_base:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="未找到知识库")
     
-    # Get document counts by status
+    # 获取文档计数
     doc_count = db.query(func.count(Document.id)).filter(
         Document.knowledge_base_id == knowledge_base_id
     ).scalar()
     
+    # 获取处理状态计数
     processed_count = db.query(func.count(Document.id)).filter(
         Document.knowledge_base_id == knowledge_base_id,
         Document.status == "indexed"
@@ -221,7 +222,7 @@ def get_knowledge_base_stats(
         Document.status == "error"
     ).scalar()
     
-    # Get file type distribution
+    # 获取文件类型分布
     file_types_query = db.query(
         Document.mime_type, 
         func.count(Document.id)
@@ -231,7 +232,7 @@ def get_knowledge_base_stats(
     
     file_types = {mime_type: count for mime_type, count in file_types_query}
     
-    # Get token count
+    # 获取令牌计数
     token_count = db.query(func.sum(DocumentChunk.token_count)).join(
         Document, DocumentChunk.document_id == Document.id
     ).filter(
@@ -240,7 +241,7 @@ def get_knowledge_base_stats(
     
     return KnowledgeBaseStats(
         document_count=doc_count,
-        total_tokens=token_count or 0,
+        total_tokens=token_count,
         processed_count=processed_count,
         pending_count=pending_count,
         error_count=error_count,
@@ -254,13 +255,13 @@ def update_knowledge_base(
     db: Session = Depends(get_db)
 ):
     """
-    Update a knowledge base.
+    更新知识库。
     """
     knowledge_base = db.query(KnowledgeBase).filter(KnowledgeBase.id == knowledge_base_id).first()
     if not knowledge_base:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="未找到知识库")
     
-    # Update fields that are provided
+    # 更新提供的字段
     update_data = knowledge_base_update.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(knowledge_base, field, value)
@@ -276,35 +277,35 @@ def delete_knowledge_base(
     db: Session = Depends(get_db)
 ):
     """
-    Delete or deactivate a knowledge base.
+    删除或停用知识库。
     """
     knowledge_base = db.query(KnowledgeBase).filter(KnowledgeBase.id == knowledge_base_id).first()
     if not knowledge_base:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="未找到知识库")
     
     if permanent:
-        # Delete documents and chunks
+        # 删除文档和块
         documents = db.query(Document).filter(Document.knowledge_base_id == knowledge_base_id).all()
         for doc in documents:
-            # Delete chunks
+            # 删除块
             db.query(DocumentChunk).filter(DocumentChunk.document_id == doc.id).delete()
         
-        # Delete documents
+        # 删除文档
         db.query(Document).filter(Document.knowledge_base_id == knowledge_base_id).delete()
         
-        # Delete knowledge base
+        # 删除知识库
         db.delete(knowledge_base)
         db.commit()
         
-        return {"message": "Knowledge base permanently deleted"}
+        return {"message": "知识库永久删除"}
     else:
-        # Soft delete by setting is_active to False
+        # 软删除，设置is_active为False
         knowledge_base.is_active = False
         db.commit()
         
-        return {"message": "Knowledge base deactivated successfully"}
+        return {"message": "知识库停用成功"}
 
-# Document management endpoints
+# 文档管理端点
 @router.get("/{knowledge_base_id}/documents", response_model=DocumentListResponse)
 def get_documents(
     knowledge_base_id: int,
@@ -318,17 +319,17 @@ def get_documents(
     db: Session = Depends(get_db)
 ):
     """
-    Get all documents in a knowledge base with pagination, filtering, and sorting.
+    获取知识库中的所有文档，支持分页、过滤和排序。
     """
-    # Check if knowledge base exists
+    # 检查知识库是否存在
     knowledge_base = db.query(KnowledgeBase).filter(KnowledgeBase.id == knowledge_base_id).first()
     if not knowledge_base:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="未找到知识库")
     
-    # Build base query
+    # 构建基本查询
     query = db.query(Document).filter(Document.knowledge_base_id == knowledge_base_id)
     
-    # Apply filters
+    # 应用过滤器
     if search:
         query = query.filter(Document.title.ilike(f"%{search}%"))
     
@@ -338,10 +339,10 @@ def get_documents(
     if mime_type:
         query = query.filter(Document.mime_type == mime_type)
     
-    # Get total count
+    # 获取总数
     total_count = query.count()
     
-    # Apply sorting
+    # 应用排序
     if sort_by:
         sort_column = getattr(Document, sort_by, Document.created_at)
         if sort_order.lower() == "desc":
@@ -350,11 +351,11 @@ def get_documents(
             sort_column = sort_column.asc()
         query = query.order_by(sort_column)
     
-    # Apply pagination
+    # 应用分页
     skip = (page - 1) * page_size
     query = query.offset(skip).limit(page_size)
     
-    # Get results
+    # 获取结果
     documents = query.all()
     
     return DocumentListResponse(
@@ -374,18 +375,18 @@ async def create_document(
     db: Session = Depends(get_db)
 ):
     """
-    Add a new document to a knowledge base either by uploading a file or providing content directly.
-    Uses Agno for document processing and indexing.
+    向知识库添加新文档，可以通过上传文件或直接提供内容。
+    使用Agno进行文档处理和索引。
     """
-    # Check if knowledge base exists
+    # 检查知识库是否存在
     knowledge_base = db.query(KnowledgeBase).filter(KnowledgeBase.id == knowledge_base_id).first()
     if not knowledge_base:
-        raise HTTPException(status_code=404, detail="Knowledge base not found")
+        raise HTTPException(status_code=404, detail="未找到知识库")
     
     if file is None and content is None:
-        raise HTTPException(status_code=400, detail="Either file or content must be provided")
+        raise HTTPException(status_code=400, detail="必须提供文件或内容")
     
-    # Create document record
+    # 创建文档记录
     document = Document(
         knowledge_base_id=knowledge_base_id,
         title=title,
@@ -393,7 +394,7 @@ async def create_document(
     )
     
     if file:
-        # Process uploaded file
+        # 处理上传文件
         file_content = await file.read()
         mime_type = file.content_type
         file_size = len(file_content)
@@ -404,7 +405,7 @@ async def create_document(
         if mime_type.startswith("text/"):
             document.content = file_content.decode()
         
-        # Upload file to object storage (MinIO)
+        # 上传文件到对象存储（MinIO）
         file_path = f"knowledge-bases/{knowledge_base_id}/documents/{file.filename}"
         upload_result = upload_file(
             file_data=file.file,
@@ -420,7 +421,7 @@ async def create_document(
             "upload_date": datetime.now().isoformat()
         }
     else:
-        # Save direct content
+        # 保存直接内容
         document.content = content
         document.mime_type = "text/plain"
         document.file_size = len(content.encode())
@@ -435,7 +436,7 @@ async def create_document(
     db.commit()
     db.refresh(document)
     
-    # Process document with Agno in background
+    # 在后台使用Agno处理文档
     background_tasks.add_task(
         process_document_with_agno,
         document.id,
@@ -445,30 +446,30 @@ async def create_document(
     return document
 
 async def process_document_with_agno(document_id: int, db: Session):
-    """Process a document using Agno's knowledge base capabilities"""
-    # Get document
+    """使用Agno的知识库功能处理文档"""
+    # 获取文档
     document = db.query(Document).filter(Document.id == document_id).first()
     if not document:
-        print(f"Document {document_id} not found for Agno processing")
+        print(f"未找到文档 {document_id} 用于Agno处理")
         return
     
-    # Update status
+    # 更新状态
     document.status = "processing"
     db.commit()
     
     try:
-        # Get knowledge base
+        # 获取知识库
         kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == document.knowledge_base_id).first()
         if not kb:
-            raise ValueError(f"Knowledge base {document.knowledge_base_id} not found")
+            raise ValueError(f"未找到知识库 {document.knowledge_base_id}")
         
-        # Initialize Agno KB processor
+        # 初始化Agno KB处理器
         kb_processor = KnowledgeBaseProcessor(
             kb_id=str(kb.id),
             name=kb.name
         )
         
-        # Prepare document data
+        # 准备文档数据
         doc_data = {
             "content": document.content,
             "metadata": {
@@ -479,19 +480,19 @@ async def process_document_with_agno(document_id: int, db: Session):
             }
         }
         
-        # Add document to Agno knowledge base
+        # 向Agno知识库添加文档
         result = await kb_processor.add_document(doc_data)
         
-        # Store chunk information
-        # In a real implementation, we'd extract actual chunks from the result
-        # For now, we'll create simulated chunks
+        # 存储块信息
+        # 在真实实现中，我们将从结果中提取实际块
+        # 目前，我们将创建模拟块
         from app.utils.text_processing import count_tokens
         
         if document.content:
-            # Calculate token count
+            # 计算令牌数
             token_count = count_tokens(document.content)
             
-            # For simulation, create chunks (in real implementation this would come from Agno)
+            # 模拟块（在真实实现中，这将来自Agno）
             chunk_size = 1000
             chunks = [document.content[i:i+chunk_size] for i in range(0, len(document.content), chunk_size)]
             
@@ -508,7 +509,7 @@ async def process_document_with_agno(document_id: int, db: Session):
                 )
                 db.add(chunk)
             
-            # Update document and knowledge base stats
+            # 更新文档和知识库统计
             document.status = "indexed"
             kb.total_documents += 1
             kb.total_tokens += token_count
@@ -516,15 +517,15 @@ async def process_document_with_agno(document_id: int, db: Session):
             db.commit()
         else:
             document.status = "error"
-            document.error_message = "No content to process"
+            document.error_message = "没有内容可处理"
             db.commit()
     
     except Exception as e:
-        # Update document status to error
+        # 更新文档状态为错误
         document.status = "error"
         document.error_message = str(e)
         db.commit()
-        print(f"Error processing document with Agno: {e}")
+        print(f"使用Agno处理文档时出错: {e}")
 
 @router.get("/{knowledge_base_id}/documents/{document_id}", response_model=DocumentSchema)
 def get_document(
@@ -533,7 +534,7 @@ def get_document(
     db: Session = Depends(get_db)
 ):
     """
-    Get a document by ID.
+    通过ID获取文档。
     """
     document = db.query(Document).filter(
         Document.knowledge_base_id == knowledge_base_id,
@@ -541,7 +542,7 @@ def get_document(
     ).first()
     
     if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail="未找到文档")
     
     return document
 
@@ -553,7 +554,7 @@ async def delete_document(
     db: Session = Depends(get_db)
 ):
     """
-    Delete a document from the knowledge base.
+    从知识库中删除文档。
     """
     document = db.query(Document).filter(
         Document.knowledge_base_id == knowledge_base_id,
@@ -561,47 +562,46 @@ async def delete_document(
     ).first()
     
     if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail="未找到文档")
     
-    # Delete document chunks first
+    # 首先删除文档块
     db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).delete()
     
-    # Delete document from database
+    # 从数据库中删除文档
     db.delete(document)
     db.commit()
     
-    # Remove from Agno in background
+    # 在后台从Agno中删除文档
     background_tasks.add_task(
         remove_document_from_agno,
         knowledge_base_id,
         document_id
     )
     
-    return {"message": "Document deleted successfully"}
+    return {"message": "文档删除成功"}
 
 async def remove_document_from_agno(knowledge_base_id: int, document_id: int):
-    """Remove a document from Agno knowledge base"""
+    """从Agno知识库中删除文档"""
     try:
-        # Initialize Agno KB processor
+        # 初始化Agno KB处理器
         kb_processor = KnowledgeBaseProcessor(
             kb_id=str(knowledge_base_id)
         )
         
-        # Remove document from Agno
+        # 从Agno中删除文档
         await kb_processor.remove_document(document_id=str(document_id))
         
-        print(f"Successfully removed document {document_id} from Agno knowledge base {knowledge_base_id}")
+        print(f"成功从Agno知识库 {knowledge_base_id} 中删除文档 {document_id}")
     except Exception as e:
-        print(f"Error removing document from Agno: {e}")
-        # In a production system, we might want to:
-        # 1. Log this error to a monitoring system
-        # 2. Add to a retry queue
-        # 3. Update the document status in the database
+        print(f"从Agno中删除文档时出错: {e}")
+        # 在生产系统中，我们可能希望：
+        # 1. 将错误记录到监控系统中
+        # 2. 添加到重试队列中
+        # 3. 更新数据库中的文档状态
 
-# Helper function for token counting since we're not importing
-# Agno directly yet
+# 帮助函数，用于计算令牌数，因为我们尚未直接导入Agno
 def count_tokens(text: str) -> int:
-    """Count tokens in a text string (placeholder function)"""
+    """计算文本字符串中的令牌数（占位函数）"""
     import re
-    # Simple approximation: ~4 chars per token
+    # 简单近似：每4个字符一个令牌
     return len(re.findall(r'\S+', text)) + len(text) // 4
