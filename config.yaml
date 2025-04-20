@@ -1,0 +1,88 @@
+service:
+  name: knowledge-qa-backend
+  ip: 127.0.0.1
+  port: 8000
+  environment: development  # development, testing, production
+
+database:
+  url: postgresql://postgres:postgres@localhost:5432/knowledge_qa
+  pool_size: 10
+  max_overflow: 20
+  pool_recycle: 3600
+
+cors:
+  origins:
+    - http://localhost
+    - http://localhost:3000
+    - http://localhost:8080
+    - "*"
+
+llm:
+  openai_api_key: ""  # Set your actual key in a local config
+  default_model: gpt-4
+  temperature: 0.7
+  max_tokens: 1500
+
+vector_store:
+  provider: milvus  # milvus, faiss, pinecone
+  milvus:
+    host: localhost
+    port: 19530
+    collection: knowledge_embeddings
+  
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+  password: ""
+  
+storage:
+  provider: minio  # minio, s3, local
+  minio:
+    endpoint: localhost:9000
+    access_key: minioadmin
+    secret_key: minioadmin
+    secure: false
+    bucket: knowledge-docs
+  
+message_queue:
+  provider: rabbitmq  # rabbitmq, kafka, redis
+  rabbitmq:
+    host: localhost
+    port: 5672
+    user: guest
+    password: guest
+  
+service_discovery:
+  provider: nacos  # nacos, consul, eureka
+  nacos:
+    server_addresses: 127.0.0.1:8848
+    namespace: public
+    group: DEFAULT_GROUP
+  
+celery:
+  broker_url: amqp://guest:guest@localhost:5672//
+  result_backend: redis://localhost:6379/0
+  
+logging:
+  level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+paths:
+  vector_store: ./vector_store
+  knowledge_base: ./knowledge_base
+
+frameworks:
+  langchain:
+    enabled: true
+    embedding_model: text-embedding-ada-002
+  
+  haystack:
+    enabled: true
+    reader_model: deepset/roberta-base-squad2
+    retriever_top_k: 5
+  
+  llamaindex:
+    enabled: true
+    chunk_size: 1000
+    chunk_overlap: 200
