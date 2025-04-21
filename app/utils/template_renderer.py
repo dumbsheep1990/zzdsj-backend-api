@@ -1,6 +1,5 @@
 """
-Template Renderer: Provides functionality for rendering HTML templates
-for assistant web pages and other interface components
+模板渲染器：提供用于渲染助手网页和其他界面组件的HTML模板功能
 """
 
 import os
@@ -10,7 +9,7 @@ from datetime import datetime
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from app.config import settings
 
-# Initialize Jinja2 environment
+# 初始化Jinja2环境
 template_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
 env = Environment(
     loader=FileSystemLoader(template_dir),
@@ -19,33 +18,33 @@ env = Environment(
 
 def render_assistant_page(assistant: Any) -> str:
     """
-    Render an HTML page for interacting with an assistant
+    渲染用于与助手交互的HTML页面
     
-    Args:
-        assistant: Assistant object from database
+    参数:
+        assistant: 来自数据库的助手对象
         
-    Returns:
-        Rendered HTML content
+    返回:
+        渲染后的HTML内容
     """
-    # Check if templates directory exists, create if not
+    # 检查模板目录是否存在，如果不存在则创建
     if not os.path.exists(template_dir):
         os.makedirs(template_dir)
         
-        # Create default template if it doesn't exist
+        # 如果默认模板不存在则创建
         template_path = os.path.join(template_dir, "assistant.html")
         if not os.path.exists(template_path):
             with open(template_path, "w") as f:
                 f.write(DEFAULT_ASSISTANT_TEMPLATE)
     
-    # Get template
+    # 获取模板
     template = env.get_template("assistant.html")
     
-    # Extract assistant capabilities
+    # 提取助手功能
     capabilities = assistant.capabilities or []
     has_multimodal = "multimodal" in capabilities
     has_voice = "voice" in capabilities
     
-    # Prepare context data
+    # 准备上下文数据
     context = {
         "assistant": {
             "id": assistant.id,
@@ -66,22 +65,22 @@ def render_assistant_page(assistant: Any) -> str:
         }
     }
     
-    # Render template
+    # 渲染模板
     return template.render(**context)
 
 
 def render_conversation_export(conversation: Any, messages: List[Any]) -> str:
     """
-    Render a conversation export as HTML
+    将对话导出为HTML格式
     
-    Args:
-        conversation: Conversation object from database
-        messages: List of message objects
+    参数:
+        conversation: 来自数据库的对话对象
+        messages: 消息对象列表
         
-    Returns:
-        Rendered HTML content
+    返回:
+        渲染后的HTML内容
     """
-    # Get template
+    # 获取模板
     template_path = os.path.join(template_dir, "conversation_export.html")
     if not os.path.exists(template_path):
         with open(template_path, "w") as f:
@@ -89,7 +88,7 @@ def render_conversation_export(conversation: Any, messages: List[Any]) -> str:
     
     template = env.get_template("conversation_export.html")
     
-    # Format messages
+    # 格式化消息
     formatted_messages = []
     for msg in messages:
         formatted_messages.append({
@@ -98,7 +97,7 @@ def render_conversation_export(conversation: Any, messages: List[Any]) -> str:
             "created_at": msg.created_at.isoformat() if hasattr(msg, 'created_at') else "",
         })
     
-    # Prepare context data
+    # 准备上下文数据
     context = {
         "conversation": {
             "id": conversation.id,
@@ -114,17 +113,17 @@ def render_conversation_export(conversation: Any, messages: List[Any]) -> str:
         "static_url": f"{settings.BASE_URL}/static"
     }
     
-    # Render template
+    # 渲染模板
     return template.render(**context)
 
 
-# Default assistant template
+# 默认助手模板
 DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ assistant.name }} - AI Assistant</title>
+    <title>{{ assistant.name }} - AI助手</title>
     <style>
         :root {
             --primary-color: #3a6ea5;
@@ -364,39 +363,39 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                         <path d="M4.502 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/>
                         <path d="M14.002 13a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2V5A2 2 0 0 1 2 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-1.998 2M14 2H4a1 1 0 0 0-1 1h9.002a2 2 0 0 1 2 2v7A1 1 0 0 0 15 11V3a1 1 0 0 0-1-1M2.002 4a1 1 0 0 0-1 1v8l2.646-2.354a.5.5 0 0 1 .63-.062l2.66 1.773 3.71-3.71a.5.5 0 0 1 .577-.094l1.777 1.947V5a1 1 0 0 0-1-1h-10"/>
                     </svg>
-                    Upload Image
+                    上传图片
                 </label>
                 <input id="file-upload" class="file-upload" type="file" accept="image/*">
                 {% endif %}
             </div>
             
-            <button id="new-chat-btn">New Chat</button>
+            <button id="new-chat-btn">新建聊天</button>
         </div>
         
         <div id="chat-container" class="chat-container">
             <div class="message-container">
                 <div class="message assistant">
-                    <p>Hello! I'm {{ assistant.name }}. How can I help you today?</p>
+                    <p>您好！我是{{ assistant.name }}。我可以如何帮助您今天？</p>
                 </div>
             </div>
         </div>
         
         <div class="input-container">
-            <input type="text" id="user-input" placeholder="Type your message..." aria-label="Message input">
+            <input type="text" id="user-input" placeholder="输入您的消息..." aria-label="消息输入">
             {% if assistant.has_voice %}
-            <button id="voice-btn" title="Voice input">
+            <button id="voice-btn" title="语音输入">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M8 8a3 3 0 0 0 3-3V3a3 3 0 0 0-6 0v2a3 3 0 0 0 3 3"/>
                     <path d="M5 4.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/>
                 </svg>
             </button>
             {% endif %}
-            <button id="send-btn">Send</button>
+            <button id="send-btn">发送</button>
         </div>
     </main>
     
     <footer>
-        <p>Powered by Knowledge Q&A System | Model: {{ assistant.model }}</p>
+        <p>由知识问答系统提供支持 | 模型：{{ assistant.model }}</p>
     </footer>
     
     <script>
@@ -416,7 +415,7 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
             let waitingForResponse = false;
             let uploadedImages = [];
             
-            // Function to add a message to the chat
+            // 函数添加消息到聊天
             function addMessage(content, role) {
                 const messageContainer = document.createElement('div');
                 messageContainer.className = 'message-container';
@@ -430,7 +429,7 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
             
-            // Function to add a thinking indicator
+            // 函数添加思考指示器
             function addThinkingIndicator() {
                 const thinkingContainer = document.createElement('div');
                 thinkingContainer.className = 'message-container thinking-container';
@@ -439,7 +438,7 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                 thinkingElement.className = 'message assistant thinking';
                 thinkingElement.innerHTML = `
                     <div class="dot-flashing"></div>
-                    <span>Thinking...</span>
+                    <span>思考中...</span>
                 `;
                 
                 thinkingContainer.appendChild(thinkingElement);
@@ -449,7 +448,7 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                 return thinkingContainer;
             }
             
-            // Function to send a message to the assistant
+            // 函数发送消息到助手
             async function sendMessage() {
                 const message = userInput.value.trim();
                 if (message === '' && uploadedImages.length === 0) return;
@@ -457,31 +456,31 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                 if (waitingForResponse) return;
                 waitingForResponse = true;
                 
-                // Add user message to chat
+                // 添加用户消息到聊天
                 addMessage(message, 'user');
                 
-                // Clear input
+                // 清空输入
                 userInput.value = '';
                 
-                // Prepare request body
+                // 准备请求正文
                 let requestBody = {
                     messages: []
                 };
                 
-                // Add system message if this is a new conversation
+                // 添加系统消息如果这是一个新对话
                 if (!conversationId) {
                     requestBody.messages.push({
                         role: 'system',
-                        content: 'You are {{ assistant.name }}, a helpful AI assistant.'
+                        content: '您是{{ assistant.name }}, 一个有用的AI助手。'
                     });
                 } else {
                     requestBody.conversation_id = conversationId;
                 }
                 
-                // Add user message
+                // 添加用户消息
                 {% if assistant.has_multimodal %}
                 if (uploadedImages.length > 0) {
-                    // Format as multimodal content
+                    // 格式化为多模态内容
                     const content = [];
                     
                     if (message) {
@@ -505,7 +504,7 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                         content: content
                     });
                     
-                    // Clear uploaded images
+                    // 清空上传的图片
                     uploadedImages = [];
                 } else {
                     requestBody.messages.push({
@@ -520,11 +519,11 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                 });
                 {% endif %}
                 
-                // Add thinking indicator
+                // 添加思考指示器
                 const thinkingContainer = addThinkingIndicator();
                 
                 try {
-                    // Send request to API
+                    // 发送请求到API
                     const response = await fetch('{{ api_base_url }}/{{ assistant.id }}/chat/completions', {
                         method: 'POST',
                         headers: {
@@ -536,26 +535,26 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                     const data = await response.json();
                     
                     if (!data.message_id) {
-                        throw new Error('Invalid response from server');
+                        throw new Error('无效的服务器响应');
                     }
                     
-                    // Save conversation ID
+                    // 保存对话ID
                     if (data.conversation_id) {
                         conversationId = data.conversation_id;
                     }
                     
-                    // Poll for response
+                    // 轮询响应
                     await pollForResponse(data.message_id, thinkingContainer);
                     
                 } catch (error) {
-                    console.error('Error:', error);
+                    console.error('错误:', error);
                     chatContainer.removeChild(thinkingContainer);
-                    addMessage('Sorry, there was an error processing your request.', 'assistant');
+                    addMessage('抱歉，处理您的请求时出错。', 'assistant');
                     waitingForResponse = false;
                 }
             }
             
-            // Function to poll for assistant response
+            // 函数轮询助手响应
             async function pollForResponse(messageId, thinkingContainer) {
                 try {
                     const pollInterval = setInterval(async () => {
@@ -566,7 +565,7 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                             clearInterval(pollInterval);
                             chatContainer.removeChild(thinkingContainer);
                             
-                            // Add assistant response to chat
+                            // 添加助手响应到聊天
                             const content = data.choices[0].message.content;
                             addMessage(content, 'assistant');
                             
@@ -574,19 +573,19 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                         } else if (data.status === 'error') {
                             clearInterval(pollInterval);
                             chatContainer.removeChild(thinkingContainer);
-                            addMessage('Sorry, there was an error generating a response.', 'assistant');
+                            addMessage('抱歉，生成响应时出错。', 'assistant');
                             waitingForResponse = false;
                         }
                     }, 1000);
                 } catch (error) {
-                    console.error('Error polling for response:', error);
+                    console.error('轮询响应时出错:', error);
                     chatContainer.removeChild(thinkingContainer);
-                    addMessage('Sorry, there was an error getting the response.', 'assistant');
+                    addMessage('抱歉，获取响应时出错。', 'assistant');
                     waitingForResponse = false;
                 }
             }
             
-            // Event listeners
+            // 事件监听器
             sendButton.addEventListener('click', sendMessage);
             
             userInput.addEventListener('keypress', function(e) {
@@ -596,21 +595,21 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
             });
             
             newChatButton.addEventListener('click', function() {
-                // Clear chat
+                // 清空聊天
                 while (chatContainer.firstChild) {
                     chatContainer.removeChild(chatContainer.firstChild);
                 }
                 
-                // Reset conversation
+                // 重置对话
                 conversationId = null;
                 uploadedImages = [];
                 
-                // Add welcome message
-                addMessage('Hello! I\'m {{ assistant.name }}. How can I help you today?', 'assistant');
+                // 添加欢迎消息
+                addMessage('您好！我是{{ assistant.name }}。我可以如何帮助您今天？', 'assistant');
             });
             
             {% if assistant.has_voice %}
-            // Voice input
+            // 语音输入
             voiceButton.addEventListener('click', function() {
                 if ('webkitSpeechRecognition' in window) {
                     const recognition = new webkitSpeechRecognition();
@@ -618,7 +617,7 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                     recognition.interimResults = false;
                     
                     voiceButton.disabled = true;
-                    voiceButton.textContent = 'Listening...';
+                    voiceButton.textContent = '正在监听...';
                     
                     recognition.start();
                     
@@ -633,28 +632,28 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                     };
                     
                     recognition.onerror = function(event) {
-                        console.error('Speech recognition error:', event.error);
+                        console.error('语音识别错误:', event.error);
                         voiceButton.disabled = false;
                         voiceButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 8a3 3 0 0 0 3-3V3a3 3 0 0 0-6 0v2a3 3 0 0 0 3 3"/><path d="M5 4.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/></svg>';
                     };
                 } else {
-                    alert('Sorry, your browser does not support speech recognition.');
+                    alert('抱歉，您的浏览器不支持语音识别。');
                 }
             });
             {% endif %}
             
             {% if assistant.has_multimodal %}
-            // File upload
+            // 文件上传
             fileUpload.addEventListener('change', async function(e) {
                 if (e.target.files.length > 0) {
                     const file = e.target.files[0];
                     
-                    // Create FormData
+                    // 创建FormData
                     const formData = new FormData();
                     formData.append('file', file);
                     
                     try {
-                        // Upload image
+                        // 上传图片
                         const response = await fetch('{{ api_base_url }}/{{ assistant.id }}/upload', {
                             method: 'POST',
                             body: formData
@@ -665,12 +664,12 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
                         if (data.url) {
                             uploadedImages.push(data.url);
                             
-                            // Show image preview
-                            addMessage(`<img src="${data.url}" alt="Uploaded image" style="max-width: 100%; max-height: 300px;">`, 'user');
+                            // 显示图片预览
+                            addMessage(`<img src="${data.url}" alt="上传的图片" style="max-width: 100%; max-height: 300px;">`, 'user');
                         }
                     } catch (error) {
-                        console.error('Error uploading image:', error);
-                        alert('Error uploading image. Please try again.');
+                        console.error('上传图片时出错:', error);
+                        alert('上传图片时出错。请重试。');
                     }
                 }
             });
@@ -681,13 +680,13 @@ DEFAULT_ASSISTANT_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
-# Default export template
+# 默认导出模板
 DEFAULT_EXPORT_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversation with {{ assistant.name }}</title>
+    <title>与{{ assistant.name }}的对话</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -755,10 +754,10 @@ DEFAULT_EXPORT_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
     <header>
-        <h1>Conversation with {{ assistant.name }}</h1>
+        <h1>与{{ assistant.name }}的对话</h1>
         <div class="meta">
-            <div>Conversation: {{ conversation.title }}</div>
-            <div>Date: {{ conversation.created_at }}</div>
+            <div>对话：{{ conversation.title }}</div>
+            <div>日期：{{ conversation.created_at }}</div>
         </div>
     </header>
     
@@ -772,7 +771,7 @@ DEFAULT_EXPORT_TEMPLATE = """<!DOCTYPE html>
     </div>
     
     <footer>
-        <p>Exported on {{ export_date }}</p>
+        <p>导出于{{ export_date }}</p>
     </footer>
 </body>
 </html>

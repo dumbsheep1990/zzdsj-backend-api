@@ -4,11 +4,11 @@ import threading
 import time
 from app.config import settings
 
-# Global Nacos client instance
+# 全局Nacos客户端实例
 _nacos_client = None
 
 def get_nacos_client():
-    """Get or create a Nacos client instance"""
+    """获取或创建Nacos客户端实例"""
     global _nacos_client
     
     if _nacos_client is None:
@@ -20,41 +20,41 @@ def get_nacos_client():
     return _nacos_client
 
 def register_service():
-    """Register the service with Nacos"""
+    """向Nacos注册服务"""
     client = get_nacos_client()
     
-    # Get local IP if not specified
+    # 如果未指定则获取本地IP
     ip = settings.SERVICE_IP
     if ip == "127.0.0.1" or ip == "localhost":
         try:
             hostname = socket.gethostname()
             ip = socket.gethostbyname(hostname)
         except Exception as e:
-            print(f"Error getting local IP: {e}")
+            print(f"获取本地IP时出错: {e}")
             ip = "127.0.0.1"
     
-    # Register service instance
+    # 注册服务实例
     success = client.add_instance(
         service_name=settings.SERVICE_NAME,
         ip=ip,
         port=settings.SERVICE_PORT,
         weight=1.0,
-        ephemeral=True,  # Ephemeral instance will be automatically removed when heartbeat stops
+        ephemeral=True,  # 临时实例在心跳停止时将自动删除
         group_name=settings.NACOS_GROUP
     )
     
     if success:
-        print(f"Service {settings.SERVICE_NAME} registered with Nacos at {ip}:{settings.SERVICE_PORT}")
+        print(f"服务 {settings.SERVICE_NAME} 已在 {ip}:{settings.SERVICE_PORT} 注册到Nacos")
     else:
-        print(f"Failed to register service {settings.SERVICE_NAME} with Nacos")
+        print(f"无法将服务 {settings.SERVICE_NAME} 注册到Nacos")
     
     return success
 
 def deregister_service():
-    """Deregister the service from Nacos"""
+    """从Nacos注销服务"""
     client = get_nacos_client()
     
-    # Deregister service instance
+    # 注销服务实例
     success = client.remove_instance(
         service_name=settings.SERVICE_NAME,
         ip=settings.SERVICE_IP,
@@ -63,20 +63,20 @@ def deregister_service():
     )
     
     if success:
-        print(f"Service {settings.SERVICE_NAME} deregistered from Nacos")
+        print(f"服务 {settings.SERVICE_NAME} 已从Nacos注销")
     else:
-        print(f"Failed to deregister service {settings.SERVICE_NAME} from Nacos")
+        print(f"无法从Nacos注销服务 {settings.SERVICE_NAME}")
     
     return success
 
 def start_heartbeat():
-    """Start a background thread to send heartbeats to Nacos"""
+    """启动后台线程向Nacos发送心跳"""
     def heartbeat_task():
         client = get_nacos_client()
         
         while True:
             try:
-                # Send heartbeat
+                # 发送心跳
                 client.send_heartbeat(
                     service_name=settings.SERVICE_NAME,
                     ip=settings.SERVICE_IP,
@@ -84,19 +84,19 @@ def start_heartbeat():
                     group_name=settings.NACOS_GROUP
                 )
                 
-                # Sleep for 5 seconds
+                # 休眠5秒
                 time.sleep(5)
             
             except Exception as e:
-                print(f"Error sending heartbeat to Nacos: {e}")
+                print(f"向Nacos发送心跳时出错: {e}")
                 time.sleep(1)
     
-    # Start heartbeat thread
+    # 启动心跳线程
     heartbeat_thread = threading.Thread(target=heartbeat_task, daemon=True)
     heartbeat_thread.start()
 
 def get_service_instances(service_name: str, group_name: str = None):
-    """Get all instances of a service"""
+    """获取服务的所有实例"""
     client = get_nacos_client()
     
     if group_name is None:
@@ -111,11 +111,11 @@ def get_service_instances(service_name: str, group_name: str = None):
         return instances.get('hosts', [])
     
     except Exception as e:
-        print(f"Error getting service instances from Nacos: {e}")
+        print(f"从Nacos获取服务实例时出错: {e}")
         return []
 
 def get_config(data_id: str, group: str = None):
-    """Get configuration from Nacos"""
+    """从Nacos获取配置"""
     client = get_nacos_client()
     
     if group is None:
@@ -128,11 +128,11 @@ def get_config(data_id: str, group: str = None):
         )
     
     except Exception as e:
-        print(f"Error getting configuration from Nacos: {e}")
+        print(f"从Nacos获取配置时出错: {e}")
         return None
 
 def publish_config(data_id: str, content: str, group: str = None):
-    """Publish configuration to Nacos"""
+    """发布配置到Nacos"""
     client = get_nacos_client()
     
     if group is None:
@@ -146,5 +146,5 @@ def publish_config(data_id: str, content: str, group: str = None):
         )
     
     except Exception as e:
-        print(f"Error publishing configuration to Nacos: {e}")
+        print(f"向Nacos发布配置时出错: {e}")
         return False

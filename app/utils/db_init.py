@@ -1,5 +1,5 @@
 """
-Database Initialization Module: Provides tools for initializing and migrating the database schema
+数据库初始化模块：提供初始化和迁移数据库模式的工具
 """
 
 import os
@@ -11,16 +11,16 @@ from typing import List, Dict, Any, Optional
 import alembic.config
 from pathlib import Path
 
-# Configure logging
+# 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Add parent directory to path for imports
+# 将父目录添加到路径以便导入
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(os.path.dirname(current_dir))
 sys.path.append(parent_dir)
 
-# Import models to ensure they're registered with Base.metadata
+# 导入模型以确保它们注册到Base.metadata
 from app.models.database import Base
 from app.models.knowledge import KnowledgeBase, Document, DocumentChunk
 from app.models.assistant import Assistant, Conversation, Message, assistant_knowledge_base
@@ -28,36 +28,36 @@ from app.models.chat import ChatSession, ChatMessage
 from app.config import settings
 
 def get_db_url() -> str:
-    """Get database URL from settings"""
+    """从设置中获取数据库URL"""
     return f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
 
 def init_database(drop_existing: bool = False):
     """
-    Initialize the database schema
+    初始化数据库模式
     
-    Args:
-        drop_existing: If True, drop existing tables before creating new ones
+    参数:
+        drop_existing: 如果为True，在创建新表前删除现有表
     """
     try:
-        # Create database engine
+        # 创建数据库引擎
         engine = create_engine(get_db_url())
         
-        # Drop all tables if requested
+        # 如果请求则删除所有表
         if drop_existing:
-            logger.info("Dropping all existing tables...")
+            logger.info("正在删除所有现有表...")
             Base.metadata.drop_all(engine)
-            logger.info("All tables dropped successfully")
+            logger.info("所有表删除成功")
         
-        # Create all tables
-        logger.info("Creating database tables...")
+        # 创建所有表
+        logger.info("正在创建数据库表...")
         Base.metadata.create_all(engine)
-        logger.info("Database tables created successfully")
+        logger.info("数据库表创建成功")
         
-        # Create session for initial data
+        # 创建会话用于初始数据
         Session = sessionmaker(bind=engine)
         session = Session()
         
-        # Check if we should create initial data
+        # 检查是否应该创建初始数据
         if settings.CREATE_INITIAL_DATA:
             create_initial_data(session)
         
@@ -66,93 +66,93 @@ def init_database(drop_existing: bool = False):
         return True
     
     except Exception as e:
-        logger.error(f"Error initializing database: {str(e)}")
+        logger.error(f"初始化数据库时出错: {str(e)}")
         return False
 
 def check_database_connection():
     """
-    Check if the database connection is working
+    检查数据库连接是否正常
     
-    Returns:
-        True if connection successful, False otherwise
+    返回:
+        如果连接成功则为True，否则为False
     """
     try:
-        # Create engine
+        # 创建引擎
         engine = create_engine(get_db_url())
         
-        # Attempt to connect
+        # 尝试连接
         with engine.connect() as conn:
             result = conn.execute(text("SELECT 1"))
             row = result.fetchone()
             
             if row and row[0] == 1:
-                logger.info("Database connection successful")
+                logger.info("数据库连接成功")
                 return True
             else:
-                logger.error("Database connection failed")
+                logger.error("数据库连接失败")
                 return False
     
     except Exception as e:
-        logger.error(f"Error connecting to database: {str(e)}")
+        logger.error(f"连接数据库时出错: {str(e)}")
         return False
 
 def create_initial_data(session):
     """
-    Create initial data in the database
+    在数据库中创建初始数据
     
-    Args:
-        session: SQLAlchemy session
+    参数:
+        session: SQLAlchemy会话
     """
-    logger.info("Creating initial data...")
+    logger.info("正在创建初始数据...")
     
     try:
-        # Check if a default knowledge base already exists
-        kb_exists = session.query(KnowledgeBase).filter_by(name="General Knowledge").first()
+        # 检查默认知识库是否已存在
+        kb_exists = session.query(KnowledgeBase).filter_by(name="通用知识").first()
         
         if not kb_exists:
-            # Create a default knowledge base
+            # 创建默认知识库
             kb = KnowledgeBase(
-                name="General Knowledge",
-                description="General purpose knowledge base for common questions",
+                name="通用知识",
+                description="用于常见问题的通用知识库",
                 status="active"
             )
             session.add(kb)
             session.commit()
-            logger.info(f"Created default knowledge base: {kb.name}")
+            logger.info(f"创建了默认知识库: {kb.name}")
         
-        # Check if a default assistant exists
-        assistant_exists = session.query(Assistant).filter_by(name="General Assistant").first()
+        # 检查默认助手是否存在
+        assistant_exists = session.query(Assistant).filter_by(name="通用助手").first()
         
         if not assistant_exists:
-            # Create a default assistant
+            # 创建默认助手
             assistant = Assistant(
-                name="General Assistant",
-                description="General purpose assistant for answering questions",
+                name="通用助手",
+                description="用于回答问题的通用助手",
                 model="gpt-4",
                 capabilities=["text", "retrieval"],
-                system_prompt="You are a helpful assistant that answers questions based on the knowledge base."
+                system_prompt="你是一个基于知识库回答问题的有用助手。"
             )
             
-            # Link to the default knowledge base
-            kb = session.query(KnowledgeBase).filter_by(name="General Knowledge").first()
+            # 链接到默认知识库
+            kb = session.query(KnowledgeBase).filter_by(name="通用知识").first()
             if kb:
                 assistant.knowledge_bases = [kb]
             
             session.add(assistant)
             session.commit()
-            logger.info(f"Created default assistant: {assistant.name}")
+            logger.info(f"创建了默认助手: {assistant.name}")
         
-        logger.info("Initial data created successfully")
+        logger.info("初始数据创建成功")
     
     except Exception as e:
-        logger.error(f"Error creating initial data: {str(e)}")
+        logger.error(f"创建初始数据时出错: {str(e)}")
         session.rollback()
 
 def print_schema_info():
     """
-    Print information about the database schema
+    打印数据库模式的信息
     """
-    # Get all models
+    # 获取所有模型
     models = [
         KnowledgeBase,
         Document,
@@ -164,32 +164,32 @@ def print_schema_info():
         ChatMessage
     ]
     
-    print("\n=== DATABASE SCHEMA INFORMATION ===\n")
+    print("\n=== 数据库模式信息 ===\n")
     
     for model in models:
-        print(f"Table: {model.__tablename__}")
-        print("Columns:")
+        print(f"表: {model.__tablename__}")
+        print("列:")
         for column in model.__table__.columns:
-            print(f"  - {column.name}: {column.type} {'PRIMARY KEY' if column.primary_key else ''} {'NULLABLE' if column.nullable else 'NOT NULL'}")
-        print("Relationships:")
+            print(f"  - {column.name}: {column.type} {'主键' if column.primary_key else ''} {'可空' if column.nullable else '非空'}")
+        print("关系:")
         for relationship in model.__mapper__.relationships:
             print(f"  - {relationship.key}: {relationship.target}")
         print("\n" + "-" * 40 + "\n")
     
-    print("Association Tables:")
+    print("关联表:")
     print(f"  - {assistant_knowledge_base.name}")
     for column in assistant_knowledge_base.columns:
-        print(f"    - {column.name}: {column.type} {'PRIMARY KEY' if column.primary_key else ''}")
+        print(f"    - {column.name}: {column.type} {'主键' if column.primary_key else ''}")
     print("\n" + "=" * 40 + "\n")
 
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="Database initialization tools")
-    parser.add_argument("--check", action="store_true", help="Check database connection")
-    parser.add_argument("--init", action="store_true", help="Initialize database schema")
-    parser.add_argument("--drop", action="store_true", help="Drop existing tables before initialization")
-    parser.add_argument("--info", action="store_true", help="Print schema information")
+    parser = argparse.ArgumentParser(description="数据库初始化工具")
+    parser.add_argument("--check", action="store_true", help="检查数据库连接")
+    parser.add_argument("--init", action="store_true", help="初始化数据库模式")
+    parser.add_argument("--drop", action="store_true", help="在初始化前删除现有表")
+    parser.add_argument("--info", action="store_true", help="打印模式信息")
     
     args = parser.parse_args()
     
@@ -201,6 +201,3 @@ if __name__ == "__main__":
     
     if args.info:
         print_schema_info()
-    
-    if not (args.check or args.init or args.info):
-        parser.print_help()

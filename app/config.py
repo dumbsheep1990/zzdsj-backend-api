@@ -1,9 +1,9 @@
-from typing import List
+from typing import List, Dict, Any
 from app.utils.config_manager import get_config
 
 class Settings:
     # 服务信息
-    PROJECT_NAME: str = get_config("service", "name", default="知识库问答系统")
+    PROJECT_NAME: str = get_config("service", "name", default="智政知识库问答系统")
     API_V1_STR: str = "/api"
     SERVICE_NAME: str = get_config("service", "name", default="knowledge-qa-backend")
     SERVICE_IP: str = get_config("service", "ip", default="127.0.0.1")
@@ -18,6 +18,62 @@ class Settings:
     # LLM配置
     OPENAI_API_KEY: str = get_config("llm", "openai_api_key", default="")
     DEFAULT_MODEL: str = get_config("llm", "default_model", default="gpt-4")
+    
+    # 模型提供商配置
+    # OpenAI配置
+    OPENAI_API_BASE: str = get_config("model_providers", "openai", "api_base", default="https://api.openai.com/v1")
+    OPENAI_ORGANIZATION: str = get_config("model_providers", "openai", "organization", default="")
+    
+    # 智谱AI配置
+    ZHIPU_API_KEY: str = get_config("model_providers", "zhipu", "api_key", default="")
+    
+    # DeepSeek配置
+    DEEPSEEK_API_KEY: str = get_config("model_providers", "deepseek", "api_key", default="")
+    DEEPSEEK_API_BASE: str = get_config("model_providers", "deepseek", "api_base", default="https://api.deepseek.com/v1")
+    
+    # Ollama配置
+    OLLAMA_API_BASE: str = get_config("model_providers", "ollama", "api_base", default="http://localhost:11434")
+    
+    # VLLM配置
+    VLLM_API_BASE: str = get_config("model_providers", "vllm", "api_base", default="http://localhost:8000")
+    
+    # 通义千问配置
+    DASHSCOPE_API_KEY: str = get_config("model_providers", "dashscope", "api_key", default="")
+    
+    # Anthropic配置
+    ANTHROPIC_API_KEY: str = get_config("model_providers", "anthropic", "api_key", default="")
+    ANTHROPIC_API_BASE: str = get_config("model_providers", "anthropic", "api_base", default="https://api.anthropic.com")
+    
+    # TogetherAI配置
+    TOGETHER_API_KEY: str = get_config("model_providers", "together", "api_key", default="")
+    TOGETHER_API_BASE: str = get_config("model_providers", "together", "api_base", default="https://api.together.xyz/v1")
+    
+    # 千问API配置
+    QWEN_API_KEY: str = get_config("model_providers", "qwen", "api_key", default="")
+    QWEN_API_BASE: str = get_config("model_providers", "qwen", "api_base", default="https://dashscope.aliyuncs.com/api/v1")
+    
+    # 百度文心一言配置
+    BAIDU_API_KEY: str = get_config("model_providers", "baidu", "api_key", default="")
+    BAIDU_SECRET_KEY: str = get_config("model_providers", "baidu", "secret_key", default="")
+    BAIDU_API_BASE: str = get_config("model_providers", "baidu", "api_base", default="https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop")
+    
+    # 月之暗面配置
+    MOONSHOT_API_KEY: str = get_config("model_providers", "moonshot", "api_key", default="")
+    MOONSHOT_API_BASE: str = get_config("model_providers", "moonshot", "api_base", default="https://api.moonshot.cn/v1")
+    
+    # 智谱GLM配置
+    GLM_API_KEY: str = get_config("model_providers", "glm", "api_key", default="")
+    GLM_API_BASE: str = get_config("model_providers", "glm", "api_base", default="https://open.bigmodel.cn/api/paas/v4")
+    
+    # MiniMax配置
+    MINIMAX_API_KEY: str = get_config("model_providers", "minimax", "api_key", default="")
+    MINIMAX_GROUP_ID: str = get_config("model_providers", "minimax", "group_id", default="")
+    MINIMAX_API_BASE: str = get_config("model_providers", "minimax", "api_base", default="https://api.minimax.chat/v1")
+    
+    # 百川配置
+    BAICHUAN_API_KEY: str = get_config("model_providers", "baichuan", "api_key", default="")
+    BAICHUAN_SECRET_KEY: str = get_config("model_providers", "baichuan", "secret_key", default="")
+    BAICHUAN_API_BASE: str = get_config("model_providers", "baichuan", "api_base", default="https://api.baichuan-ai.com/v1")
     
     # 向量存储 - Milvus配置
     MILVUS_HOST: str = get_config("vector_store", "milvus", "host", default="localhost")
@@ -53,10 +109,56 @@ class Settings:
     CELERY_RESULT_BACKEND: str = get_config("celery", "result_backend", default="redis://localhost:6379/0")
     
     # 框架配置
+    # LangChain配置
     LANGCHAIN_EMBEDDING_MODEL: str = get_config("frameworks", "langchain", "embedding_model", default="text-embedding-ada-002")
+    LANGCHAIN_CHAT_MODEL: str = get_config("frameworks", "langchain", "chat_model", default="gpt-3.5-turbo")
+    LANGCHAIN_MEMORY_TYPE: str = get_config("frameworks", "langchain", "memory_type", default="conversation_buffer")
+    LANGCHAIN_MEMORY_K: int = get_config("frameworks", "langchain", "memory_k", default=5)
+    LANGCHAIN_USE_LANGSMITH: bool = get_config("frameworks", "langchain", "use_langsmith", default=False)
+    LANGCHAIN_LANGSMITH_API_KEY: str = get_config("frameworks", "langchain", "langsmith_api_key", default="")
+    LANGCHAIN_LANGSMITH_PROJECT: str = get_config("frameworks", "langchain", "langsmith_project", default="knowledge-qa")
+    
+    # Haystack配置
     HAYSTACK_READER_MODEL: str = get_config("frameworks", "haystack", "reader_model", default="deepset/roberta-base-squad2")
+    HAYSTACK_RETRIEVER_TYPE: str = get_config("frameworks", "haystack", "retriever_type", default="embedding")
+    HAYSTACK_USE_BM25: bool = get_config("frameworks", "haystack", "use_bm25", default=True)
+    HAYSTACK_TOP_K: int = get_config("frameworks", "haystack", "top_k", default=5)
+    HAYSTACK_EMBEDDING_MODEL: str = get_config("frameworks", "haystack", "embedding_model", default="sentence-transformers/all-MiniLM-L6-v2")
+    HAYSTACK_RERANK_DOCUMENTS: bool = get_config("frameworks", "haystack", "rerank_documents", default=False)
+    HAYSTACK_RERANKER_MODEL: str = get_config("frameworks", "haystack", "reranker_model", default="cross-encoder/ms-marco-MiniLM-L-6-v2")
+    
+    # LlamaIndex配置
     LLAMAINDEX_CHUNK_SIZE: int = get_config("frameworks", "llamaindex", "chunk_size", default=1000)
     LLAMAINDEX_CHUNK_OVERLAP: int = get_config("frameworks", "llamaindex", "chunk_overlap", default=200)
+    LLAMAINDEX_EMBEDDING_MODEL: str = get_config("frameworks", "llamaindex", "embedding_model", default="text-embedding-ada-002")
+    LLAMAINDEX_LLM_MODEL: str = get_config("frameworks", "llamaindex", "llm_model", default="gpt-3.5-turbo")
+    LLAMAINDEX_INDEX_TYPE: str = get_config("frameworks", "llamaindex", "index_type", default="vector_store")
+    LLAMAINDEX_USE_KNOWLEDGE_GRAPH: bool = get_config("frameworks", "llamaindex", "use_knowledge_graph", default=False)
+    
+    # Agno配置
+    AGNO_AGENT_TYPE: str = get_config("frameworks", "agno", "agent_type", default="conversational")
+    AGNO_MODEL: str = get_config("frameworks", "agno", "model", default="gpt-3.5-turbo")
+    AGNO_MAX_ITERATIONS: int = get_config("frameworks", "agno", "max_iterations", default=5)
+    AGNO_MEMORY_TYPE: str = get_config("frameworks", "agno", "memory_type", default="conversation_buffer")
+    AGNO_MEMORY_K: int = get_config("frameworks", "agno", "memory_k", default=5)
+    
+    # 框架集成配置
+    # 统一入口 - LangChain
+    FRAMEWORK_ENTRY_POINT: str = get_config("framework_integration", "entry_point", default="langchain")
+    
+    # QA助手 - Agno与检索集成
+    QA_ASSISTANT_FRAMEWORK: str = get_config("framework_integration", "qa_assistant", "framework", default="agno")
+    QA_RETRIEVER_FRAMEWORK: str = get_config("framework_integration", "qa_assistant", "retriever", default="haystack")
+    QA_INDEXER_FRAMEWORK: str = get_config("framework_integration", "qa_assistant", "indexer", default="llamaindex")
+    
+    # QA管理 - LangChain与Agno协作
+    QA_MANAGEMENT_CONVERSATION_FRAMEWORK: str = get_config("framework_integration", "qa_management", "conversation", default="langchain")
+    QA_MANAGEMENT_MEMORY_FRAMEWORK: str = get_config("framework_integration", "qa_management", "memory", default="agno")
+    QA_MANAGEMENT_API_FRAMEWORK: str = get_config("framework_integration", "qa_management", "api", default="langchain")
+    
+    # 知识库管理 - LlamaIndex与Haystack分工
+    KNOWLEDGE_MANAGEMENT_INDEXING_FRAMEWORK: str = get_config("framework_integration", "knowledge_management", "indexing", default="llamaindex")
+    KNOWLEDGE_MANAGEMENT_SEARCH_FRAMEWORK: str = get_config("framework_integration", "knowledge_management", "search", default="haystack")
     
     # 遗留路径（保留以兼容）
     VECTOR_STORE_PATH: str = get_config("paths", "vector_store", default="./vector_store")

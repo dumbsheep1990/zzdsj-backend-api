@@ -1,6 +1,6 @@
-# 知识库问答系统后端
+# 智政知识库问答系统后端
 
-智政智脑后端服务，提供对知识库问答能力的细粒度控制。
+智政知识库问答系统的后端服务，提供对知识库问答能力的细粒度控制。
 
 ## 架构概述
 
@@ -19,10 +19,22 @@
 
 ### AI/ML集成
 
-- **LangChain**：LLM应用开发框架
-- **HayStack**：问答系统框架
-- **LlamaIndex**：LLM应用的数据框架
-- **Agno**：用于自主操作的代理框架
+- **LangChain**：LLM应用开发框架，作为统一入口
+- **HayStack**：问答系统框架，负责高级文档检索
+- **LlamaIndex**：LLM应用的数据框架，用于知识库索引
+- **Agno**：用于自主操作的代理框架，支持复杂推理
+
+### 模型提供商支持
+
+- **OpenAI**: GPT-3.5, GPT-4系列模型
+- **智谱AI**: GLM系列模型
+- **DeepSeek**: DeepSeek系列模型
+- **通义千问**: 阿里达摩院千问系列模型
+- **百度文心一言**: 百度ERNIE系列模型
+- **月之暗面**: Moonshot系列模型
+- **Anthropic**: Claude系列模型
+- **本地推理**: Ollama和VLLM本地部署支持
+- **其他国内模型**: 百川、MiniMax等中文模型支持
 
 ## 目录结构
 
@@ -32,20 +44,28 @@ zz-backend-lite/
 │   ├── api/                # FastAPI路由
 │   │   ├── assistants.py   # 助手管理端点
 │   │   ├── knowledge.py    # 知识库管理端点
-│   │   └── chat.py         # 聊天接口端点
+│   │   ├── chat.py         # 聊天接口端点
+│   │   ├── model_provider.py # 模型提供商管理
+│   │   └── assistant_qa.py # 问答助手管理
 │   ├── core/               # 核心业务逻辑
 │   │   ├── assistants/     # 助手管理逻辑
 │   │   ├── knowledge/      # 知识库管理
-│   │   └── chat/           # 聊天交互逻辑
+│   │   ├── chat/           # 聊天交互逻辑
+│   │   ├── chat_manager.py # 统一聊天管理
+│   │   ├── model_manager.py # 模型连接管理
+│   │   └── assistant_qa_manager.py # 问答助手管理
 │   ├── frameworks/         # AI框架集成
 │   │   ├── haystack/       # Haystack集成
 │   │   ├── langchain/      # LangChain集成
 │   │   ├── llamaindex/     # LlamaIndex集成
-│   │   └── agents/         # 代理框架(Agno)
+│   │   ├── agno/           # Agno代理框架
+│   │   └── integration/    # 框架集成层
 │   ├── models/             # 数据库模型
 │   │   ├── assistants.py   # 助手模型
 │   │   ├── knowledge.py    # 知识库模型
-│   │   └── chat.py         # 聊天模型
+│   │   ├── chat.py         # 聊天模型
+│   │   ├── model_provider.py # 模型提供商模型
+│   │   └── assistant_qa.py # 问答助手模型
 │   ├── schemas/            # Pydantic模式
 │   ├── utils/              # 实用函数
 │   │   ├── database.py     # 数据库工具
@@ -66,7 +86,7 @@ zz-backend-lite/
 
 ### 前提条件
 
-- Python 3.9+
+- Python 3.10+
 - Docker和Docker Compose（用于基础设施）
 
 ### 设置基础设施
@@ -83,7 +103,7 @@ docker-compose up -d
 
 ```bash
 cp .env.example .env
-# 使用您的特定设置编辑.env文件，特别是API密钥
+# 配置和编辑.env文件，也可在前端系统页面进行配置
 ```
 
 3. 安装依赖项：
@@ -139,13 +159,27 @@ celery -A app.worker worker --loglevel=info
 - `GET /api/chat/conversations/{conversation_id}` - 获取带有消息的对话
 - `POST /api/chat/` - 发送消息并获取AI响应
 
-## 助手能力
+### 模型管理接口
 
-每个助手可以配置不同的能力：
+- `GET /api/models/providers` - 获取所有模型提供商
+- `POST /api/models/providers` - 添加新模型提供商
+- `GET /api/models/providers/{provider_id}` - 获取提供商详情
+- `PUT /api/models/providers/{provider_id}` - 更新模型提供商
+- `DELETE /api/models/providers/{provider_id}` - 删除模型提供商
+- `GET /api/models/providers/{provider_id}/models` - 获取提供商的模型
+- `POST /api/models/providers/{provider_id}/models` - 添加新模型
+- `POST /api/models/test-connection` - 测试模型连接
 
-- **客户支持**：处理客户服务查询
-- **问答**：回答通用知识问题
-- **服务介绍**：提供有关服务的信息
+### 问答助手接口
+
+- `GET /api/assistant-qa/assistants` - 获取问答助手列表
+- `POST /api/assistant-qa/assistants` - 创建问答助手
+- `GET /api/assistant-qa/assistants/{assistant_id}` - 获取问答助手详情
+- `GET /api/assistant-qa/assistants/{assistant_id}/questions` - 获取问题列表
+- `POST /api/assistant-qa/questions` - 创建新问题
+- `GET /api/assistant-qa/questions/{question_id}` - 获取问题详情
+- `PUT /api/assistant-qa/questions/{question_id}/answer-settings` - 更新回答设置
+- `PUT /api/assistant-qa/questions/{question_id}/document-settings` - 更新文档设置
 
 ## 知识库集成
 
@@ -156,6 +190,40 @@ celery -A app.worker worker --loglevel=info
 3. 为每个块生成嵌入向量
 4. 将块存储在Milvus中进行向量相似度搜索
 5. 当提出问题时，检索相关块以为AI响应提供信息
+
+## 模型管理系统
+
+模型管理系统提供了对各种大语言模型(LLM)的统一管理：
+
+1. **模型提供商管理**：支持添加、编辑和删除模型提供商，包括配置API密钥和基础URL
+2. **模型配置**：允许配置模型参数，如温度、最大输出长度等
+3. **连接测试**：在使用前测试模型连接和API密钥有效性
+4. **多提供商支持**：支持常见国内外模型提供商，如OpenAI、智谱、百度、阿里等
+5. **本地部署支持**：集成Ollama和VLLM等本地部署方案
+
+## 问答助手系统
+
+问答助手系统提供产品级问答管理界面：
+
+1. **助手类型**：支持产品文档助手、技术支持助手等不同类型助手
+2. **问题管理**：为每个助手创建和管理预设问题卡片
+3. **文档关联**：自动关联相关文档，并显示文档相关度
+4. **回答模式控制**：提供多种回答模式
+   - 默认模式：结合模型和文档知识
+   - 仅文档模式：只使用文档内容回答
+   - 仅模型模式：不参考文档只用模型回答
+   - 混合模式：使用Agno代理进行高级协调
+5. **文档设置**：允许选择特定文档分段用于回答问题
+6. **缓存控制**：支持启用或禁用回答缓存
+
+## 框架集成架构
+
+系统通过集成多个框架来发挥各自优势：
+
+1. **统一入口 - LangChain**：负责接收用户查询，管理会话上下文，协调整个工作流
+2. **QA助手 - Agno代理**：处理用户查询，支持记忆和工具使用，调用Haystack进行文档检索
+3. **QA管理 - LangChain与Agno协作**：LangChain负责对话历史管理，Agno维护会话状态
+4. **知识库管理 - LlamaIndex与Haystack**：LlamaIndex负责文档索引，Haystack用于高级搜索
 
 ## 高级功能
 
@@ -174,16 +242,9 @@ celery -A app.worker worker --loglevel=info
 - 多个Celery工作器可以并行处理任务
 - Milvus和PostgreSQL等基础设施组件支持集群
 
-## 定制化
+### 多模型管理
 
-系统可以通过多种方式扩展：
-
-- 在`app/core/knowledge/document_processor.py`中添加新的文档解析器
-- 在`app/frameworks/`目录中实现其他AI框架
-- 通过扩展数据模型和核心服务逻辑创建新的助手能力
-
-## 安全考虑
-
-- API密钥和敏感数据应在`.env`文件中妥善保护
-- MinIO桶权限应仔细配置
-- 考虑为生产环境实施适当的身份验证和授权
+支持在运行时切换不同模型提供商：
+- 可根据成本、性能和能力选择适当的模型
+- 支持特定任务使用专用模型（如文档总结vs.问答）
+- 提供模型回退机制，确保服务可靠性
