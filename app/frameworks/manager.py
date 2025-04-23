@@ -14,6 +14,7 @@ class FrameworkType(Enum):
     HAYSTACK = "haystack" 
     LLAMAINDEX = "llamaindex"
     AGNO = "agno"
+    FASTMCP = "fastmcp"
 
 
 class FrameworkCapability(Enum):
@@ -24,6 +25,7 @@ class FrameworkCapability(Enum):
     DOCUMENT_PROCESSING = "document_processing"
     AGENT = "agent"
     CHAT = "chat"
+    MCP_TOOLS = "mcp_tools"
 
 
 class FrameworkManager:
@@ -54,6 +56,9 @@ class FrameworkManager:
         
         if settings.get_config("frameworks", "agno", "enabled", default=False):
             self._register_agno()
+            
+        if settings.get_config("frameworks", "fastmcp", "enabled", default=False):
+            self._register_fastmcp()
     
     def _register_langchain(self):
         """注册LangChain框架及其能力"""
@@ -109,6 +114,19 @@ class FrameworkManager:
         
         # 注册以Agno为提供者的能力
         self._register_capability(FrameworkCapability.AGENT, FrameworkType.AGNO)
+        
+    def _register_fastmcp(self):
+        """注册FastMCP框架及其能力"""
+        from app.frameworks.fastmcp import tools, resources, server
+        
+        # 注册框架
+        self._framework_registry[FrameworkType.FASTMCP] = {
+            FrameworkCapability.MCP_TOOLS: tools,
+            FrameworkCapability.AGENT: resources
+        }
+        
+        # 注册以FastMCP为提供者的能力
+        self._register_capability(FrameworkCapability.MCP_TOOLS, FrameworkType.FASTMCP)
     
     def _register_capability(self, capability: FrameworkCapability, framework: FrameworkType):
         """注册能力及其提供框架"""

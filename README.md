@@ -181,6 +181,39 @@ celery -A app.worker worker --loglevel=info
 - `PUT /api/assistant-qa/questions/{question_id}/answer-settings` - 更新回答设置
 - `PUT /api/assistant-qa/questions/{question_id}/document-settings` - 更新文档设置
 
+### MCP服务接口
+
+#### 自定义MCP服务
+
+- `GET /api/mcp/server/status` - 获取MCP服务器状态，包括已注册工具、资源和提示的数量
+- `POST /api/mcp/server/restart` - 重启MCP服务器
+
+- `GET /api/mcp/tools` - 列出所有MCP工具，支持按类别和标签筛选
+- `GET /api/mcp/tools/{name}` - 获取特定工具的详细信息
+- `POST /api/mcp/tools` - 创建新MCP工具，支持动态代码加载和注册
+
+- `GET /api/mcp/resources` - 列出所有MCP资源
+- `GET /api/mcp/resources/{uri}` - 获取特定资源详情
+- `POST /api/mcp/resources` - 创建新MCP资源
+
+- `GET /api/mcp/prompts` - 列出所有MCP提示
+- `GET /api/mcp/prompts/{name}` - 获取特定提示详情
+- `POST /api/mcp/prompts` - 创建新MCP提示
+
+- `POST /api/mcp/deploy` - 将选定的工具、资源和提示打包并部署为MCP服务
+
+#### 第三方MCP工具
+
+- `GET /api/mcp/providers` - 列出所有第三方MCP提供商，支持按能力筛选
+- `GET /api/mcp/providers/{provider_id}` - 获取特定提供商详情
+- `POST /api/mcp/providers` - 注册新的第三方MCP提供商
+- `DELETE /api/mcp/providers/{provider_id}` - 删除第三方MCP提供商
+
+- `GET /api/mcp/providers/{provider_id}/tools` - 列出提供商提供的工具
+- `POST /api/mcp/providers/{provider_id}/tools/{tool_name}/test` - 测试特定工具
+
+- `POST /api/mcp/providers/{provider_id}/chat` - 与支持聊天能力的提供商进行聊天，支持流式响应
+
 ## 知识库集成
 
 助手可以链接到多个知识库，使其能够基于特定文档集合回答问题。文档自动处理流程：

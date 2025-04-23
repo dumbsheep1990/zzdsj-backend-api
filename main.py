@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 import atexit
 import os
 
-from app.api import assistants, knowledge, chat, assistant, model_provider, assistant_qa
+from app.api import assistants, knowledge, chat, assistant, model_provider, assistant_qa, mcp
 from app.config import settings
 from app.utils.database import init_db
 from app.utils.vector_store import init_milvus
@@ -42,6 +42,7 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["知识�
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["对话"])
 app.include_router(model_provider.router, prefix="/api/v1/models", tags=["模型管理"])
 app.include_router(assistant_qa.router, prefix="/api/v1/assistant-qa", tags=["问答助手"])
+app.include_router(mcp.router, tags=["MCP服务"])
 
 @app.get("/", include_in_schema=False)
 def root():
