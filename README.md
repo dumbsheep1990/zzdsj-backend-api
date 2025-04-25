@@ -19,7 +19,7 @@
 
 ### AI/ML集成
 
-- **LangChain**：LLM应用开发框架，作为统一入口
+- **LlamaIndex**：LLM应用开发框架，作为统一入口
 - **HayStack**：问答系统框架，负责高级文档检索
 - **LlamaIndex**：LLM应用的数据框架，用于知识库索引
 - **Agno**：用于自主操作的代理框架，支持复杂推理
@@ -56,7 +56,7 @@ zz-backend-lite/
 │   │   └── assistant_qa_manager.py # 问答助手管理
 │   ├── frameworks/         # AI框架集成
 │   │   ├── haystack/       # Haystack集成
-│   │   ├── langchain/      # LangChain集成
+│   │   ├── llamaIndex/      # LlamaIndex集成
 │   │   ├── llamaindex/     # LlamaIndex集成
 │   │   ├── agno/           # Agno代理框架
 │   │   └── integration/    # 框架集成层
@@ -253,10 +253,10 @@ celery -A app.worker worker --loglevel=info
 
 系统通过集成多个框架来发挥各自优势：
 
-1. **统一入口 - LangChain**：负责接收用户查询，管理会话上下文，协调整个工作流
+1. **统一入口 - LlamaIndex**：负责接收用户查询，管理会话上下文，协调整个工作流，提供文档索引和检索功能
 2. **QA助手 - Agno代理**：处理用户查询，支持记忆和工具使用，调用Haystack进行文档检索
-3. **QA管理 - LangChain与Agno协作**：LangChain负责对话历史管理，Agno维护会话状态
-4. **知识库管理 - LlamaIndex与Haystack**：LlamaIndex负责文档索引，Haystack用于高级搜索
+3. **QA管理 - LlamaIndex与Agno协作**：LlamaIndex负责对话历史管理和文档知识集成，Agno维护会话状态
+4. **知识库管理 - LlamaIndex与Haystack**：LlamaIndex负责文档索引和检索，Haystack用于高级搜索
 
 ## 高级功能
 

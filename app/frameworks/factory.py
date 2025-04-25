@@ -37,9 +37,9 @@ class AgentFrameworkFactory:
             代理实例
         """
         try:
-            if self.framework_name == "langchain":
-                from app.frameworks.langchain.agent import create_langchain_agent
-                return await create_langchain_agent(
+            if self.framework_name == "llamaindex":
+                from app.frameworks.llamaindex.agent import create_llamaindex_agent
+                return await create_llamaindex_agent(
                     name=name,
                     description=description,
                     knowledge_bases=knowledge_bases,
@@ -50,16 +50,6 @@ class AgentFrameworkFactory:
             elif self.framework_name == "haystack":
                 from app.frameworks.haystack.agent import create_haystack_agent
                 return await create_haystack_agent(
-                    name=name,
-                    description=description,
-                    knowledge_bases=knowledge_bases,
-                    model=model,
-                    settings=settings
-                )
-                
-            elif self.framework_name == "llamaindex":
-                from app.frameworks.llamaindex.agent import create_llamaindex_agent
-                return await create_llamaindex_agent(
                     name=name,
                     description=description,
                     knowledge_bases=knowledge_bases,
@@ -96,10 +86,10 @@ def get_agent_framework(framework_name: str) -> AgentFrameworkFactory:
     """
     # 检查是否是支持的框架
     framework_name = framework_name.lower()
-    supported_frameworks = ["langchain", "haystack", "llamaindex", "agno"]
+    supported_frameworks = ["llamaindex", "haystack", "agno"]
     
     if framework_name not in supported_frameworks:
-        logger.warning(f"未知框架: {framework_name}，使用默认的langchain")
-        framework_name = "langchain"
+        logger.warning(f"未知框架: {framework_name}，使用默认的llamaindex")
+        framework_name = "llamaindex"
     
     return AgentFrameworkFactory(framework_name)

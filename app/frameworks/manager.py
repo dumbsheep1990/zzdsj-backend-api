@@ -10,7 +10,6 @@ from app.config import settings
 
 class FrameworkType(Enum):
     """支持的AI框架枚举"""
-    LANGCHAIN = "langchain"
     HAYSTACK = "haystack" 
     LLAMAINDEX = "llamaindex"
     AGNO = "agno"
@@ -45,9 +44,6 @@ class FrameworkManager:
     def _init_registry(self):
         """使用可用框架初始化框架注册表"""
         # 为每个能力注册默认框架
-        if settings.get_config("frameworks", "langchain", "enabled", default=True):
-            self._register_langchain()
-        
         if settings.get_config("frameworks", "haystack", "enabled", default=True):
             self._register_haystack()
         
@@ -59,21 +55,6 @@ class FrameworkManager:
             
         if settings.get_config("frameworks", "fastmcp", "enabled", default=False):
             self._register_fastmcp()
-    
-    def _register_langchain(self):
-        """注册LangChain框架及其能力"""
-        from app.frameworks.langchain import embeddings, chat, retrieval
-        
-        # 注册框架
-        self._framework_registry[FrameworkType.LANGCHAIN] = {
-            FrameworkCapability.EMBEDDINGS: embeddings,
-            FrameworkCapability.CHAT: chat,
-            FrameworkCapability.RETRIEVAL: retrieval
-        }
-        
-        # 注册以LangChain为提供者的能力
-        self._register_capability(FrameworkCapability.EMBEDDINGS, FrameworkType.LANGCHAIN)
-        self._register_capability(FrameworkCapability.CHAT, FrameworkType.LANGCHAIN)
     
     def _register_haystack(self):
         """注册Haystack框架及其能力"""

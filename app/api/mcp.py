@@ -113,6 +113,8 @@ class MCPDeployResponse(BaseModel):
     docker_image: Optional[str] = None
     docker_container: Optional[str] = None
     deploy_directory: Optional[str] = None
+    service_port: Optional[int] = None
+    startup_info: Optional[Dict[str, Any]] = None
 
 # 服务器状态API
 @router.get("/server/status", response_model=MCPServerStatusResponse)
@@ -416,10 +418,14 @@ async def deploy_mcp_service_api(deploy_request: MCPDeployRequest):
         import shutil
         import json
         import subprocess
+        import random
         from datetime import datetime
         
         # 创建部署ID
         deployment_id = str(uuid.uuid4())
+        
+        # 生成随机端口（避开常用端口）
+        service_port = random.randint(10000, 65000)
         
         # 创建部署目录
         deploy_dir = os.path.join(tempfile.gettempdir(), f"mcp_deploy_{deployment_id}")
@@ -432,6 +438,7 @@ async def deploy_mcp_service_api(deploy_request: MCPDeployRequest):
 import logging
 import importlib
 import traceback
+import os
 
 # 配置日志
 logging.basicConfig(
@@ -475,9 +482,11 @@ except Exception as e:
     logger.error(traceback.format_exc())
 
 if __name__ == "__main__":
+    # 从环境变量获取端口，如果不存在则使用默认端口
+    port = int(os.environ.get("MCP_SERVICE_PORT", {service_port}))
     # 启动服务器
-    logger.info("启动MCP服务器...")
-    mcp.run(host="0.0.0.0", port=8000)
+    logger.info(f"启动MCP服务器在端口: {{port}}...")
+    mcp.run(host="0.0.0.0", port=port)
 """)
         
         # 创建tools.py文件，包含所有工具
@@ -580,18 +589,19 @@ def {prompt_name}(*args, **kwargs):
 ## 部署信息
 
 - 部署ID: {deployment_id}
+- 服务端口: {service_port}
 - 创建时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 ## 使用方法
 
 1. 通过Docker部署:
    ```
-   docker run -p 8000:8000 {deploy_request.name.lower().replace(' ', '-')}:{deployment_id[:8]}
+   docker run -p {service_port}:{service_port} {deploy_request.name.lower().replace(' ', '-')}:{deployment_id[:8]}
    ```
 
 2. API访问:
    ```
-   http://localhost:8000/
+   http://localhost:{service_port}/
 """)
         
         # 创建requirements.txt
@@ -623,10 +633,13 @@ COPY . .
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
+  CMD curl -f http://localhost:${{MCP_SERVICE_PORT}}/health || exit 1
 
 # 暴露端口
-EXPOSE 8000
+EXPOSE ${{MCP_SERVICE_PORT}}
+
+# 设置环境变量
+ENV MCP_SERVICE_PORT={service_port}
 
 # 启动服务
 CMD ["python", "server.py"]
@@ -643,20 +656,16 @@ services:
     image: {deploy_request.name.lower().replace(' ', '-')}:{deployment_id[:8]}
     container_name: mcp-{deployment_id[:8]}
     ports:
-      - "8000:8000"
+      - "{service_port}:{service_port}"
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs
     environment:
       - MCP_SERVICE_NAME={deploy_request.name}
       - MCP_DEPLOYMENT_ID={deployment_id}
+      - MCP_SERVICE_PORT={service_port}
 """)
         
-        # 构建和启动容器
-        # 在实际环境中，这部分应该异步执行，不阻塞API响应
-        # 这里仅作为示例
-        
-        # 记录部署信息到部署数据库或配置文件
         # 创建部署配置文件
         config_file = os.path.join(deploy_dir, "deployment.json")
         with open(config_file, "w", encoding="utf-8") as f:
@@ -672,15 +681,16 @@ services:
                 "created_at": datetime.now().isoformat(),
                 "status": "pending",
                 "image": f"{deploy_request.name.lower().replace(' ', '-')}:{deployment_id[:8]}",
-                "container": f"mcp-{deployment_id[:8]}"
+                "container": f"mcp-{deployment_id[:8]}",
+                "service_port": service_port
             }, f, indent=2)
         
         # 创建启动脚本
         start_script = os.path.join(deploy_dir, "start.sh")
         with open(start_script, "w", encoding="utf-8") as f:
-            f.write("""#!/bin/bash
+            f.write(f"""#!/bin/bash
 docker-compose up -d
-echo "MCP service started. Access at http://localhost:8000"
+echo "MCP service started. Access at http://localhost:{service_port}"
 """)
         
         # 赋予执行权限
@@ -711,7 +721,7 @@ echo "MCP service stopped"
         
         # 设置部署URL
         # 在实际环境中，应该是动态分配的URL或IP:端口
-        deployment_url = f"http://localhost:8000/mcp/{deployment_id}"
+        deployment_url = f"http://localhost:{service_port}/mcp/{deployment_id}"
         
         # 设置镜像名
         image_name = f"{deploy_request.name.lower().replace(' ', '-')}:{deployment_id[:8]}"
@@ -722,9 +732,19 @@ echo "MCP service stopped"
             "message": f"MCP服务 {deploy_request.name} 已成功部署为Docker容器",
             "deployment_id": deployment_id,
             "deployment_url": deployment_url,
+            "service_port": service_port,
             "docker_image": image_name,
             "docker_container": f"mcp-{deployment_id[:8]}",
-            "deploy_directory": deploy_dir
+            "deploy_directory": deploy_dir,
+            "startup_info": {
+                "access_url": f"http://localhost:{service_port}",
+                "api_docs": f"http://localhost:{service_port}/docs",
+                "health_endpoint": f"http://localhost:{service_port}/health",
+                "docker_run_command": f"docker run -p {service_port}:{service_port} {image_name}",
+                "docker_compose_command": "docker-compose up -d",
+                "startup_script": "bash start.sh",
+                "shutdown_script": "bash stop.sh"
+            }
         }
         
     except HTTPException:

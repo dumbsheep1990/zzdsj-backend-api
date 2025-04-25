@@ -27,7 +27,7 @@ class AssistantService:
         self.kb_repo = KnowledgeBaseRepository(db)
     
     async def create_assistant(self, name: str, description: Optional[str] = None,
-                             framework: str = "langchain", model: Optional[str] = None,
+                             framework: str = "llamaindex", model: Optional[str] = None,
                              knowledge_base_ids: Optional[List[str]] = None,
                              settings_data: Optional[Dict[str, Any]] = None) -> Assistant:
         """
@@ -36,7 +36,7 @@ class AssistantService:
         参数:
             name: 助手名称
             description: 助手描述
-            framework: 框架名称 (langchain, haystack, llamaindex, agno)
+            framework: 框架名称 (llamaindex, haystack, langchain, agno)
             model: 使用的模型
             knowledge_base_ids: 知识库ID列表
             settings_data: 其他设置
