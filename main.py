@@ -67,7 +67,7 @@ async def get_open_api_endpoint():
 # 知识库问答系统API
 
 ## 功能特点
-- **多框架集成**: 支持LangChain、Haystack、LlamaIndex和Agno
+- **多框架集成**: 支持Haystack、LlamaIndex和Agno
 - **知识库管理**: 创建、更新和查询知识库
 - **文档处理**: 上传、处理和检索文档
 - **AI助手**: 配置和与AI助手交互
@@ -92,7 +92,15 @@ API请求受到速率限制以防止滥用。当前限制为:
 async def startup_event():
     """启动时初始化服务"""
     # 初始化数据库
-    init_db()
+    print("正在初始化数据库...")
+    try:
+        init_db(create_tables=True, seed_data=True)
+        print("数据库初始化成功")
+    except Exception as e:
+        print(f"初始化数据库时出错: {e}")
+        # 数据库初始化失败是严重错误，可能需要退出应用
+        # import sys
+        # sys.exit(1)
     
     # 生成数据库模式文档
     try:
