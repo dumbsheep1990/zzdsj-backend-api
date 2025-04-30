@@ -5,7 +5,7 @@
 
 from typing import Dict, Any, List, Optional, Union
 from llama_index.core.tools import BaseTool, QueryEngineTool, ToolMetadata
-from llama_index.core.query_engine import QueryEngine
+from llama_index.core.query_engine import BaseQueryEngine
 
 from app.frameworks.llamaindex.adapters.agno_tools import AgnoAgentTool, create_agno_tool
 from app.frameworks.llamaindex.adapters.haystack_retriever import HaystackRetriever, create_haystack_retriever
@@ -18,9 +18,9 @@ class ToolRegistry:
     
     def __init__(self):
         """初始化工具注册中心"""
-        self._tools: Dict[str, Union[BaseTool, QueryEngine]] = {}
+        self._tools: Dict[str, Union[BaseTool, BaseQueryEngine]] = {}
     
-    def register_tool(self, name: str, tool: Union[BaseTool, QueryEngine]) -> None:
+    def register_tool(self, name: str, tool: Union[BaseTool, BaseQueryEngine]) -> None:
         """
         注册工具
         
@@ -30,7 +30,7 @@ class ToolRegistry:
         """
         self._tools[name] = tool
     
-    def get_tool(self, name: str) -> Optional[Union[BaseTool, QueryEngine]]:
+    def get_tool(self, name: str) -> Optional[Union[BaseTool, BaseQueryEngine]]:
         """
         获取工具
         
@@ -51,7 +51,7 @@ class ToolRegistry:
         """
         return list(self._tools.keys())
     
-    def get_all_tools(self) -> Dict[str, Union[BaseTool, QueryEngine]]:
+    def get_all_tools(self) -> Dict[str, Union[BaseTool, BaseQueryEngine]]:
         """
         获取所有工具
         
@@ -88,8 +88,8 @@ class ToolRegistry:
                     )
                 )
             
-            # 如果是QueryEngine类型，则包装
-            elif isinstance(tool, QueryEngine):
+            # 如果是BaseQueryEngine类型，则包装
+            elif isinstance(tool, BaseQueryEngine):
                 query_engine_tools.append(
                     QueryEngineTool(
                         query_engine=tool,

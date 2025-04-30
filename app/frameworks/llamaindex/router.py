@@ -4,7 +4,7 @@ LlamaIndex路由模块: 提供统一的查询路由功能
 """
 
 from typing import List, Dict, Any, Optional, Union
-from llama_index.core.query_engine import RouterQueryEngine, QueryEngine
+from llama_index.core.query_engine import RouterQueryEngine, BaseQueryEngine
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core import ServiceContext
 from llama_index.core.llms import ChatMessage, MessageRole
