@@ -44,6 +44,11 @@ class KnowledgeAgent:
             # 获取查询引擎工具
             tools = self._get_knowledge_tools()
             
+            # 添加MCP工具
+            from app.frameworks.llamaindex.tools import get_all_mcp_tools
+            mcp_tools = get_all_mcp_tools()
+            tools.extend(mcp_tools)
+            
             # 获取系统消息
             system_prompt = self.settings_data.get("system_prompt", "")
             if not system_prompt:

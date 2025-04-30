@@ -439,3 +439,47 @@ class AssistantQAManager:
         except Exception as e:
             logger.error(f"生成回答错误: {str(e)}")
             return f"生成回答时出错: {str(e)}"
+
+    def get_assistant_tools(self, assistant_id: int) -> List[Dict[str, Any]]:
+        """
+        获取助手的工具配置
+        
+        参数:
+            assistant_id: 助手ID
+            
+        返回:
+            工具配置列表
+        """
+        assistant = self.get_assistant(assistant_id)
+        if not assistant:
+            raise HTTPException(status_code=404, detail=f"未找到助手: {assistant_id}")
+        
+        # 从assistant.settings获取工具配置
+        settings = assistant.settings or {}
+        return settings.get("tools", [])
+    
+    def update_assistant_tools(self, assistant_id: int, tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        更新助手的工具配置
+        
+        参数:
+            assistant_id: 助手ID
+            tools: 工具配置列表
+            
+        返回:
+            更新后的工具配置列表
+        """
+        assistant = self.get_assistant(assistant_id)
+        if not assistant:
+            raise HTTPException(status_code=404, detail=f"未找到助手: {assistant_id}")
+        
+        # 更新assistant.settings中的工具配置
+        settings = assistant.settings or {}
+        settings["tools"] = tools
+        
+        # 更新assistant
+        assistant.settings = settings
+        assistant.updated_at = datetime.utcnow()
+        self.db.commit()
+        
+        return tools

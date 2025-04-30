@@ -120,7 +120,7 @@ def init_db(create_tables=True, seed_data=True):
         seed_data (bool): 是否填充初始数据
     """
     # 导入所有模型
-    from app.models import assistants, knowledge, chat, model_provider, assistant_qa
+    from app.models import assistants, knowledge, chat, model_provider, assistant_qa, mcp
     
     if create_tables:
         # 创建表

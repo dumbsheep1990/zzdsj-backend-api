@@ -1,9 +1,10 @@
 """
 问答助手API: 提供问答助手管理、问题卡片管理和文档关联操作
 """
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
 
 from app.schemas.assistant_qa import (
     AssistantCreate, AssistantUpdate, AssistantResponse, AssistantList,
@@ -14,6 +15,15 @@ from app.core.assistant_qa_manager import AssistantQAManager
 from app.utils.database import get_db
 
 router = APIRouter()
+
+
+# 助手工具配置模型
+class AssistantToolConfig(BaseModel):
+    """助手工具配置"""
+    tool_type: str = Field(..., description="工具类型: mcp, query_engine, function等")
+    tool_name: str = Field(..., description="工具名称")
+    enabled: bool = True
+    settings: Optional[Dict[str, Any]] = None
 
 
 # 助手管理接口
@@ -230,3 +240,93 @@ async def update_document_segment_settings(
         segment_ids=settings.segment_ids
     )
     return updated
+
+
+# 工具配置接口
+@router.post("/assistants/{assistant_id}/tools", response_model=List[Dict[str, Any]])
+async def configure_assistant_tools(
+    assistant_id: int,
+    tools: List[AssistantToolConfig],
+    db: Session = Depends(get_db)
+):
+    """配置助手工具"""
+    try:
+        # 验证助手存在
+        manager = AssistantQAManager(db)
+        assistant = manager.get_assistant(assistant_id)
+        if not assistant:
+            raise HTTPException(status_code=404, detail="未找到助手")
+        
+        # 处理MCP工具
+        configured_tools = []
+        for tool_config in tools:
+            if tool_config.tool_type == "mcp":
+                # 获取MCP工具
+                from app.frameworks.integration.mcp_integration import MCPIntegrationService
+                mcp_service = MCPIntegrationService()
+                mcp_tool = mcp_service.get_tool_by_name(tool_config.tool_name)
+                
+                if mcp_tool:
+                    # 存储工具配置
+                    tool_data = {
+                        "tool_type": "mcp",
+                        "tool_name": tool_config.tool_name,
+                        "enabled": tool_config.enabled,
+                        "settings": tool_config.settings or {}
+                    }
+                    configured_tools.append(tool_data)
+                else:
+                    raise HTTPException(status_code=404, detail=f"未找到MCP工具: {tool_config.tool_name}")
+            
+            elif tool_config.tool_type == "query_engine":
+                # 处理查询引擎工具
+                tool_data = {
+                    "tool_type": "query_engine",
+                    "tool_name": tool_config.tool_name,
+                    "enabled": tool_config.enabled,
+                    "settings": tool_config.settings or {}
+                }
+                configured_tools.append(tool_data)
+            
+            elif tool_config.tool_type == "function":
+                # 处理函数工具
+                tool_data = {
+                    "tool_type": "function",
+                    "tool_name": tool_config.tool_name,
+                    "enabled": tool_config.enabled,
+                    "settings": tool_config.settings or {}
+                }
+                configured_tools.append(tool_data)
+            
+            else:
+                # 未知工具类型
+                raise HTTPException(status_code=400, detail=f"不支持的工具类型: {tool_config.tool_type}")
+        
+        # 更新助手工具配置
+        manager.update_assistant_tools(assistant_id, configured_tools)
+        
+        return configured_tools
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"配置助手工具时出错: {str(e)}")
+
+
+@router.get("/assistants/{assistant_id}/tools", response_model=List[Dict[str, Any]])
+async def get_assistant_tools(
+    assistant_id: int,
+    db: Session = Depends(get_db)
+):
+    """获取助手工具配置"""
+    try:
+        # 验证助手存在
+        manager = AssistantQAManager(db)
+        assistant = manager.get_assistant(assistant_id)
+        if not assistant:
+            raise HTTPException(status_code=404, detail="未找到助手")
+        
+        # 获取工具配置
+        tools = manager.get_assistant_tools(assistant_id)
+        return tools
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取助手工具配置时出错: {str(e)}")

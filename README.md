@@ -19,14 +19,14 @@
 
 ### AI/ML集成
 
-- **LlamaIndex**：LLM应用开发框架，作为统一入口
+- **LlamaIndex**：作为统一入口点和路由框架，提供知识库索引、聊天功能和嵌入处理
 - **HayStack**：问答系统框架，负责高级文档检索
-- **LlamaIndex**：LLM应用的数据框架，用于知识库索引
 - **Agno**：用于自主操作的代理框架，支持复杂推理
+- **MCP**：Model Context Protocol，提供模型与外部工具和数据源的标准化连接
 
 ### 模型提供商支持
 
-- **OpenAI**: GPT-3.5, GPT-4系列模型
+- **OpenAI**: GPT-3.5, GPT-4, GPT-4o系列模型
 - **智谱AI**: GLM系列模型
 - **DeepSeek**: DeepSeek系列模型
 - **通义千问**: 阿里达摩院千问系列模型
@@ -56,15 +56,16 @@ zz-backend-lite/
 │   │   └── assistant_qa_manager.py # 问答助手管理
 │   ├── frameworks/         # AI框架集成
 │   │   ├── haystack/       # Haystack集成
-│   │   ├── llamaIndex/      # LlamaIndex集成
 │   │   ├── llamaindex/     # LlamaIndex集成
 │   │   ├── agno/           # Agno代理框架
+│   │   ├── mcp/            # MCP服务集成
 │   │   └── integration/    # 框架集成层
 │   ├── models/             # 数据库模型
 │   │   ├── assistants.py   # 助手模型
 │   │   ├── knowledge.py    # 知识库模型
 │   │   ├── chat.py         # 聊天模型
 │   │   ├── model_provider.py # 模型提供商模型
+│   │   ├── mcp.py          # MCP模型
 │   │   └── assistant_qa.py # 问答助手模型
 │   ├── schemas/            # Pydantic模式
 │   ├── utils/              # 实用函数
@@ -128,6 +129,24 @@ python main.py
 
 ```bash
 celery -A app.worker worker --loglevel=info
+```
+
+## 数据库管理
+
+本项目使用Alembic进行数据库迁移管理，确保数据库结构与代码同步：
+
+```bash
+# 创建新的迁移版本
+alembic revision --autogenerate -m "描述变更"
+
+# 升级到最新版本
+alembic upgrade head
+
+# 查看迁移历史
+alembic history
+
+# 回滚到特定版本
+alembic downgrade <版本号>
 ```
 
 ## API端点
@@ -281,3 +300,26 @@ celery -A app.worker worker --loglevel=info
 - 可根据成本、性能和能力选择适当的模型
 - 支持特定任务使用专用模型（如文档总结vs.问答）
 - 提供模型回退机制，确保服务可靠性
+
+## 核心功能架构
+
+### 知识库处理流程
+
+1. **文档上传**：通过API上传文档到MinIO对象存储
+2. **文档处理**：使用LlamaIndex进行文档解析、分块和嵌入 
+3. **向量存储**：嵌入向量存储到Milvus向量数据库
+4. **元数据索引**：文档元数据存储在PostgreSQL中
+
+### 聊天系统架构
+
+1. **聊天管理**：基于LlamaIndex构建的聊天管理器，处理消息路由和模型选择
+2. **QA助手 - Agno代理**：处理用户查询，支持记忆和工具使用，调用Haystack进行文档检索
+3. **QA管理 - LlamaIndex与Agno协作**：LlamaIndex负责对话历史管理和文档知识集成，Agno维护会话状态
+4. **知识库管理 - LlamaIndex与Haystack**：LlamaIndex负责文档索引和检索，Haystack用于高级搜索
+
+### MCP服务集成
+
+1. **标准化工具连接**：使用Model Context Protocol标准连接AI模型与外部工具
+2. **工具注册管理**：支持动态创建和注册MCP工具
+3. **资源管理**：统一管理外部资源连接
+4. **提示模板**：管理标准化的提示模板
