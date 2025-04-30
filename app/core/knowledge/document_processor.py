@@ -141,7 +141,7 @@ def create_embeddings_for_document(document_id: int, db: Session):
     """
     Create embeddings for all chunks of a document and store them.
     """
-    from app.frameworks.langchain.embeddings import get_embedding_model
+    from app.frameworks.llamaindex.embeddings import get_embedding_model
     
     # Get document chunks
     chunks = db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).all()
@@ -157,7 +157,7 @@ def create_embeddings_for_document(document_id: int, db: Session):
         
         # Generate embeddings
         try:
-            embeddings = embedding_model.embed_documents(texts)
+            embeddings = [embedding_model.get_text_embedding(text) for text in texts]
             
             # Store embeddings
             for j, chunk in enumerate(batch):

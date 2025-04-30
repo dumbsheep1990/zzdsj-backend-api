@@ -41,7 +41,7 @@ class KnowledgeService:
         try:
             # 使用默认嵌入模型（如果未指定）
             if not embedding_model:
-                embedding_model = settings.LANGCHAIN_EMBEDDING_MODEL
+                embedding_model = settings.EMBEDDING_MODEL
             
             kb_data = {
                 "id": str(uuid.uuid4()),
@@ -225,7 +225,7 @@ class KnowledgeService:
             metadatas = [{"chunk_id": chunk.id, "document_id": chunk.document_id, **chunk.metadata} for chunk in chunks]
             
             # 获取嵌入模型
-            embedding_model = kb.embedding_model or settings.LANGCHAIN_EMBEDDING_MODEL
+            embedding_model = kb.embedding_model or settings.EMBEDDING_MODEL
             
             # 添加到向量存储
             ids = await vector_store.add_texts(collection_name=kb_id, 
@@ -266,7 +266,7 @@ class KnowledgeService:
             vector_store = get_vector_store()
             
             # 获取嵌入模型
-            embedding_model = kb.embedding_model or settings.LANGCHAIN_EMBEDDING_MODEL
+            embedding_model = kb.embedding_model or settings.EMBEDDING_MODEL
             
             # 执行搜索
             results = await vector_store.similarity_search(

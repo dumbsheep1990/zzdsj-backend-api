@@ -109,14 +109,20 @@ class Settings:
     CELERY_RESULT_BACKEND: str = get_config("celery", "result_backend", default="redis://localhost:6379/0")
     
     # 框架配置
-    # LangChain配置
-    LANGCHAIN_EMBEDDING_MODEL: str = get_config("frameworks", "langchain", "embedding_model", default="text-embedding-ada-002")
-    LANGCHAIN_CHAT_MODEL: str = get_config("frameworks", "langchain", "chat_model", default="gpt-3.5-turbo")
-    LANGCHAIN_MEMORY_TYPE: str = get_config("frameworks", "langchain", "memory_type", default="conversation_buffer")
-    LANGCHAIN_MEMORY_K: int = get_config("frameworks", "langchain", "memory_k", default=5)
-    LANGCHAIN_USE_LANGSMITH: bool = get_config("frameworks", "langchain", "use_langsmith", default=False)
-    LANGCHAIN_LANGSMITH_API_KEY: str = get_config("frameworks", "langchain", "langsmith_api_key", default="")
-    LANGCHAIN_LANGSMITH_PROJECT: str = get_config("frameworks", "langchain", "langsmith_project", default="knowledge-qa")
+    # LlamaIndex配置（替代LangChain）
+    EMBEDDING_MODEL: str = get_config("frameworks", "llamaindex", "embedding_model", default="text-embedding-ada-002")
+    CHAT_MODEL: str = get_config("frameworks", "llamaindex", "llm_model", default="gpt-3.5-turbo")
+    MEMORY_TYPE: str = get_config("frameworks", "llamaindex", "memory_type", default="conversation_buffer")
+    MEMORY_K: int = get_config("frameworks", "llamaindex", "memory_k", default=5)
+    
+    # 保留LangChain配置（为了兼容性，但已不再使用）
+    LANGCHAIN_EMBEDDING_MODEL: str = EMBEDDING_MODEL
+    LANGCHAIN_CHAT_MODEL: str = CHAT_MODEL
+    LANGCHAIN_MEMORY_TYPE: str = MEMORY_TYPE
+    LANGCHAIN_MEMORY_K: int = MEMORY_K
+    LANGCHAIN_USE_LANGSMITH: bool = False
+    LANGCHAIN_LANGSMITH_API_KEY: str = ""
+    LANGCHAIN_LANGSMITH_PROJECT: str = "knowledge-qa"
     
     # Haystack配置
     HAYSTACK_READER_MODEL: str = get_config("frameworks", "haystack", "reader_model", default="deepset/roberta-base-squad2")
@@ -143,18 +149,18 @@ class Settings:
     AGNO_MEMORY_K: int = get_config("frameworks", "agno", "memory_k", default=5)
     
     # 框架集成配置
-    # 统一入口 - LangChain
-    FRAMEWORK_ENTRY_POINT: str = get_config("framework_integration", "entry_point", default="langchain")
+    # 统一入口 - LlamaIndex（替代LangChain）
+    FRAMEWORK_ENTRY_POINT: str = get_config("framework_integration", "entry_point", default="llamaindex")
     
     # QA助手 - Agno与检索集成
     QA_ASSISTANT_FRAMEWORK: str = get_config("framework_integration", "qa_assistant", "framework", default="agno")
     QA_RETRIEVER_FRAMEWORK: str = get_config("framework_integration", "qa_assistant", "retriever", default="haystack")
     QA_INDEXER_FRAMEWORK: str = get_config("framework_integration", "qa_assistant", "indexer", default="llamaindex")
     
-    # QA管理 - LangChain与Agno协作
-    QA_MANAGEMENT_CONVERSATION_FRAMEWORK: str = get_config("framework_integration", "qa_management", "conversation", default="langchain")
+    # QA管理 - LlamaIndex与Agno协作（替代LangChain）
+    QA_MANAGEMENT_CONVERSATION_FRAMEWORK: str = get_config("framework_integration", "qa_management", "conversation", default="llamaindex")
     QA_MANAGEMENT_MEMORY_FRAMEWORK: str = get_config("framework_integration", "qa_management", "memory", default="agno")
-    QA_MANAGEMENT_API_FRAMEWORK: str = get_config("framework_integration", "qa_management", "api", default="langchain")
+    QA_MANAGEMENT_API_FRAMEWORK: str = get_config("framework_integration", "qa_management", "api", default="llamaindex")
     
     # 知识库管理 - LlamaIndex与Haystack分工
     KNOWLEDGE_MANAGEMENT_INDEXING_FRAMEWORK: str = get_config("framework_integration", "knowledge_management", "indexing", default="llamaindex")

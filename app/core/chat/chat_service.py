@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.models.chat import Conversation, Message, MessageReference
 from app.models.assistants import Assistant, AssistantKnowledgeBase
-from app.frameworks.langchain.embeddings import similarity_search
+from app.frameworks.llamaindex.embeddings import similarity_search
 
 async def process_chat_request(
     assistant_id: int,
@@ -94,43 +94,44 @@ async def generate_response(
     """
     Generate a response using the appropriate LLM framework based on assistant configuration.
     """
-    from langchain.schema import SystemMessage, HumanMessage, AIMessage
-    from langchain_openai import ChatOpenAI
+    from app.frameworks.llamaindex.chat import generate_response as llamaindex_generate_response
     from app.config import settings
-    
-    # Prepare the chat history in LangChain format
-    messages = []
-    
-    # Add system message with assistant description and capabilities
+
+    # 准备对话历史
+    formatted_history = []
+
+    # 转换对话历史为LlamaIndex格式
+    for message in conversation_history:
+        formatted_history.append({
+            "role": message.role,
+            "content": message.content
+        })
+
+    # 添加系统消息
     system_message = f"You are a helpful AI assistant named {assistant.name}."
-    
+
     if assistant.description:
         system_message += f" {assistant.description}"
-    
-    # Add reference documents to system message if available
+
+    # 添加参考文档
+    references_formatted = []
     if references:
-        system_message += "\n\nRelevant information from knowledge base:"
-        for i, ref in enumerate(references):
-            system_message += f"\n\nDocument {i+1}:\n{ref['content']}"
-    
-    messages.append(SystemMessage(content=system_message))
-    
-    # Add conversation history
-    for message in conversation_history:
-        if message.role == "user":
-            messages.append(HumanMessage(content=message.content))
-        elif message.role == "assistant":
-            messages.append(AIMessage(content=message.content))
-    
-    # Initialize ChatOpenAI with the appropriate model
+        for ref in references:
+            references_formatted.append({
+                "content": ref["content"],
+                "metadata": ref.get("metadata", {})
+            })
+
+    # 初始化模型名称
     model_name = assistant.model_id if assistant.model_id else settings.DEFAULT_MODEL
-    chat = ChatOpenAI(
+
+    # 生成响应
+    response = await llamaindex_generate_response(
+        system_prompt=system_message,
+        conversation_history=formatted_history,
+        references=references_formatted,
         model_name=model_name,
-        openai_api_key=settings.OPENAI_API_KEY,
         temperature=0.7
     )
-    
-    # Generate response
-    response = await chat.ainvoke(messages)
-    
-    return response.content
+
+    return response

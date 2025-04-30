@@ -133,7 +133,7 @@ def get_embedding_model(model_name: Optional[str] = None, api_key: Optional[str]
     from app.config import settings
     
     # 使用提供的模型名称或从配置中获取默认值
-    model = model_name or settings.LANGCHAIN_EMBEDDING_MODEL
+    model = model_name or settings.EMBEDDING_MODEL
     
     # 使用提供的API密钥或从配置中获取默认值
     key = api_key or settings.OPENAI_API_KEY

@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 from llama_index.core.chat_engine import SimpleChatEngine
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core import Settings
+from llama_index.core.llms import ChatMessage, MessageRole
 from app.frameworks.llamaindex.core import get_llm, get_service_context, format_prompt
 
 def create_chat_engine(
@@ -63,6 +64,9 @@ async def generate_response(
     返回:
         生成的响应
     """
+    # 获取LLM
+    llm = get_llm(model_name, temperature)
+    
     # 处理参考资料
     if references:
         reference_text = "\n\n知识库中的相关信息:"
@@ -71,30 +75,51 @@ async def generate_response(
         
         system_prompt += reference_text
     
-    # 创建聊天引擎
-    chat_engine = create_chat_engine(
-        system_prompt=system_prompt,
-        model_name=model_name,
-        temperature=temperature
-    )
+    # 创建消息列表
+    messages = []
+    
+    # 添加系统消息
+    messages.append(ChatMessage(role=MessageRole.SYSTEM, content=system_prompt))
     
     # 添加对话历史
     for message in conversation_history:
         if message["role"] == "user":
-            chat_engine.memory.put({"role": "user", "content": message["content"]})
+            messages.append(ChatMessage(role=MessageRole.USER, content=message["content"]))
         elif message["role"] == "assistant":
-            chat_engine.memory.put({"role": "assistant", "content": message["content"]})
-    
-    # 获取最后一条用户消息
-    last_user_message = None
-    for message in reversed(conversation_history):
-        if message["role"] == "user":
-            last_user_message = message["content"]
-            break
+            messages.append(ChatMessage(role=MessageRole.ASSISTANT, content=message["content"]))
     
     # 生成响应
-    if last_user_message:
-        response = await chat_engine.aquery(last_user_message)
-        return response.response
-    else:
-        raise ValueError("对话历史中没有用户消息")
+    response = await llm.achat(messages)
+    
+    return response.message.content
+
+def create_prompt_template(template_name: str, **kwargs) -> str:
+    """
+    从模板创建提示，与现有LangChain的功能保持相同接口
+    """
+    # 定义模板
+    templates = {
+        "qa": (
+            "你是一个根据提供的上下文回答问题的助手。\n"
+            "如果答案不在上下文中，请说你不知道。\n"
+            "上下文: {context}\n\n"
+            "问题: {question}"
+        ),
+        "summarize": (
+            "以简洁的方式总结以下文本:\n\n{text}"
+        ),
+        "assistant": (
+            "你是{assistant_name}，{assistant_description}\n"
+            "根据以下能力，以有帮助和准确的方式回应用户:\n"
+            "{capabilities}"
+        )
+    }
+    
+    # 获取模板
+    if template_name not in templates:
+        raise ValueError(f"未找到模板 '{template_name}'")
+    
+    template = templates[template_name]
+    
+    # 用提供的值填充模板
+    return template.format(**kwargs)

@@ -13,7 +13,7 @@ from app.models.knowledge import Document, DocumentSegment, KnowledgeBase
 from app.schemas.assistant_qa import AnswerModeEnum
 
 # 框架集成
-from app.frameworks.langchain.chat import generate_response
+from app.frameworks.llamaindex.chat import generate_response
 from app.frameworks.haystack.reader import extract_answers
 from app.frameworks.llamaindex.retrieval import query_index
 from app.frameworks.agno.agent import AgnoAgent
@@ -26,7 +26,7 @@ class AssistantQAManager:
     """
     问答助手管理器
     
-    集成LangChain、Haystack、LlamaIndex和Agno框架，
+    集成LlamaIndex、Haystack、LlamaIndex和Agno框架，
     提供统一的问答助手管理、问题回答和文档检索功能
     """
     
@@ -421,13 +421,13 @@ class AssistantQAManager:
                 return agent_response.get("answer", "无法生成回答")
                 
             else:
-                # 默认模式：LangChain统一入口，使用文档增强回答
+                # 默认模式：LlamaIndex统一入口，使用文档增强回答
                 system_prompt = f"你是一个{assistant.name}，需要回答关于{assistant.description or '相关主题'}的问题。"
                 
                 # 创建上下文
                 conversation_history = [{"role": "user", "content": question.question_text}]
                 
-                # 使用LangChain生成回答
+                # 使用LlamaIndex生成回答
                 response = await generate_response(
                     system_prompt=system_prompt,
                     conversation_history=conversation_history,
