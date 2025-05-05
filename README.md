@@ -153,85 +153,119 @@ alembic downgrade <版本号>
 
 该服务提供了几个RESTful API端点：
 
+### 用户认证与授权
+
+- `POST /api/v1/auth/register` - 注册新用户
+- `POST /api/v1/auth/login` - 用户登录获取令牌
+- `POST /api/v1/auth/refresh` - 刷新访问令牌
+- `GET /api/v1/auth/me` - 获取当前用户信息
+
+### 用户管理
+
+- `GET /api/v1/users/` - 获取用户列表（需要管理权限）
+- `GET /api/v1/users/{user_id}` - 获取指定用户信息
+- `PUT /api/v1/users/me` - 更新当前用户信息
+- `PUT /api/v1/users/{user_id}` - 更新指定用户信息（需要管理权限）
+- `DELETE /api/v1/users/{user_id}` - 删除/禁用用户（需要管理权限）
+- `PUT /api/v1/users/me/password` - 更新当前用户密码
+- `PUT /api/v1/users/me/settings` - 更新当前用户设置
+
+### 角色与权限管理
+
+- `GET /api/v1/users/roles` - 获取所有角色
+- `POST /api/v1/users/roles` - 创建新角色
+- `PUT /api/v1/users/roles/{role_id}` - 更新角色
+- `DELETE /api/v1/users/roles/{role_id}` - 删除角色
+- `GET /api/v1/users/permissions` - 获取所有权限
+- `PUT /api/v1/users/roles/{role_id}/permissions` - 分配权限给角色
+- `PUT /api/v1/users/{user_id}/roles` - 分配角色给用户
+
+### API密钥管理
+
+- `GET /api/v1/api-keys/` - 获取当前用户的API密钥
+- `POST /api/v1/api-keys/` - 创建新API密钥
+- `PUT /api/v1/api-keys/{api_key_id}` - 更新API密钥
+- `DELETE /api/v1/api-keys/{api_key_id}` - 删除API密钥
+
 ### 助手管理
 
-- `GET /api/assistants/` - 列出所有助手
-- `POST /api/assistants/` - 创建新助手
-- `GET /api/assistants/{assistant_id}` - 获取助手详情
-- `PUT /api/assistants/{assistant_id}` - 更新助手
-- `DELETE /api/assistants/{assistant_id}` - 删除/停用助手
+- `GET /api/v1/assistants/` - 列出所有助手
+- `POST /api/v1/assistants/` - 创建新助手
+- `GET /api/v1/assistants/{assistant_id}` - 获取助手详情
+- `PUT /api/v1/assistants/{assistant_id}` - 更新助手
+- `DELETE /api/v1/assistants/{assistant_id}` - 删除/停用助手
 
 ### 知识库管理
 
-- `GET /api/knowledge/` - 列出所有知识库
-- `POST /api/knowledge/` - 创建新知识库
-- `GET /api/knowledge/{knowledge_base_id}` - 获取知识库详情
-- `PUT /api/knowledge/{knowledge_base_id}` - 更新知识库
-- `DELETE /api/knowledge/{knowledge_base_id}` - 删除知识库
-- `GET /api/knowledge/{knowledge_base_id}/documents` - 列出文档
-- `POST /api/knowledge/{knowledge_base_id}/documents` - 添加文档
+- `GET /api/v1/knowledge/` - 列出所有知识库
+- `POST /api/v1/knowledge/` - 创建新知识库
+- `GET /api/v1/knowledge/{knowledge_base_id}` - 获取知识库详情
+- `PUT /api/v1/knowledge/{knowledge_base_id}` - 更新知识库
+- `DELETE /api/v1/knowledge/{knowledge_base_id}` - 删除知识库
+- `GET /api/v1/knowledge/{knowledge_base_id}/documents` - 列出文档
+- `POST /api/v1/knowledge/{knowledge_base_id}/documents` - 添加文档
 
 ### 聊天接口
 
-- `GET /api/chat/conversations` - 列出对话
-- `POST /api/chat/conversations` - 创建新对话
-- `GET /api/chat/conversations/{conversation_id}` - 获取带有消息的对话
-- `POST /api/chat/` - 发送消息并获取AI响应
+- `GET /api/v1/chat/conversations` - 列出对话
+- `POST /api/v1/chat/conversations` - 创建新对话
+- `GET /api/v1/chat/conversations/{conversation_id}` - 获取带有消息的对话
+- `POST /api/v1/chat/` - 发送消息并获取AI响应
 
 ### 模型管理接口
 
-- `GET /api/models/providers` - 获取所有模型提供商
-- `POST /api/models/providers` - 添加新模型提供商
-- `GET /api/models/providers/{provider_id}` - 获取提供商详情
-- `PUT /api/models/providers/{provider_id}` - 更新模型提供商
-- `DELETE /api/models/providers/{provider_id}` - 删除模型提供商
-- `GET /api/models/providers/{provider_id}/models` - 获取提供商的模型
-- `POST /api/models/providers/{provider_id}/models` - 添加新模型
-- `POST /api/models/test-connection` - 测试模型连接
+- `GET /api/v1/models/providers` - 获取所有模型提供商
+- `POST /api/v1/models/providers` - 添加新模型提供商
+- `GET /api/v1/models/providers/{provider_id}` - 获取提供商详情
+- `PUT /api/v1/models/providers/{provider_id}` - 更新模型提供商
+- `DELETE /api/v1/models/providers/{provider_id}` - 删除模型提供商
+- `GET /api/v1/models/providers/{provider_id}/models` - 获取提供商的模型
+- `POST /api/v1/models/providers/{provider_id}/models` - 添加新模型
+- `POST /api/v1/models/test-connection` - 测试模型连接
 
 ### 问答助手接口
 
-- `GET /api/assistant-qa/assistants` - 获取问答助手列表
-- `POST /api/assistant-qa/assistants` - 创建问答助手
-- `GET /api/assistant-qa/assistants/{assistant_id}` - 获取问答助手详情
-- `GET /api/assistant-qa/assistants/{assistant_id}/questions` - 获取问题列表
-- `POST /api/assistant-qa/questions` - 创建新问题
-- `GET /api/assistant-qa/questions/{question_id}` - 获取问题详情
-- `PUT /api/assistant-qa/questions/{question_id}/answer-settings` - 更新回答设置
-- `PUT /api/assistant-qa/questions/{question_id}/document-settings` - 更新文档设置
+- `GET /api/v1/assistant-qa/assistants` - 获取问答助手列表
+- `POST /api/v1/assistant-qa/assistants` - 创建问答助手
+- `GET /api/v1/assistant-qa/assistants/{assistant_id}` - 获取问答助手详情
+- `GET /api/v1/assistant-qa/assistants/{assistant_id}/questions` - 获取问题列表
+- `POST /api/v1/assistant-qa/questions` - 创建新问题
+- `GET /api/v1/assistant-qa/questions/{question_id}` - 获取问题详情
+- `PUT /api/v1/assistant-qa/questions/{question_id}/answer-settings` - 更新回答设置
+- `PUT /api/v1/assistant-qa/questions/{question_id}/document-settings` - 更新文档设置
 
 ### MCP服务接口
 
 #### 自定义MCP服务
 
-- `GET /api/mcp/server/status` - 获取MCP服务器状态，包括已注册工具、资源和提示的数量
-- `POST /api/mcp/server/restart` - 重启MCP服务器
+- `GET /api/v1/mcp/server/status` - 获取MCP服务器状态，包括已注册工具、资源和提示的数量
+- `POST /api/v1/mcp/server/restart` - 重启MCP服务器
 
-- `GET /api/mcp/tools` - 列出所有MCP工具，支持按类别和标签筛选
-- `GET /api/mcp/tools/{name}` - 获取特定工具的详细信息
-- `POST /api/mcp/tools` - 创建新MCP工具，支持动态代码加载和注册
+- `GET /api/v1/mcp/tools` - 列出所有MCP工具，支持按类别和标签筛选
+- `GET /api/v1/mcp/tools/{name}` - 获取特定工具的详细信息
+- `POST /api/v1/mcp/tools` - 创建新MCP工具，支持动态代码加载和注册
 
-- `GET /api/mcp/resources` - 列出所有MCP资源
-- `GET /api/mcp/resources/{uri}` - 获取特定资源详情
-- `POST /api/mcp/resources` - 创建新MCP资源
+- `GET /api/v1/mcp/resources` - 列出所有MCP资源
+- `GET /api/v1/mcp/resources/{uri}` - 获取特定资源详情
+- `POST /api/v1/mcp/resources` - 创建新MCP资源
 
-- `GET /api/mcp/prompts` - 列出所有MCP提示
-- `GET /api/mcp/prompts/{name}` - 获取特定提示详情
-- `POST /api/mcp/prompts` - 创建新MCP提示
+- `GET /api/v1/mcp/prompts` - 列出所有MCP提示
+- `GET /api/v1/mcp/prompts/{name}` - 获取特定提示详情
+- `POST /api/v1/mcp/prompts` - 创建新MCP提示
 
-- `POST /api/mcp/deploy` - 将选定的工具、资源和提示打包并部署为MCP服务
+- `POST /api/v1/mcp/deploy` - 将选定的工具、资源和提示打包并部署为MCP服务
 
 #### 第三方MCP工具
 
-- `GET /api/mcp/providers` - 列出所有第三方MCP提供商，支持按能力筛选
-- `GET /api/mcp/providers/{provider_id}` - 获取特定提供商详情
-- `POST /api/mcp/providers` - 注册新的第三方MCP提供商
-- `DELETE /api/mcp/providers/{provider_id}` - 删除第三方MCP提供商
+- `GET /api/v1/mcp/providers` - 列出所有第三方MCP提供商，支持按能力筛选
+- `GET /api/v1/mcp/providers/{provider_id}` - 获取特定提供商详情
+- `POST /api/v1/mcp/providers` - 注册新的第三方MCP提供商
+- `DELETE /api/v1/mcp/providers/{provider_id}` - 删除第三方MCP提供商
 
-- `GET /api/mcp/providers/{provider_id}/tools` - 列出提供商提供的工具
-- `POST /api/mcp/providers/{provider_id}/tools/{tool_name}/test` - 测试特定工具
+- `GET /api/v1/mcp/providers/{provider_id}/tools` - 列出提供商提供的工具
+- `POST /api/v1/mcp/providers/{provider_id}/tools/{tool_name}/test` - 测试特定工具
 
-- `POST /api/mcp/providers/{provider_id}/chat` - 与支持聊天能力的提供商进行聊天，支持流式响应
+- `POST /api/v1/mcp/providers/{provider_id}/chat` - 与支持聊天能力的提供商进行聊天，支持流式响应
 
 ## 知识库集成
 

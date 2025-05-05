@@ -8,6 +8,7 @@ import atexit
 import os
 
 from app.api import assistants, knowledge, chat, assistant, model_provider, assistant_qa, mcp, mcp_service
+from app.api import auth, user, api_key, resource_permission
 from app.config import settings
 from app.utils.database import init_db
 from app.utils.vector_store import init_milvus
@@ -44,6 +45,10 @@ app.include_router(model_provider.router, prefix="/api/v1/models", tags=["模型
 app.include_router(assistant_qa.router, prefix="/api/v1/assistant-qa", tags=["问答助手"])
 app.include_router(mcp.router, tags=["MCP服务"])
 app.include_router(mcp_service.router, tags=["MCP服务管理"])
+app.include_router(auth.router)
+app.include_router(user.router)
+app.include_router(api_key.router)
+app.include_router(resource_permission.router)
 
 @app.get("/", include_in_schema=False)
 def root():

@@ -15,6 +15,12 @@ class Settings:
     # CORS跨域
     CORS_ORIGINS: List[str] = get_config("cors", "origins", default=["http://localhost", "http://localhost:3000", "http://localhost:8080", "*"])
     
+    # 认证与安全配置
+    JWT_SECRET_KEY: str = get_config("security", "jwt_secret_key", default="23f0767704249cd7be7181a0dad23c74e0739c98ce54d7140fc2e94dfa584fb0")
+    JWT_ALGORITHM: str = get_config("security", "jwt_algorithm", default="HS256")
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = get_config("security", "jwt_access_token_expire_minutes", default=30)
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = get_config("security", "jwt_refresh_token_expire_days", default=7)
+    
     # LLM配置
     OPENAI_API_KEY: str = get_config("llm", "openai_api_key", default="")
     DEFAULT_MODEL: str = get_config("llm", "default_model", default="gpt-4")
