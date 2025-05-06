@@ -86,3 +86,16 @@ frameworks:
     enabled: true
     chunk_size: 1000
     chunk_overlap: 200
+
+# 添加InfluxDB时序数据库配置
+metrics:
+  enabled: true
+  provider: influxdb
+  token_statistics: true  # 是否开启token统计功能
+  influxdb:
+    url: http://localhost:8086
+    token: ""  # 填入您的InfluxDB API token
+    org: knowledge_qa_org
+    bucket: llm_metrics
+    batch_size: 50
+    flush_interval: 10  # 数据写入间隔(秒)

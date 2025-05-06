@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.chat import Conversation, Message, MessageReference
 from app.models.assistants import Assistant, AssistantKnowledgeBase
 from app.frameworks.llamaindex.embeddings import similarity_search
+from app.middleware.token_metrics_middleware import TokenMetricsMiddleware
 
 async def process_chat_request(
     assistant_id: int,
@@ -133,5 +134,40 @@ async def generate_response(
         model_name=model_name,
         temperature=0.7
     )
+
+    # 异步记录Token使用统计
+    try:
+        # 构建完整消息列表用于Token计算
+        complete_messages = []
+        
+        # 添加系统消息
+        complete_messages.append({
+            "role": "system",
+            "content": system_message
+        })
+        
+        # 添加对话历史
+        complete_messages.extend(formatted_history)
+        
+        # 添加用户最新消息
+        complete_messages.append({
+            "role": "user",
+            "content": user_message
+        })
+        
+        # 异步记录Token统计，不影响主流程
+        await TokenMetricsMiddleware.record_usage(
+            user_id=str(assistant.user_id),
+            model_name=model_name,
+            messages=complete_messages,
+            response_text=response,
+            conversation_id=str(conversation_history[0].conversation_id if conversation_history else "unknown"),
+            assistant_id=str(assistant.id),
+            assistant_name=assistant.name,
+            references_count=len(references_formatted)
+        )
+    except Exception as e:
+        # 捕获异常但不影响主流程
+        print(f"Token统计记录失败: {e}")
 
     return response

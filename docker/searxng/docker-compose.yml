@@ -1,0 +1,27 @@
+version: '3.7'
+
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    networks:
+      - search_network
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - INSTANCE_NAME=智政搜索服务
+      - BASE_URL=http://localhost:8888/
+      - BIND_ADDRESS=0.0.0.0:8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  search_network:
+    driver: bridge

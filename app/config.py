@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 from app.utils.config_manager import get_config
+from pydantic import BaseSettings, Field
 
 class Settings:
     # 服务信息
@@ -84,7 +85,30 @@ class Settings:
     # 向量存储 - Milvus配置
     MILVUS_HOST: str = get_config("vector_store", "milvus", "host", default="localhost")
     MILVUS_PORT: str = get_config("vector_store", "milvus", "port", default="19530")
-    MILVUS_COLLECTION: str = get_config("vector_store", "milvus", "collection", default="knowledge_embeddings")
+    MILVUS_COLLECTION: str = get_config("vector_store", "milvus", "collection", default="document_vectors")
+    
+    # 向量存储 - Elasticsearch配置
+    ELASTICSEARCH_URL: str = get_config("vector_store", "elasticsearch", "url", default="http://localhost:9200")
+    ELASTICSEARCH_USERNAME: str = get_config("vector_store", "elasticsearch", "username", default="")
+    ELASTICSEARCH_PASSWORD: str = get_config("vector_store", "elasticsearch", "password", default="")
+    ELASTICSEARCH_CLOUD_ID: str = get_config("vector_store", "elasticsearch", "cloud_id", default="")
+    ELASTICSEARCH_API_KEY: str = get_config("vector_store", "elasticsearch", "api_key", default="")
+    ELASTICSEARCH_INDEX: str = get_config("vector_store", "elasticsearch", "index", default="document_index")
+    ELASTICSEARCH_DEFAULT_ANALYZER: str = get_config("vector_store", "elasticsearch", "analyzer", default="standard")
+    ELASTICSEARCH_EMBEDDING_DIM: int = get_config("vector_store", "elasticsearch", "embedding_dim", default=1536)
+    ELASTICSEARCH_SIMILARITY: str = get_config("vector_store", "elasticsearch", "similarity", default="cosine")
+    ELASTICSEARCH_HYBRID_SEARCH: bool = get_config("vector_store", "elasticsearch", "hybrid_search", default=True)
+    ELASTICSEARCH_HYBRID_WEIGHT: float = get_config("vector_store", "elasticsearch", "hybrid_weight", default=0.5)
+    
+    # 文档处理配置
+    DOCUMENT_SPLITTER_TYPE: str = get_config("document_processing", "splitter_type", default="sentence")
+    DOCUMENT_CHUNK_SIZE: int = get_config("document_processing", "chunk_size", default=1000)
+    DOCUMENT_CHUNK_OVERLAP: int = get_config("document_processing", "chunk_overlap", default=200)
+    DOCUMENT_PROCESSING_CONCURRENCY: int = get_config("document_processing", "concurrency", default=4)
+    EMBEDDING_BATCH_SIZE: int = get_config("document_processing", "embedding_batch_size", default=16)
+    DOCUMENT_PROCESSING_TIMEOUT: int = get_config("document_processing", "timeout", default=3600)
+    DOCUMENT_SEMANTIC_CHUNK_STRATEGY: str = get_config("document_processing", "semantic_chunk_strategy", default="auto")
+    DOCUMENT_USE_METADATA_EXTRACTION: bool = get_config("document_processing", "use_metadata_extraction", default=True)
     
     # Redis配置
     REDIS_HOST: str = get_config("redis", "host", default="localhost")
@@ -140,12 +164,13 @@ class Settings:
     HAYSTACK_RERANKER_MODEL: str = get_config("frameworks", "haystack", "reranker_model", default="cross-encoder/ms-marco-MiniLM-L-6-v2")
     
     # LlamaIndex配置
-    LLAMAINDEX_CHUNK_SIZE: int = get_config("frameworks", "llamaindex", "chunk_size", default=1000)
-    LLAMAINDEX_CHUNK_OVERLAP: int = get_config("frameworks", "llamaindex", "chunk_overlap", default=200)
+    LLAMAINDEX_CHUNK_SIZE: int = get_config("frameworks", "llamaindex", "chunk_size", default=DOCUMENT_CHUNK_SIZE)
+    LLAMAINDEX_CHUNK_OVERLAP: int = get_config("frameworks", "llamaindex", "chunk_overlap", default=DOCUMENT_CHUNK_OVERLAP)
     LLAMAINDEX_EMBEDDING_MODEL: str = get_config("frameworks", "llamaindex", "embedding_model", default="text-embedding-ada-002")
     LLAMAINDEX_LLM_MODEL: str = get_config("frameworks", "llamaindex", "llm_model", default="gpt-3.5-turbo")
     LLAMAINDEX_INDEX_TYPE: str = get_config("frameworks", "llamaindex", "index_type", default="vector_store")
     LLAMAINDEX_USE_KNOWLEDGE_GRAPH: bool = get_config("frameworks", "llamaindex", "use_knowledge_graph", default=False)
+    LLAMAINDEX_DEFAULT_STORE: str = get_config("frameworks", "llamaindex", "default_store", default="elasticsearch")
     
     # Agno配置
     AGNO_AGENT_TYPE: str = get_config("frameworks", "agno", "agent_type", default="conversational")
@@ -172,6 +197,58 @@ class Settings:
     KNOWLEDGE_MANAGEMENT_INDEXING_FRAMEWORK: str = get_config("framework_integration", "knowledge_management", "indexing", default="llamaindex")
     KNOWLEDGE_MANAGEMENT_SEARCH_FRAMEWORK: str = get_config("framework_integration", "knowledge_management", "search", default="haystack")
     
+    # 敏感词过滤配置
+    SENSITIVE_WORD_FILTER_TYPE: str = get_config("sensitive_word", "filter_type", default="local")
+    SENSITIVE_WORD_FILTER_RESPONSE: str = get_config("sensitive_word", "default_response", 
+                                                default="很抱歉，您的消息包含敏感内容，请调整后重新发送。")
+    SENSITIVE_WORD_DICT_PATH: str = get_config("sensitive_word", "dict_path", default="")
+    SENSITIVE_WORD_API_URL: str = get_config("sensitive_word", "api_url", default="")
+    SENSITIVE_WORD_API_KEY: str = get_config("sensitive_word", "api_key", default="")
+    SENSITIVE_WORD_API_TIMEOUT: float = get_config("sensitive_word", "api_timeout", default=3.0)
+    SENSITIVE_WORD_CACHE_ENABLED: bool = get_config("sensitive_word", "cache_enabled", default=True)
+    SENSITIVE_WORD_CACHE_TTL: int = get_config("sensitive_word", "cache_ttl", default=3600)
+    
+    # SearxNG 搜索引擎配置
+    class SearxNGSettings(BaseSettings):
+        """SearxNG搜索引擎设置"""
+        enabled: bool = Field(True, env="SEARXNG_ENABLED")
+        auto_deploy: bool = Field(True, env="SEARXNG_AUTO_DEPLOY")
+        host: str = Field("localhost", env="SEARXNG_HOST") 
+        port: int = Field(8888, env="SEARXNG_PORT")
+        default_engines: List[str] = Field(["google", "bing", "baidu", "wikipedia"], env="SEARXNG_DEFAULT_ENGINES")
+        default_language: str = Field("zh-CN", env="SEARXNG_DEFAULT_LANGUAGE")
+        max_results: int = Field(10, env="SEARXNG_MAX_RESULTS")
+        timeout: float = Field(10.0, env="SEARXNG_TIMEOUT")
+        
+        class Config:
+            env_prefix = "SEARXNG_"
+    
+    # 组件配置
+    llamaindex: LlamaIndexSettings = LlamaIndexSettings()
+    haystack: HaystackSettings = HaystackSettings()
+    agno: AgnoSettings = AgnoSettings()
+    searxng: SearxNGSettings = SearxNGSettings()
+    
+    # InfluxDB指标统计配置
+    class MetricsSettings(BaseSettings):
+        """指标统计设置"""
+        enabled: bool = Field(get_config("metrics", "enabled", default=False), env="METRICS_ENABLED")
+        provider: str = Field(get_config("metrics", "provider", default="influxdb"), env="METRICS_PROVIDER")
+        token_statistics: bool = Field(get_config("metrics", "token_statistics", default=True), env="METRICS_TOKEN_STATISTICS")
+        
+        # InfluxDB设置
+        influxdb_url: str = Field(get_config("metrics", "influxdb", "url", default="http://localhost:8086"), env="INFLUXDB_URL")
+        influxdb_token: str = Field(get_config("metrics", "influxdb", "token", default=""), env="INFLUXDB_TOKEN")
+        influxdb_org: str = Field(get_config("metrics", "influxdb", "org", default="knowledge_qa_org"), env="INFLUXDB_ORG")
+        influxdb_bucket: str = Field(get_config("metrics", "influxdb", "bucket", default="llm_metrics"), env="INFLUXDB_BUCKET")
+        influxdb_batch_size: int = Field(get_config("metrics", "influxdb", "batch_size", default=50), env="INFLUXDB_BATCH_SIZE")
+        influxdb_flush_interval: int = Field(get_config("metrics", "influxdb", "flush_interval", default=10), env="INFLUXDB_FLUSH_INTERVAL")
+        
+        class Config:
+            env_prefix = "METRICS_"
+    
+    metrics: MetricsSettings = MetricsSettings()
+
     # 遗留路径（保留以兼容）
     VECTOR_STORE_PATH: str = get_config("paths", "vector_store", default="./vector_store")
     KNOWLEDGE_BASE_PATH: str = get_config("paths", "knowledge_base", default="./knowledge_base")

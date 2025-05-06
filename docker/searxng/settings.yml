@@ -1,0 +1,81 @@
+general:
+  debug: false
+  instance_name: 智政搜索服务
+  privacypolicy_url: false
+  donation_url: false
+  contact_url: false
+  enable_metrics: true
+
+search:
+  safe_search: 0
+  autocomplete: 'google'
+  default_lang: 'zh-CN'
+  ban_time_on_fail: 5
+  max_ban_time_on_fail: 120
+  formats: ['html', 'json']
+
+server:
+  port: 8080
+  bind_address: 0.0.0.0
+  base_url: http://localhost:8888/
+  secret_key: "智政搜索服务密钥"  # 生产环境应使用随机生成的密钥
+  limiter: false
+  image_proxy: true
+  method: "GET"
+
+redis:
+  url: redis://redis:6379/0
+
+ui:
+  static_use_hash: true
+  default_theme: simple
+  default_locale: zh
+  center_alignment: false
+  results_on_new_tab: false
+  query_in_title: true
+  infinite_scroll: false
+  cache_url: https://web.archive.org/web/
+  default_engine: google
+  theme_args:
+    simple_style: light
+
+engines:
+  - name: google
+    engine: google
+    shortcut: go
+    use_mobile_ui: false
+    disabled: false
+    language: zh-CN
+    weight: 2
+    timeout: 3.0
+  
+  - name: bing
+    engine: bing
+    shortcut: bi
+    disabled: false
+    language: zh-CN
+    weight: 1
+    timeout: 3.0
+  
+  - name: baidu
+    engine: baidu
+    shortcut: bd
+    disabled: false
+    language: zh-CN
+    weight: 1
+    timeout: 3.0
+  
+  - name: wikipedia
+    engine: wikipedia
+    shortcut: wp
+    disabled: false
+    language: zh
+    weight: 1
+    timeout: 2.0
+  
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    disabled: false
+    weight: 1
+    timeout: 3.0

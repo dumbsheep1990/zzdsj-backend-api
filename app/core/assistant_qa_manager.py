@@ -15,7 +15,7 @@ from app.schemas.assistant_qa import AnswerModeEnum
 # 框架集成
 from app.frameworks.llamaindex.chat import generate_response
 from app.frameworks.haystack.reader import extract_answers
-from app.frameworks.llamaindex.retrieval import query_index
+from app.frameworks.llamaindex.retrieval import retrieve_documents, query_documents
 from app.frameworks.agno.agent import AgnoAgent
 from app.config import settings
 
@@ -319,24 +319,53 @@ class AssistantQAManager:
     ) -> None:
         """检索并关联相关的文档分段"""
         try:
-            # 使用LlamaIndex检索
-            query_results = await query_index(
+            # 获取知识库配置
+            kb = self.db.query(KnowledgeBase).filter(KnowledgeBase.id == knowledge_base_id).first()
+            if not kb:
+                logger.warning(f"知识库不存在: {knowledge_base_id}")
+                return
+            
+            # 获取知识库配置参数
+            kb_config = kb.config or {}
+            
+            # 确定是否使用混合搜索
+            use_hybrid = kb_config.get("use_hybrid_search", settings.ELASTICSEARCH_HYBRID_SEARCH)
+            hybrid_weight = kb_config.get("hybrid_weight", settings.ELASTICSEARCH_HYBRID_WEIGHT)
+            es_index_name = kb_config.get("es_index_name", None)
+            
+            # 确定是否使用Agno知识库
+            agno_kb_id = kb_config.get("agno_kb_id", None)
+
+            # 使用改进后的LlamaIndex检索
+            query_results = await retrieve_documents(
                 query=question.question_text,
-                knowledge_base_id=knowledge_base_id,
-                top_k=top_k
+                top_k=top_k,
+                use_hybrid=use_hybrid,
+                hybrid_weight=hybrid_weight,
+                es_index_name=es_index_name,
+                agno_kb_id=agno_kb_id
             )
             
             # 关联文档分段
             for result in query_results:
+                metadata = result.get("metadata", {})
+                document_id = metadata.get("document_id")
+                segment_id = metadata.get("segment_id")
+                score = result.get("score", 0.0)
+                
+                if not document_id or not segment_id:
+                    logger.warning(f"返回结果缺少文档ID或分段ID: {result}")
+                    continue
+                
                 # 获取文档和分段
                 document = self.db.query(Document).filter(
                     Document.knowledge_base_id == knowledge_base_id,
-                    Document.id == result["document_id"]
+                    Document.id == document_id
                 ).first()
                 
                 segment = self.db.query(DocumentSegment).filter(
-                    DocumentSegment.document_id == result["document_id"],
-                    DocumentSegment.id == result["segment_id"]
+                    DocumentSegment.document_id == document_id,
+                    DocumentSegment.id == segment_id
                 ).first()
                 
                 if document and segment:
@@ -345,7 +374,7 @@ class AssistantQAManager:
                         question_id=question.id,
                         document_id=document.id,
                         segment_id=segment.id,
-                        relevance_score=result["score"],
+                        relevance_score=score,
                         is_enabled=True
                     )
                     self.db.add(doc_segment)
@@ -353,7 +382,7 @@ class AssistantQAManager:
         except Exception as e:
             logger.error(f"文档检索错误: {str(e)}")
             # 继续处理，即使检索失败
-    
+
     async def _generate_answer(self, question: Question) -> str:
         """根据问题和回答模式生成回答"""
         try:
@@ -361,6 +390,14 @@ class AssistantQAManager:
             assistant = self.db.query(Assistant).filter(Assistant.id == question.assistant_id).first()
             if not assistant:
                 return "无法找到关联的助手信息"
+            
+            # 获取知识库信息
+            kb = None
+            kb_config = {}
+            if assistant.knowledge_base_id:
+                kb = self.db.query(KnowledgeBase).filter(KnowledgeBase.id == assistant.knowledge_base_id).first()
+                if kb:
+                    kb_config = kb.config or {}
             
             # 获取启用的文档分段内容
             document_segments = []
@@ -409,16 +446,31 @@ class AssistantQAManager:
                 return response
                 
             elif question.answer_mode == AnswerModeEnum.HYBRID:
-                # 使用Agno代理，集成Haystack和LlamaIndex能力
-                agent = AgnoAgent(
-                    name=assistant.name,
-                    description=assistant.description or "问答助手",
-                    knowledge_bases=[str(assistant.knowledge_base_id)] if assistant.knowledge_base_id else []
-                )
+                # 使用Agno代理，集成ES和LlamaIndex能力
+                agno_kb_id = kb_config.get("agno_kb_id") if kb else None
                 
-                # 使用Agno代理回答
-                agent_response = await agent.query(question.question_text)
-                return agent_response.get("answer", "无法生成回答")
+                if agno_kb_id:
+                    # 使用Agno代理，集成Haystack和LlamaIndex能力
+                    agent = AgnoAgent(
+                        name=assistant.name,
+                        description=assistant.description or "问答助手",
+                        knowledge_bases=[agno_kb_id]
+                    )
+                    
+                    # 使用Agno代理回答
+                    agent_response = await agent.query(question.question_text)
+                    return agent_response.get("answer", "无法生成回答")
+                else:
+                    # 使用ES混合搜索
+                    response = await query_documents(
+                        query=question.question_text,
+                        top_k=5,
+                        use_hybrid=kb_config.get("use_hybrid_search", settings.ELASTICSEARCH_HYBRID_SEARCH),
+                        hybrid_weight=kb_config.get("hybrid_weight", settings.ELASTICSEARCH_HYBRID_WEIGHT),
+                        es_index_name=kb_config.get("es_index_name")
+                    )
+                    
+                    return response.get("answer", "无法从混合搜索中生成答案")
                 
             else:
                 # 默认模式：LlamaIndex统一入口，使用文档增强回答
@@ -439,7 +491,7 @@ class AssistantQAManager:
         except Exception as e:
             logger.error(f"生成回答错误: {str(e)}")
             return f"生成回答时出错: {str(e)}"
-
+    
     def get_assistant_tools(self, assistant_id: int) -> List[Dict[str, Any]]:
         """
         获取助手的工具配置

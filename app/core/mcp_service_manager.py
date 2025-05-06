@@ -12,6 +12,8 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 from pathlib import Path
 
+from app.utils.mcp_service_registrar import get_mcp_service_registrar
+
 logger = logging.getLogger(__name__)
 
 class MCPServiceManager:
@@ -36,6 +38,8 @@ class MCPServiceManager:
         os.makedirs(self.deployments_dir, exist_ok=True)
         self.deployments_cache = {}
         self._load_all_deployments()
+        # 获取MCP服务注册器
+        self.service_registrar = get_mcp_service_registrar()
     
     def _load_all_deployments(self) -> None:
         """加载所有部署配置"""
@@ -166,6 +170,14 @@ class MCPServiceManager:
                     text=True,
                     check=True
                 )
+                # 更新部署状态
+                deployment["status"] = "running"
+                deployment["last_started"] = datetime.now().isoformat()
+                self._save_deployment(deployment_id, deployment)
+                
+                # 向Nacos注册服务
+                self._register_service_to_nacos(deployment_id, deployment)
+                
                 return {"status": "success", "message": f"服务已启动: {result.stdout.strip()}"}
             
             # 否则使用docker-compose启动
@@ -181,6 +193,9 @@ class MCPServiceManager:
             deployment["status"] = "running"
             deployment["last_started"] = datetime.now().isoformat()
             self._save_deployment(deployment_id, deployment)
+            
+            # 向Nacos注册服务
+            self._register_service_to_nacos(deployment_id, deployment)
             
             return {
                 "status": "success", 
@@ -220,6 +235,9 @@ class MCPServiceManager:
             
             if status["state"] != "running":
                 return {"status": "success", "message": "服务已经停止"}
+            
+            # 从Nacos注销服务
+            self._deregister_service_from_nacos(deployment_id)
             
             # 停止容器
             result = subprocess.run(
@@ -294,6 +312,9 @@ class MCPServiceManager:
             status = self.get_deployment_status(deployment_id)
             if status["state"] == "running":
                 await self.stop_deployment(deployment_id)
+            else:
+                # 确保服务已从Nacos注销
+                self._deregister_service_from_nacos(deployment_id)
             
             # 删除容器（如果存在）
             if container_name:
@@ -332,8 +353,8 @@ class MCPServiceManager:
             return {"status": "success", "message": "部署已完全删除"}
             
         except Exception as e:
-            logger.error(f"删除部署失败: {str(e)}")
-            return {"status": "error", "message": f"删除部署失败: {str(e)}"}
+            logger.error(f"删除服务失败: {str(e)}")
+            return {"status": "error", "message": f"删除服务失败: {str(e)}"}
     
     def _save_deployment(self, deployment_id: str, deployment: Dict[str, Any]) -> None:
         """
@@ -410,37 +431,104 @@ class MCPServiceManager:
         """
         deployment = self.get_deployment(deployment_id)
         if not deployment:
-            return {"status": "error", "message": "部署不存在"}
+            return {"health": "unknown", "message": "部署不存在"}
         
-        # 获取服务URL
+        # 检查容器是否运行中
+        status = self.get_deployment_status(deployment_id)
+        if status["state"] != "running":
+            return {"health": "unhealthy", "message": "服务未运行"}
+        
+        # 检查服务是否响应健康检查
         service_port = deployment.get("service_port")
-        if not service_port:
-            return {"status": "error", "message": "部署配置缺少服务端口"}
+        health_endpoint = deployment.get("health_endpoint", "/health")
         
-        health_url = f"http://localhost:{service_port}/health"
+        if not service_port:
+            return {"health": "uncertain", "message": "未配置服务端口"}
         
         try:
-            # 检查容器状态
-            status = self.get_deployment_status(deployment_id)
-            if status["state"] != "running":
-                return {"health": "unavailable", "message": "服务未运行"}
+            import aiohttp
+            health_url = f"http://localhost:{service_port}{health_endpoint}"
             
-            # 发送HTTP请求检查健康状态
-            import httpx
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(health_url)
-                
-                if response.status_code == 200:
-                    return {"health": "healthy", "message": "服务运行正常", "details": response.json()}
-                else:
-                    return {"health": "unhealthy", "message": f"服务返回异常状态码: {response.status_code}"}
-                
-        except httpx.TimeoutException:
-            return {"health": "unhealthy", "message": "服务请求超时"}
+            async with aiohttp.ClientSession() as session:
+                async with session.get(health_url, timeout=5) as response:
+                    if response.status == 200:
+                        health_result = {"health": "healthy", "message": "服务健康"}
+                        # 更新Nacos中的服务健康状态
+                        self.service_registrar.update_mcp_service_status(deployment_id, True)
+                        return health_result
+                    else:
+                        health_result = {"health": "unhealthy", "message": f"服务返回错误状态码: {response.status}"}
+                        # 更新Nacos中的服务健康状态
+                        self.service_registrar.update_mcp_service_status(deployment_id, False)
+                        return health_result
+        
         except Exception as e:
-            logger.error(f"健康检查失败: {str(e)}")
-            return {"health": "unknown", "message": f"健康检查失败: {str(e)}"}
+            health_result = {"health": "unhealthy", "message": f"健康检查失败: {str(e)}"}
+            # 更新Nacos中的服务健康状态
+            self.service_registrar.update_mcp_service_status(deployment_id, False)
+            return health_result
+
+    def _register_service_to_nacos(self, deployment_id: str, deployment: Dict[str, Any]) -> bool:
+        """
+        向Nacos注册MCP服务
+        
+        参数:
+            deployment_id: 部署ID
+            deployment: 部署配置
             
+        返回:
+            注册是否成功
+        """
+        try:
+            service_name = deployment.get("name", f"mcp-service-{deployment_id}")
+            service_port = deployment.get("service_port")
+            
+            if not service_port:
+                logger.warning(f"部署 {deployment_id} 没有指定服务端口，无法向Nacos注册")
+                return False
+            
+            # 构建元数据
+            metadata = {
+                "type": "mcp-service",
+                "version": deployment.get("version", "1.0.0"),
+                "image": deployment.get("docker_image", ""),
+                "container": deployment.get("container", ""),
+                "description": deployment.get("description", ""),
+                "created_at": deployment.get("created_at", ""),
+                "last_started": deployment.get("last_started", ""),
+                "health_check_url": f"/api/mcp-services/{deployment_id}/health"
+            }
+            
+            # 注册服务
+            success = self.service_registrar.register_mcp_service(
+                deployment_id=deployment_id,
+                name=service_name,
+                service_port=service_port,
+                metadata=metadata
+            )
+            
+            return success
+        
+        except Exception as e:
+            logger.error(f"向Nacos注册MCP服务时出错: {str(e)}")
+            return False
+    
+    def _deregister_service_from_nacos(self, deployment_id: str) -> bool:
+        """
+        从Nacos注销MCP服务
+        
+        参数:
+            deployment_id: 部署ID
+            
+        返回:
+            注销是否成功
+        """
+        try:
+            return self.service_registrar.deregister_mcp_service(deployment_id)
+        except Exception as e:
+            logger.error(f"从Nacos注销MCP服务时出错: {str(e)}")
+            return False
+    
     async def get_tool_schema(self, deployment_id: str, tool_name: str) -> Dict[str, Any]:
         """
         获取工具的JSON Schema
@@ -465,13 +553,13 @@ class MCPServiceManager:
         schema_url = f"http://localhost:{service_port}/api/mcp/tools/{tool_name}"
         
         try:
-            # 检查容器状态
+            # 检查容器是否存在
             status = self.get_deployment_status(deployment_id)
             if status["state"] != "running":
                 raise ValueError(f"服务未运行: {deployment_id}")
             
             # 发送HTTP请求获取Schema
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with aiohttp.ClientSession() as client:
                 response = await client.get(schema_url)
                 response.raise_for_status()
                 
@@ -491,12 +579,9 @@ class MCPServiceManager:
                         }
                     }
                     
-        except httpx.HTTPStatusError as e:
+        except aiohttp.ClientResponseError as e:
             logger.error(f"获取工具Schema失败: {str(e)}")
-            raise ValueError(f"获取工具Schema失败: HTTP {e.response.status_code}")
-        except httpx.TimeoutException:
-            logger.error(f"获取工具Schema超时: {tool_name}")
-            raise ValueError(f"获取工具Schema超时")
+            raise ValueError(f"获取工具Schema失败: HTTP {e.status}")
         except Exception as e:
             logger.error(f"获取工具Schema出错: {str(e)}")
             raise ValueError(f"获取工具Schema失败: {str(e)}")
@@ -525,20 +610,20 @@ class MCPServiceManager:
         examples_url = f"http://localhost:{service_port}/api/mcp/tools/{tool_name}/examples"
         
         try:
-            # 检查容器状态
+            # 检查容器是否存在
             status = self.get_deployment_status(deployment_id)
             if status["state"] != "running":
                 raise ValueError(f"服务未运行: {deployment_id}")
             
             # 发送HTTP请求获取示例
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with aiohttp.ClientSession() as client:
                 try:
                     response = await client.get(examples_url)
                     response.raise_for_status()
                     return response.json()
-                except httpx.HTTPStatusError as e:
+                except aiohttp.ClientResponseError as e:
                     # 如果没有示例接口，则生成一个基本示例
-                    if e.response.status_code == 404:
+                    if e.status == 404:
                         # 获取工具Schema
                         schema = await self.get_tool_schema(deployment_id, tool_name)
                         
@@ -554,9 +639,6 @@ class MCPServiceManager:
                     else:
                         raise
                     
-        except httpx.TimeoutException:
-            logger.error(f"获取工具示例超时: {tool_name}")
-            raise ValueError(f"获取工具示例超时")
         except Exception as e:
             logger.error(f"获取工具示例出错: {str(e)}")
             # 返回空示例列表而不是抛出异常
