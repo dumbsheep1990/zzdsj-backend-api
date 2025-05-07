@@ -23,13 +23,18 @@ from app.utils.service_manager import get_service_manager, register_lightrag_ser
 from app.core.mcp_service_manager import get_mcp_service_manager
 from app.middleware.sensitive_word_middleware import SensitiveWordMiddleware
 from app.startup import register_searxng_startup
+from app.utils.config_manager import inject_config_to_env, get_base_dependencies
 
-# 配置日志
+# 导入日志系统
+from app.middleware.logging_middleware import setup_logging, get_logger
+from app.utils.logging_config import load_logging_config, register_logging_env_mappings
+
+# 初始化默认日志配置
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -39,17 +44,42 @@ app = FastAPI(
     redoc_url=None,  # 禁用默认redoc
 )
 
-# 配置CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# 从配置中加载CORS设置
+from app.utils.config_manager import get_config_manager
+config = get_config_manager().get_config()
 
-# 添加敏感词过滤中间件
-app.add_middleware(SensitiveWordMiddleware)
+# 检查是否启用CORS
+cors_enabled = config.get("cors_enabled", True)
+if cors_enabled:
+    # 获取CORS来源
+    cors_origins_str = config.get("cors_origins", '["http://localhost:3000", "http://127.0.0.1:3000"]')
+    try:
+        if isinstance(cors_origins_str, str):
+            cors_origins = json.loads(cors_origins_str)
+        else:
+            cors_origins = cors_origins_str
+    except json.JSONDecodeError:
+        logger.error(f"CORS来源解析失败: {cors_origins_str}，使用默认值")
+        cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    
+    # 获取是否允许携带认证信息
+    allow_credentials = config.get("cors_allow_credentials", True)
+    
+    # 添加CORS中间件
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=allow_credentials,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    logger.info(f"已配置CORS，允许的来源: {', '.join(cors_origins)}")
+else:
+    logger.info("CORS已禁用")
+
+# 安装所有安全中间件
+from app.middleware.security import setup_security_middleware
+setup_security_middleware(app)
 
 # 注册SearxNG服务启动
 register_searxng_startup(app)
@@ -154,66 +184,109 @@ async def startup_mcp_health_check():
 @app.on_event("startup")
 async def startup_event():
     """启动时初始化服务"""
-    # 第1步: 运行配置自检和引导
-    print("正在执行配置自检和引导流程...")
-    bootstrap_result = await ConfigBootstrap.run_bootstrap()
+    # 第1步: 将配置注入到环境变量
+    # 使用print而非logger，因为日志系统还未配置
+    print("正在将配置注入到环境变量...")
+    inject_config_to_env()
     
-    # 检查数据库可用性
-    db_available = bootstrap_result.get("config_validation", {}).get("services_healthy", {}).get("database", False)
+    # 注册日志配置环境变量映射
+    from app.utils.config_manager import get_config_manager
+    register_logging_env_mappings(get_config_manager())
     
-    # 第2步: 数据库初始化 (仅当数据库可用时)
-    if db_available:
-        print("正在初始化数据库...")
-        try:
-            init_db(create_tables=True, seed_data=True)
-            print("数据库初始化成功")
-        except Exception as e:
-            print(f"初始化数据库时出错: {e}")
+    # 第2步: 初始化日志系统
+    print("正在初始化日志系统...")
+    logging_config = load_logging_config()
+    setup_logging(
+        app=app,
+        log_level=logging_config.level,
+        log_to_console=logging_config.console_enabled,
+        log_to_file=logging_config.file_enabled,
+        log_file_path=logging_config.file_path,
+        log_format=logging_config.format,
+        log_retention=logging_config.file_retention,
+        log_rotation=logging_config.file_rotation,
+        exclude_paths=logging_config.request_exclude_paths,
+        log_request_body=logging_config.log_request_body,
+        log_response_body=logging_config.log_response_body
+    )
+    
+    # 设置模块特定的日志级别
+    if logging_config.module_levels:
+        for module_name, level in logging_config.module_levels.items():
+            module_logger = logging.getLogger(module_name)
+            module_logger.setLevel(getattr(logging, level.upper(), logging.INFO))
+    
+    logger.info("日志系统初始化完成")
+    
+    # 第3步: 检查基础依赖配置
+    base_deps = get_base_dependencies()
+    missing_deps = [dep for dep, config in base_deps.items() if not config]
+    if missing_deps:
+        logger.warning(f"以下必要的依赖配置缺失或不完整: {', '.join(missing_deps)}")
+    
+    # 第4步: 运行配置自检和引导
+    logger.info("正在执行配置自检和引导流程...")
+    from app.utils.config_bootstrap import bootstrap_config
+    await bootstrap_config()
+    
+    # 第5步: 初始化数据库
+    logger.info("正在初始化数据库...")
+    from app.utils.database import initialize_database
+    await initialize_database()
+    
+    # 第6步: 生成数据库模式文档
+    try:
+        from app.utils.swagger_helper import save_db_schema_doc, add_schema_examples, generate_model_examples
+        logger.info("正在生成数据库模式文档...")
+        schema_path = save_db_schema_doc()
+        logger.info(f"数据库模式文档已保存到 {schema_path}")
         
-        # 生成数据库模式文档
-        try:
-            from app.utils.swagger_helper import save_db_schema_doc, add_schema_examples, generate_model_examples
-            schema_path = save_db_schema_doc()
-            print(f"数据库模式文档已保存到 {schema_path}")
-            
-            # 为Swagger文档添加示例数据
-            examples = generate_model_examples()
-            add_schema_examples(app, examples)
-        except Exception as e:
-            print(f"生成模式文档时出错: {e}")
-    else:
-        print("警告: 数据库服务不可用，跳过初始化")
+        # 为Swagger文档添加示例数据
+        examples = generate_model_examples()
+        add_schema_examples(app, examples)
+    except Exception as e:
+        logger.error(f"生成数据库模式文档时出错: {str(e)}", exc_info=True)
     
-    # 第3步: Milvus初始化
-    milvus_available = bootstrap_result.get("config_validation", {}).get("services_healthy", {}).get("milvus", False)
+    # 第7步: 执行配置验证
+    from app.utils.config_validator import validate_services_health
+    service_health = await validate_services_health()
+    
+    # 第8步: Milvus初始化
+    milvus_available = service_health.get("milvus", False)
     if milvus_available:
         try:
+            from app.utils.vector_store import init_milvus
+            logger.info("正在初始化Milvus...")
             init_milvus()
-            print("Milvus初始化成功")
+            logger.info("Milvus初始化成功")
         except Exception as e:
-            print(f"初始化Milvus时出错: {e}")
+            logger.error(f"初始化Milvus时出错: {str(e)}", exc_info=True)
     else:
-        print("警告: Milvus服务不可用，跳过初始化")
+        logger.warning("Milvus服务不可用，跳过初始化")
     
-    # 第4步: MinIO初始化
-    minio_available = bootstrap_result.get("config_validation", {}).get("services_healthy", {}).get("minio", False)
+    # 第9步: MinIO初始化
+    minio_available = service_health.get("minio", False)
     if minio_available:
         try:
+            from app.utils.object_storage import init_minio
+            logger.info("正在初始化MinIO...")
             init_minio()
-            print("MinIO初始化成功")
+            logger.info("MinIO初始化成功")
         except Exception as e:
-            print(f"初始化MinIO时出错: {e}")
+            logger.error(f"初始化MinIO时出错: {str(e)}", exc_info=True)
     else:
-        print("警告: MinIO服务不可用，跳过初始化")
+        logger.warning("MinIO服务不可用，跳过初始化")
     
-    # 第5步: Nacos服务注册
-    nacos_available = bootstrap_result.get("config_validation", {}).get("services_healthy", {}).get("nacos", False)
+    # 第10步: Nacos服务注册
+    nacos_available = service_health.get("nacos", False)
     if nacos_available:
         try:
+            from app.utils.service_discovery import register_service, start_heartbeat
+            logger.info("正在向Nacos注册服务...")
             register_service()
             # 启动心跳线程
             start_heartbeat()
-            print("服务注册成功")
+            logger.info("服务注册成功")
             
             # 初始MCP服务注册器
             mcp_registrar = get_mcp_service_registrar()
@@ -228,33 +301,34 @@ async def startup_event():
                     mcp_manager._register_service_to_nacos(deployment_id, deployment)
             logger.info("已重新注册所有运行中的MCP服务")
         except Exception as e:
-            print(f"向Nacos注册服务时出错: {e}")
+            logger.error(f"向Nacos注册服务时出错: {str(e)}", exc_info=True)
     else:
-        print("警告: Nacos服务不可用，跳过服务注册")
+        logger.warning("Nacos服务不可用，跳过服务注册")
         
-    # 第6步: 注册和启动LightRAG服务
+    # 第11步: 注册和启动LightRAG服务
     try:
-        print("正在注册 LightRAG 服务...")
+        logger.info("正在注册 LightRAG 服务...")
         # 初始化服务管理器
         service_manager = get_service_manager()
         
         # 注册LightRAG服务
         register_lightrag_service()
+        logger.info("LightRAG服务注册成功")
         
         # 检查是否启用LightRAG
         lightrag_enabled = getattr(settings, "LIGHTRAG_ENABLED", True)
         if lightrag_enabled:
             # 自动启动LightRAG服务
+            logger.info("正在启动 LightRAG 服务...")
             lightrag_status = service_manager.start_service("lightrag-api")
             if lightrag_status:
-                print("LightRAG服务启动成功")
+                logger.info("LightRAG服务启动成功")
             else:
-                print("警告: LightRAG服务启动失败")
+                logger.warning("LightRAG服务启动失败")
         else:
-            print("LightRAG服务已注册但未启用")
+            logger.info("LightRAG服务已注册但未启用")
     except Exception as e:
-        print(f"初始化LightRAG服务时出错: {e}")
-        logger.error(f"LightRAG初始化错误: {str(e)}", exc_info=True)
+        logger.error(f"初始化LightRAG服务时出错: {str(e)}", exc_info=True)
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -267,9 +341,11 @@ async def shutdown_event():
         logger.info("已注销所有MCP服务")
         
         # 注销主服务
+        logger.info("正在从Nacos注销主服务...")
         deregister_service()
+        logger.info("主服务注销成功")
     except Exception as e:
-        print(f"从Nacos注销服务时出错: {e}")
+        logger.error(f"从Nacos注销服务时出错: {str(e)}", exc_info=True)
     
     # 停止LightRAG服务
     try:
