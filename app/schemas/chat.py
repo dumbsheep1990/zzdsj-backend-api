@@ -69,9 +69,15 @@ class ChatRequest(BaseModel):
     assistant_id: int
     message: str
     user_id: Optional[str] = None
+    enable_voice_input: bool = False
+    enable_voice_output: bool = False
+    voice: Optional[str] = None
+    speed: Optional[float] = None
 
 # 聊天响应模式
 class ChatResponse(BaseModel):
     conversation_id: int
     message: Message
     references: Optional[List[Dict[str, Any]]] = None
+    audio_data: Optional[str] = None  # 音频数据，Base64编码
+    transcription: Optional[Dict[str, Any]] = None  # 语音转录结果

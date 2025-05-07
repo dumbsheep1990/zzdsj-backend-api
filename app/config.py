@@ -29,6 +29,34 @@ class Settings:
     # 模型提供商配置
     # OpenAI配置
     OPENAI_API_BASE: str = get_config("model_providers", "openai", "api_base", default="https://api.openai.com/v1")
+    
+    # 语音功能配置
+    VOICE_ENABLED: bool = get_config("voice", "enabled", default=False)
+    
+    # 语音转文本(STT)配置
+    STT_MODEL_NAME: str = get_config("voice", "stt", "model_name", default="xunfei-stt")
+    STT_LANGUAGE: str = get_config("voice", "stt", "language", default="zh-CN")
+    STT_SAMPLING_RATE: int = get_config("voice", "stt", "sampling_rate", default=16000)
+    
+    # 文本转语音(TTS)配置
+    TTS_MODEL_NAME: str = get_config("voice", "tts", "model_name", default="xunfei-tts")
+    TTS_VOICE: str = get_config("voice", "tts", "voice", default="xiaoyan")
+    TTS_SPEED: float = get_config("voice", "tts", "speed", default=50)
+    TTS_AUDIO_FORMAT: str = get_config("voice", "tts", "audio_format", default="mp3")
+    
+    # 讯飞语音服务配置
+    XUNFEI_APP_ID: str = get_config("voice", "xunfei", "app_id", default="")
+    XUNFEI_API_KEY: str = get_config("voice", "xunfei", "api_key", default="")
+    XUNFEI_API_SECRET: str = get_config("voice", "xunfei", "api_secret", default="")
+    
+    # MiniMax语音服务配置
+    MINIMAX_API_KEY: str = get_config("voice", "minimax", "api_key", default="")
+    MINIMAX_GROUP_ID: str = get_config("voice", "minimax", "group_id", default="")
+    
+    # 阿里云语音服务配置
+    ALIYUN_ACCESS_KEY_ID: str = get_config("voice", "aliyun", "access_key_id", default="")
+    ALIYUN_ACCESS_KEY_SECRET: str = get_config("voice", "aliyun", "access_key_secret", default="")
+    ALIYUN_SPEECH_APPKEY: str = get_config("voice", "aliyun", "speech_appkey", default="")
     OPENAI_ORGANIZATION: str = get_config("model_providers", "openai", "organization", default="")
     
     # 智谱AI配置
@@ -139,6 +167,35 @@ class Settings:
     CELERY_RESULT_BACKEND: str = get_config("celery", "result_backend", default="redis://localhost:6379/0")
     
     # 框架配置
+    # LightRAG配置
+    class LightRAGSettings(BaseSettings):
+        """LightRAG设置"""
+        enabled: bool = Field(False, env="LIGHTRAG_ENABLED")
+        base_dir: str = Field("./data/lightrag", env="LIGHTRAG_BASE_DIR")
+        embedding_dim: int = Field(1536, env="LIGHTRAG_EMBEDDING_DIM")
+        max_token_size: int = Field(8192, env="LIGHTRAG_MAX_TOKEN_SIZE")
+        
+        # 存储配置
+        graph_db_type: str = Field("file", env="LIGHTRAG_GRAPH_DB_TYPE")  # 可选: file, postgres, redis
+        pg_host: str = Field("lightrag-postgres", env="LIGHTRAG_PG_HOST")
+        pg_port: int = Field(5432, env="LIGHTRAG_PG_PORT")
+        pg_user: str = Field("postgres", env="LIGHTRAG_PG_USER")
+        pg_password: str = Field("password", env="LIGHTRAG_PG_PASSWORD")
+        pg_db: str = Field("lightrag", env="LIGHTRAG_PG_DB")
+        redis_host: str = Field("localhost", env="LIGHTRAG_REDIS_HOST")
+        redis_port: int = Field(6379, env="LIGHTRAG_REDIS_PORT")
+        redis_db: int = Field(1, env="LIGHTRAG_REDIS_DB")
+        redis_password: str = Field("", env="LIGHTRAG_REDIS_PASSWORD")
+        
+        # 高级配置
+        use_semantic_chunking: bool = Field(False, env="LIGHTRAG_USE_SEMANTIC_CHUNKING")
+        use_knowledge_graph: bool = Field(False, env="LIGHTRAG_USE_KNOWLEDGE_GRAPH")
+        kg_relation_threshold: float = Field(0.7, env="LIGHTRAG_KG_RELATION_THRESHOLD")
+        max_workers: int = Field(4, env="LIGHTRAG_MAX_WORKERS")
+        
+        class Config:
+            env_prefix = "LIGHTRAG_"
+    
     # LlamaIndex配置（替代LangChain）
     EMBEDDING_MODEL: str = get_config("frameworks", "llamaindex", "embedding_model", default="text-embedding-ada-002")
     CHAT_MODEL: str = get_config("frameworks", "llamaindex", "llm_model", default="gpt-3.5-turbo")
@@ -228,6 +285,7 @@ class Settings:
     haystack: HaystackSettings = HaystackSettings()
     agno: AgnoSettings = AgnoSettings()
     searxng: SearxNGSettings = SearxNGSettings()
+    lightrag: LightRAGSettings = LightRAGSettings()
     
     # InfluxDB指标统计配置
     class MetricsSettings(BaseSettings):
@@ -252,6 +310,32 @@ class Settings:
     # 遗留路径（保留以兼容）
     VECTOR_STORE_PATH: str = get_config("paths", "vector_store", default="./vector_store")
     KNOWLEDGE_BASE_PATH: str = get_config("paths", "knowledge_base", default="./knowledge_base")
+    
+    # LightRAG配置
+    LIGHTRAG_ENABLED: bool = get_config("frameworks", "lightrag", "enabled", default=False)
+    LIGHTRAG_BASE_DIR: str = get_config("frameworks", "lightrag", "base_dir", default="./data/lightrag")
+    LIGHTRAG_DEFAULT_EMBEDDING_DIM: int = get_config("frameworks", "lightrag", "embedding_dim", default=1536)
+    LIGHTRAG_MAX_TOKEN_SIZE: int = get_config("frameworks", "lightrag", "max_token_size", default=8192)
+    
+    # LightRAG存储配置
+    LIGHTRAG_GRAPH_DB_TYPE: str = get_config("frameworks", "lightrag", "graph_db_type", default="file")  # 可选: file, postgres, redis
+    LIGHTRAG_PG_HOST: str = get_config("frameworks", "lightrag", "pg_host", default="lightrag-postgres")
+    LIGHTRAG_PG_PORT: int = get_config("frameworks", "lightrag", "pg_port", default=5432)
+    LIGHTRAG_PG_USER: str = get_config("frameworks", "lightrag", "pg_user", default="postgres")
+    LIGHTRAG_PG_PASSWORD: str = get_config("frameworks", "lightrag", "pg_password", default="password")
+    LIGHTRAG_PG_DB: str = get_config("frameworks", "lightrag", "pg_db", default="lightrag")
+    
+    # LightRAG和Redis存储配置
+    LIGHTRAG_REDIS_HOST: str = get_config("frameworks", "lightrag", "redis_host", default=REDIS_HOST)
+    LIGHTRAG_REDIS_PORT: int = get_config("frameworks", "lightrag", "redis_port", default=REDIS_PORT)
+    LIGHTRAG_REDIS_DB: int = get_config("frameworks", "lightrag", "redis_db", default=1)
+    LIGHTRAG_REDIS_PASSWORD: str = get_config("frameworks", "lightrag", "redis_password", default=REDIS_PASSWORD)
+    
+    # LightRAG知识图谱高级配置
+    LIGHTRAG_USE_SEMANTIC_CHUNKING: bool = get_config("frameworks", "lightrag", "use_semantic_chunking", default=False)
+    LIGHTRAG_USE_KNOWLEDGE_GRAPH: bool = get_config("frameworks", "lightrag", "use_knowledge_graph", default=False)
+    LIGHTRAG_KG_RELATION_THRESHOLD: float = get_config("frameworks", "lightrag", "kg_relation_threshold", default=0.7)
+    LIGHTRAG_MAX_WORKERS: int = get_config("frameworks", "lightrag", "max_workers", default=4)
 
 
 settings = Settings()

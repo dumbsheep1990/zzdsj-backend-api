@@ -11,7 +11,7 @@ import logging
 
 from app.api import assistants, knowledge, chat, assistant, model_provider, assistant_qa, mcp, mcp_service
 from app.api import auth, user, api_key, resource_permission
-from app.api import system_config, sensitive_word, settings
+from app.api import system_config, sensitive_word, settings, lightrag
 from app.config import settings
 from app.utils.database import init_db
 from app.utils.vector_store import init_milvus
@@ -19,6 +19,7 @@ from app.utils.object_storage import init_minio
 from app.utils.service_discovery import register_service, deregister_service, start_heartbeat
 from app.utils.config_bootstrap import ConfigBootstrap
 from app.utils.mcp_service_registrar import get_mcp_service_registrar
+from app.utils.service_manager import get_service_manager, register_lightrag_service
 from app.core.mcp_service_manager import get_mcp_service_manager
 from app.middleware.sensitive_word_middleware import SensitiveWordMiddleware
 from app.startup import register_searxng_startup
@@ -64,6 +65,7 @@ app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["知识�
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["对话"])
 app.include_router(model_provider.router, prefix="/api/v1/models", tags=["模型管理"])
 app.include_router(assistant_qa.router, prefix="/api/v1/assistant-qa", tags=["问答助手"])
+app.include_router(lightrag.router, tags=["LightRAG服务"])
 app.include_router(mcp.router, tags=["MCP服务"])
 app.include_router(mcp_service.router, tags=["MCP服务管理"])
 app.include_router(system_config.router)
@@ -213,7 +215,7 @@ async def startup_event():
             start_heartbeat()
             print("服务注册成功")
             
-            # 初始化MCP服务注册器
+            # 初始MCP服务注册器
             mcp_registrar = get_mcp_service_registrar()
             logger.info("MCP服务注册器初始化完成")
             
@@ -229,6 +231,30 @@ async def startup_event():
             print(f"向Nacos注册服务时出错: {e}")
     else:
         print("警告: Nacos服务不可用，跳过服务注册")
+        
+    # 第6步: 注册和启动LightRAG服务
+    try:
+        print("正在注册 LightRAG 服务...")
+        # 初始化服务管理器
+        service_manager = get_service_manager()
+        
+        # 注册LightRAG服务
+        register_lightrag_service()
+        
+        # 检查是否启用LightRAG
+        lightrag_enabled = getattr(settings, "LIGHTRAG_ENABLED", True)
+        if lightrag_enabled:
+            # 自动启动LightRAG服务
+            lightrag_status = service_manager.start_service("lightrag-api")
+            if lightrag_status:
+                print("LightRAG服务启动成功")
+            else:
+                print("警告: LightRAG服务启动失败")
+        else:
+            print("LightRAG服务已注册但未启用")
+    except Exception as e:
+        print(f"初始化LightRAG服务时出错: {e}")
+        logger.error(f"LightRAG初始化错误: {str(e)}", exc_info=True)
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -244,6 +270,17 @@ async def shutdown_event():
         deregister_service()
     except Exception as e:
         print(f"从Nacos注销服务时出错: {e}")
+    
+    # 停止LightRAG服务
+    try:
+        service_manager = get_service_manager()
+        lightrag_status = service_manager.stop_service("lightrag-api")
+        if lightrag_status:
+            logger.info("LightRAG服务已停止")
+        else:
+            logger.warning("LightRAG服务停止失败")
+    except Exception as e:
+        logger.error(f"停止LightRAG服务时出错: {e}")
 
 # 注册关闭处理程序
 atexit.register(deregister_service)

@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # LightRAG API服务
+  lightrag-api:
+    image: hkuds/lightrag:latest
+    container_name: lightrag-api
+    restart: unless-stopped
+    environment:
+      # 从实例配置中读取的基本必要变量
+      - LIGHTRAG_ENABLED=true
+      - LIGHTRAG_GRAPH_DB_TYPE=${LIGHTRAG_GRAPH_DB_TYPE:-file}
+      - LIGHTRAG_DATA_ROOT=/app/data/lightrag
+      
+      # 数据库连接配置 - 从主项目中继承  
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres} 
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-zz_backend}
+      
+      # Redis配置 - 从主项目中继承
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      
+      # 工作目录配置 - 为前端动态创建提供支持
+      - LIGHTRAG_WORKDIR_ENABLED=true
+      - LIGHTRAG_DEFAULT_WORKDIR=${LIGHTRAG_DEFAULT_WORKDIR:-default}
+      
+      # 将主项目数据库配置映射到LightRAG预期的变量名
+      - LIGHTRAG_PG_HOST=${POSTGRES_HOST:-postgres}
+      - LIGHTRAG_PG_PORT=${POSTGRES_PORT:-5432}
+      - LIGHTRAG_PG_USER=${POSTGRES_USER:-postgres}
+      - LIGHTRAG_PG_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - LIGHTRAG_PG_DB=${LIGHTRAG_DB:-lightrag}
+      - LIGHTRAG_REDIS_HOST=${REDIS_HOST:-redis}
+      - LIGHTRAG_REDIS_PORT=${REDIS_PORT:-6379}
+      - LIGHTRAG_REDIS_DB=1
+      - LIGHTRAG_REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      
+    volumes:
+      # 数据目录挂载 - 支持外部配置定制
+      - ${LIGHTRAG_DATA_PATH:-./data}:/app/data/lightrag
+    ports:
+      - "${LIGHTRAG_PORT:-9621}:9621"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9621/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  app-network:
+    external: true
+    name: ${NETWORK_NAME:-zz-backend-network}
