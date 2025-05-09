@@ -35,6 +35,7 @@ class ElasticsearchStore(VectorStore):
         bulk_size: int = 500,
         embedding_dimension: int = 1536,
         es_client: Optional[Elasticsearch] = None,
+        image_vector_field: str = "image_vector",
     ):
         """
         初始化Elasticsearch存储
@@ -61,6 +62,7 @@ class ElasticsearchStore(VectorStore):
         self._distance_strategy = distance_strategy
         self._bulk_size = bulk_size
         self._embedding_dimension = embedding_dimension
+        self._image_vector_field = image_vector_field
         
         if es_client is not None:
             self._client = es_client
@@ -116,6 +118,13 @@ class ElasticsearchStore(VectorStore):
                                 "index": True,
                                 "similarity": self._get_similarity_metric()
                             },
+                            # 图像向量字段 - 用于存储图像嵌入
+                            "image_vector": {
+                                "type": "dense_vector",
+                                "dims": self._embedding_dimension,
+                                "index": True,
+                                "similarity": self._get_similarity_metric()
+                            },
                             self._text_field: {
                                 "type": "text",
                                 "analyzer": "default"
@@ -124,6 +133,14 @@ class ElasticsearchStore(VectorStore):
                                 "type": "object",
                                 "enabled": True
                             },
+                            # 图像相关字段
+                            "image_url": {"type": "keyword"},
+                            "image_data": {"type": "binary"},
+                            "image_metadata": {
+                                "type": "object",
+                                "enabled": True
+                            },
+                            "has_image": {"type": "boolean"},
                             "node_id": {"type": "keyword"},
                             "document_id": {"type": "keyword"},
                             "created_at": {"type": "date"},
@@ -368,6 +385,68 @@ class ElasticsearchStore(VectorStore):
         
         return self._parse_response(response)
     
+    def _image_vector_search(
+        self,
+        query_embedding: List[float],
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None
+    ) -> List[Tuple[BaseNode, float]]:
+        """
+        执行图像向量相似度搜索
+        
+        参数:
+            query_embedding: 图像查询向量
+            top_k: 返回结果数量
+            filters: 可选过滤条件
+            
+        返回:
+            (节点, 分数)元组的列表
+        """
+        # 构建kNN查询
+        knn_query = {
+            "field": self._image_vector_field,
+            "query_vector": query_embedding,
+            "k": top_k,
+            "num_candidates": top_k * 2
+        }
+        
+        search_query = {
+            "knn": knn_query,
+            "size": top_k
+        }
+        
+        # 添加过滤条件
+        if filters:
+            filter_clauses = []
+            for key, value in filters.items():
+                filter_key = f"{self._metadata_field}.{key}"
+                
+                if isinstance(value, list):
+                    filter_clauses.append({"terms": {filter_key: value}})
+                else:
+                    filter_clauses.append({"term": {filter_key: value}})
+            
+            # 添加图像存在条件
+            filter_clauses.append({"term": {"has_image": True}})
+            
+            if filter_clauses:
+                search_query["query"] = {
+                    "bool": {"filter": filter_clauses}
+                }
+        # 如果没有其他过滤条件，仅添加图像存在条件
+        else:
+            search_query["query"] = {
+                "bool": {"filter": [{"term": {"has_image": True}}]}
+            }
+        
+        # 执行搜索
+        response = self._client.search(
+            index=self._index_name,
+            body=search_query
+        )
+        
+        return self._parse_response(response)
+        
     def hybrid_search(
         self,
         query_str: str,
@@ -432,6 +511,102 @@ class ElasticsearchStore(VectorStore):
         
         return self._parse_response(response)
     
+    def image_text_hybrid_search(
+        self,
+        query_str: str,
+        image_embedding: List[float],
+        text_embedding: List[float],
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None,
+        text_weight: float = 0.3,
+        image_weight: float = 0.3,
+        semantic_weight: float = 0.4
+    ) -> List[Tuple[BaseNode, float]]:
+        """
+        执行图像-文本混合搜索（结合全文搜索、文本向量和图像向量搜索）
+        
+        参数:
+            query_str: 查询文本
+            image_embedding: 图像查询向量
+            text_embedding: 文本查询向量
+            top_k: 返回结果数量
+            filters: 可选过滤条件
+            text_weight: 全文检索权重(BM25)
+            image_weight: 图像向量权重
+            semantic_weight: 文本向量权重
+            
+        返回:
+            (节点, 分数)元组的列表
+        """
+        # 验证权重总和为1.0
+        total_weight = text_weight + image_weight + semantic_weight
+        if abs(total_weight - 1.0) > 0.001:
+            logger.warning(f"权重总和({total_weight})不为1.0，已自动归一化")
+            text_weight /= total_weight
+            image_weight /= total_weight
+            semantic_weight /= total_weight
+        
+        # 构建混合查询
+        must_conditions = []
+        should_conditions = []
+        
+        # 处理过滤条件
+        if filters:
+            for key, value in filters.items():
+                filter_key = f"{self._metadata_field}.{key}"
+                
+                if isinstance(value, list):
+                    must_conditions.append({"terms": {filter_key: value}})
+                else:
+                    must_conditions.append({"term": {filter_key: value}})
+        
+        # 构建查询
+        search_query = {
+            "query": {
+                "script_score": {
+                    "query": {
+                        "bool": {
+                            "must": [{
+                                "match": {self._text_field: {"query": query_str}}
+                            }] + must_conditions
+                        }
+                    },
+                    "script": {
+                        "source": f"""
+                            float text_score = _score * {text_weight};
+                            float text_vec_score = 0.0;
+                            float image_vec_score = 0.0;
+                            
+                            // 文本向量分数
+                            if (doc.containsKey('{self._vector_field}')) {{  
+                                text_vec_score = cosineSimilarity(params.text_vector, '{self._vector_field}') * {semantic_weight};
+                            }}
+                            
+                            // 图像向量分数
+                            if (doc.containsKey('{self._image_vector_field}') && doc.containsKey('has_image') && doc['has_image'].value) {{
+                                image_vec_score = cosineSimilarity(params.image_vector, '{self._image_vector_field}') * {image_weight};
+                            }}
+                            
+                            return text_score + text_vec_score + image_vec_score;
+                        """,
+                        "params": {
+                            "text_vector": text_embedding,
+                            "image_vector": image_embedding
+                        }
+                    }
+                }
+            },
+            "size": top_k
+        }
+        
+        # 执行搜索
+        response = self._client.search(
+            index=self._index_name,
+            body=search_query
+        )
+        
+        return self._parse_response(response)
+    
     def _parse_response(self, response: Dict[str, Any]) -> List[Tuple[BaseNode, float]]:
         """
         解析ES响应，返回节点和分数
@@ -453,6 +628,18 @@ class ElasticsearchStore(VectorStore):
             metadata = source.get(self._metadata_field, {})
             score = hit.get("_score", 0.0)
             
+            # 添加图像相关数据到元数据
+            if source.get("has_image", False):
+                image_metadata = source.get("image_metadata", {})
+                if image_metadata:
+                    metadata["image_metadata"] = image_metadata
+                
+                image_url = source.get("image_url")
+                if image_url:
+                    metadata["image_url"] = image_url
+                
+                metadata["has_image"] = True
+            
             # 创建节点
             node = TextNode(
                 text=text,
@@ -464,6 +651,11 @@ class ElasticsearchStore(VectorStore):
             vector_embedding = source.get(self._vector_field)
             if vector_embedding:
                 node.embedding = vector_embedding
+            
+            # 可选：如果索引中存储了图像嵌入向量
+            image_vector = source.get(self._image_vector_field)
+            if image_vector:
+                metadata["image_vector"] = True  # 标记有图像向量
             
             results.append((node, score))
         
@@ -499,6 +691,90 @@ class ElasticsearchStore(VectorStore):
             except:
                 pass
             raise
+    
+    def add_image_nodes(
+        self,
+        nodes: List[BaseNode],
+        image_embeddings: List[List[float]],
+        image_urls: Optional[List[str]] = None,
+        image_data: Optional[List[str]] = None,
+        image_metadata: Optional[List[Dict[str, Any]]] = None,
+        **add_kwargs: Any,
+    ) -> List[str]:
+        """
+        添加包含图像的节点到Elasticsearch
+        
+        参数:
+            nodes: 要添加的节点列表
+            image_embeddings: 图像嵌入向量列表，与nodes一一对应
+            image_urls: 可选的图像URL列表，与nodes一一对应
+            image_data: 可选的图像二进制数据列表，与nodes一一对应（Base64编码的字符串）
+            image_metadata: 可选的图像元数据列表，与nodes一一对应
+            **add_kwargs: 额外参数
+            
+        返回:
+            添加的节点ID列表
+        """
+        if not nodes or len(nodes) != len(image_embeddings):
+            raise ValueError("节点列表和图像嵌入向量列表必须非空且长度相同")
+        
+        # 检查可选参数的长度一致性
+        if image_urls and len(image_urls) != len(nodes):
+            raise ValueError("image_urls的长度必须与nodes相同")
+        if image_data and len(image_data) != len(nodes):
+            raise ValueError("image_data的长度必须与nodes相同")
+        if image_metadata and len(image_metadata) != len(nodes):
+            raise ValueError("image_metadata的长度必须与nodes相同")
+        
+        node_ids = []
+        actions = []
+        
+        # 准备批量操作
+        for i, node in enumerate(nodes):
+            node_id = node.node_id
+            node_ids.append(node_id)
+            
+            # 提取节点信息
+            metadata = node_to_metadata_dict(node)
+            embedding = node.embedding
+            
+            # 构建ES文档
+            doc = {
+                "_index": self._index_name,
+                "_id": node_id,
+                "_source": {
+                    "node_id": node_id,
+                    "document_id": node.ref_doc_id if hasattr(node, 'ref_doc_id') else None,
+                    self._text_field: node.get_content(),
+                    self._metadata_field: metadata,
+                    "has_image": True,
+                    self._image_vector_field: image_embeddings[i],
+                }
+            }
+            
+            # 添加向量嵌入
+            if embedding is not None:
+                doc["_source"][self._vector_field] = embedding
+            
+            # 添加图像URL（如果存在）
+            if image_urls and image_urls[i]:
+                doc["_source"]["image_url"] = image_urls[i]
+            
+            # 添加图像数据（如果存在）
+            if image_data and image_data[i]:
+                doc["_source"]["image_data"] = image_data[i]
+            
+            # 添加图像元数据（如果存在）
+            if image_metadata and image_metadata[i]:
+                doc["_source"]["image_metadata"] = image_metadata[i]
+            
+            actions.append(doc)
+        
+        # 批量添加到ES
+        if actions:
+            helpers.bulk(self._client, actions)
+        
+        return node_ids
     
     def delete_index(self) -> None:
         """删除整个索引"""

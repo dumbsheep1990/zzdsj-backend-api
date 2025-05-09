@@ -169,7 +169,7 @@ class Settings:
     # 框架配置
     # LightRAG配置
     class LightRAGSettings(BaseSettings):
-        """LightRAG设置"""
+        """LightRAG设置"""
         enabled: bool = Field(False, env="LIGHTRAG_ENABLED")
         base_dir: str = Field("./data/lightrag", env="LIGHTRAG_BASE_DIR")
         embedding_dim: int = Field(1536, env="LIGHTRAG_EMBEDDING_DIM")
@@ -187,11 +187,35 @@ class Settings:
         redis_db: int = Field(1, env="LIGHTRAG_REDIS_DB")
         redis_password: str = Field("", env="LIGHTRAG_REDIS_PASSWORD")
         
+        # 服务器配置
+        server_host: str = Field("0.0.0.0", env="LIGHTRAG_SERVER_HOST")
+        server_port: int = Field(9621, env="LIGHTRAG_SERVER_PORT")
+        api_url: str = Field("http://localhost:9621", env="LIGHTRAG_API_URL")
+        container_name: str = Field("lightrag-api", env="LIGHTRAG_CONTAINER_NAME")
+        image_name: str = Field("hkuds/lightrag:latest", env="LIGHTRAG_IMAGE_NAME")
+        docker_network: str = Field("zz-backend-network", env="LIGHTRAG_DOCKER_NETWORK")
+        service_name: str = Field("lightrag-api", env="LIGHTRAG_SERVICE_NAME")
+        
+        # LLM配置
+        llm_binding: str = Field("openai", env="LIGHTRAG_LLM_BINDING")
+        llm_model: str = Field("gpt-4o-mini", env="LIGHTRAG_LLM_MODEL")
+        llm_api_base: str = Field("https://api.openai.com/v1", env="LIGHTRAG_LLM_API_BASE")
+        llm_api_key: str = Field("", env="LIGHTRAG_LLM_API_KEY")
+        
+        # 嵌入模型配置
+        embedding_binding: str = Field("openai", env="LIGHTRAG_EMBEDDING_BINDING")
+        embedding_model: str = Field("text-embedding-3-small", env="LIGHTRAG_EMBEDDING_MODEL")
+        embedding_api_base: str = Field("https://api.openai.com/v1", env="LIGHTRAG_EMBEDDING_API_BASE")
+        embedding_api_key: str = Field("", env="LIGHTRAG_EMBEDDING_API_KEY")
+        
         # 高级配置
         use_semantic_chunking: bool = Field(False, env="LIGHTRAG_USE_SEMANTIC_CHUNKING")
         use_knowledge_graph: bool = Field(False, env="LIGHTRAG_USE_KNOWLEDGE_GRAPH")
         kg_relation_threshold: float = Field(0.7, env="LIGHTRAG_KG_RELATION_THRESHOLD")
         max_workers: int = Field(4, env="LIGHTRAG_MAX_WORKERS")
+        
+        # Nacos注册配置
+        register_to_nacos: bool = Field(True, env="LIGHTRAG_REGISTER_TO_NACOS")
         
         class Config:
             env_prefix = "LIGHTRAG_"

@@ -88,7 +88,25 @@ register_searxng_startup(app)
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# 包含路由器
+# 导入新的统一API路由
+try:
+    from app.api.v1 import api_router as v1_api_router
+    # 添加统一的API v1路由
+    app.include_router(v1_api_router)
+    logger.info("成功集成API v1统一架构路由")
+except ImportError as e:
+    logger.warning(f"导入API v1统一架构失败: {str(e)}，将使用传统路由")
+
+# 导入API中间件
+try:
+    from app.api.v1.middleware import setup_middlewares
+    # 设置API中间件
+    setup_middlewares(app)
+    logger.info("成功设置API v1中间件")
+except ImportError as e:
+    logger.warning(f"设置API v1中间件失败: {str(e)}")
+
+# 包含传统路由器（保持向后兼容）
 app.include_router(assistants.router, prefix="/api/v1/assistants/classic", tags=["经典助手"])
 app.include_router(assistant.router, prefix="/api/v1/assistants", tags=["AI助手"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["知识库"])

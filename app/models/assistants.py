@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Foreign
 from sqlalchemy.orm import relationship
 
 from app.models.database import Base
+from app.models.assistant_knowledge_graph import AssistantKnowledgeGraph
 
 class Assistant(Base):
     """
@@ -21,6 +22,7 @@ class Assistant(Base):
     
     # 关系
     knowledge_bases = relationship("AssistantKnowledgeBase", back_populates="assistant")
+    knowledge_graphs = relationship("AssistantKnowledgeGraph", back_populates="assistant")
     conversations = relationship("Conversation", back_populates="assistant")
 
 class AssistantKnowledgeBase(Base):

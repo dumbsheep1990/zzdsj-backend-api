@@ -12,8 +12,11 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 from pydantic import BaseModel, Field
 from app.frameworks.lightrag.client import get_lightrag_client
+from app.frameworks.lightrag.workdir_manager import get_workdir_manager
+from app.frameworks.lightrag.api_client import get_lightrag_api_client
 from app.utils.service_manager import get_service_manager
 from app.utils.logger import setup_logger
+from app.dependencies import get_lightrag_manager_dependency, get_lightrag_api_client_dependency
 
 logger = setup_logger("lightrag_api")
 router = APIRouter(prefix="/lightrag", tags=["LightRAG"])
@@ -403,6 +406,99 @@ async def query_knowledge(query_request: QueryRequest):
     except Exception as e:
         logger.error(f"查询知识库时出错: {str(e)}")
         raise HTTPException(status_code=500, detail=f"查询知识库失败: {str(e)}")
+
+# ====================== WorkdirManager API接口 ======================
+
+class WorkdirCreateV2(BaseModel):
+    """创建工作目录请求模型 (WorkdirManager版本)"""
+    path: str = Field(..., description="工作目录路径", example="project_knowledge")
+    display_name: str = Field(..., description="工作目录显示名称", example="项目知识库")
+    description: Optional[str] = Field(None, description="工作目录描述", example="项目知识库")
+
+class QueryRequestV2(BaseModel):
+    """查询请求模型 (WorkdirManager版本)"""
+    question: str = Field(..., description="查询问题", example="什么是LightRAG?")
+    workdir: str = Field(..., description="工作目录路径", example="project_knowledge")
+    mode: str = Field("hybrid", description="查询模式: hybrid, vector, graph")
+
+@router.get("/v2/workdirs", response_model=List[Dict[str, Any]], summary="获取工作目录列表 (Server集成版)")
+async def list_workdirs_v2(manager = Depends(get_lightrag_manager_dependency)):
+    """列出所有工作目录 (WorkdirManager版本)"""
+    return await manager.list_workdirs()
+
+@router.post("/v2/workdirs", response_model=Dict[str, Any], summary="创建工作目录 (Server集成版)")
+async def create_workdir_v2(workdir: WorkdirCreateV2, manager = Depends(get_lightrag_manager_dependency)):
+    """创建新的工作目录 (WorkdirManager版本)"""
+    try:
+        workdir_id = await manager.create_workdir(workdir.path, workdir.display_name, workdir.description)
+        return {
+            "success": True,
+            "message": f"工作目录 {workdir.display_name} 创建成功",
+            "workdir": {
+                "id": workdir_id,
+                "path": workdir.path,
+                "display_name": workdir.display_name
+            }
+        }
+    except Exception as e:
+        logger.error(f"创建工作目录失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"创建工作目录失败: {str(e)}")
+
+@router.post("/v2/query", response_model=Dict[str, Any], summary="在指定工作目录执行查询 (Server集成版)")
+async def query_v2(query_request: QueryRequestV2, manager = Depends(get_lightrag_manager_dependency)):
+    """在指定工作目录执行查询 (WorkdirManager版本)"""
+    try:
+        result = await manager.query(query_request.workdir, query_request.question, query_request.mode)
+        return {
+            "success": True,
+            "workdir": query_request.workdir,
+            "question": query_request.question,
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"查询失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"查询失败: {str(e)}")
+
+@router.post("/v2/query/all", response_model=Dict[str, Any], summary="查询所有工作目录 (Server集成版)")
+async def query_all_v2(question: str = Body(..., description="查询问题"), 
+                   mode: str = Body("hybrid", description="查询模式"),
+                   manager = Depends(get_lightrag_manager_dependency)):
+    """查询所有工作目录 (WorkdirManager版本)"""
+    try:
+        results = await manager.query_all(question, mode)
+        return {
+            "success": True,
+            "question": question,
+            "results": results
+        }
+    except Exception as e:
+        logger.error(f"查询所有工作目录失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"查询所有工作目录失败: {str(e)}")
+
+@router.get("/v2/graph", response_model=Dict[str, Any], summary="获取图谱数据 (Server集成版)")
+async def get_graph_data(workdir: str = Query(..., description="工作目录路径"),
+                      api_client = Depends(get_lightrag_api_client_dependency)):
+    """获取指定工作目录的知识图谱数据 (WorkdirManager版本)"""
+    try:
+        result = api_client.get_graph_data(workdir)
+        if not result.get("success", False):
+            raise HTTPException(status_code=500, detail=f"获取图谱数据失败: {result.get('error', '未知错误')}")
+        return result.get("data", {})
+    except Exception as e:
+        logger.error(f"获取图谱数据失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取图谱数据失败: {str(e)}")
+
+@router.get("/v2/graph/combined", response_model=Dict[str, Any], summary="获取合并图谱数据 (Server集成版)")
+async def get_combined_graph_data(
+    workdirs: List[str] = Query(..., description="工作目录路径列表"),
+    api_client = Depends(get_lightrag_api_client_dependency)
+):
+    """获取多个工作目录的合并图谱数据 (WorkdirManager版本)"""
+    try:
+        return api_client.get_combined_graph_data(workdirs)
+    except Exception as e:
+        logger.error(f"获取合并图谱数据失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取合并图谱数据失败: {str(e)}")
 
 @router.post("/query/stream", summary="流式查询知识库")
 async def query_knowledge_stream(query_request: QueryRequest):

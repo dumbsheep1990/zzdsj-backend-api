@@ -289,6 +289,50 @@ class LightRAGApiClient:
             logger.error(f"流式查询请求失败: {str(e)}")
             raise
 
+    def get_graph_data(self, workdir_id: str) -> Dict[str, Any]:
+        """
+        获取知识图谱数据
+        
+        Args:
+            workdir_id: 工作目录ID
+            
+        Returns:
+            包含图谱数据的字典
+        """
+        return self._make_request("GET", f"/graphs/{workdir_id}/graph-data")
+
+    def get_combined_graph_data(self, workdir_ids: List[str]) -> Dict[str, Any]:
+        """
+        获取多个工作目录的合并图谱数据
+        
+        Args:
+            workdir_ids: 工作目录ID列表
+            
+        Returns:
+            包含合并图谱数据的字典
+        """
+        # 获取所有工作目录的图谱数据
+        combined_data = {"nodes": [], "edges": []}
+
+        for workdir_id in workdir_ids:
+            result = self.get_graph_data(workdir_id)
+            if not result.get("success", False):
+                logger.warning(f"获取工作目录 {workdir_id} 的图谱数据失败: {result.get('error', '未知错误')}")
+                continue
+
+            graph_data = result.get("data", {})
+
+            # 添加来源标识
+            for node in graph_data.get("nodes", []):
+                node["workdir"] = workdir_id
+                combined_data["nodes"].append(node)
+
+            for edge in graph_data.get("edges", []):
+                edge["workdir"] = workdir_id
+                combined_data["edges"].append(edge)
+
+        return combined_data
+
 # 单例模式，确保全局只有一个客户端实例
 _lightrag_api_client = None
 

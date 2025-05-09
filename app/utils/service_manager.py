@@ -589,19 +589,73 @@ def register_lightrag_service():
     root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     lightrag_dir = os.path.join(root_dir, 'docker', 'lightrag')
     
+    # 加载配置
+    from app.config import settings
+    lightrag_config = getattr(settings, 'lightrag', None)
+    
+    # 检查是否出现如与Pydantic BaseSettings对象
+    if hasattr(lightrag_config, 'dict') and callable(lightrag_config.dict):
+        config = lightrag_config.dict()
+    else:
+        # 如果不是Pydantic对象，则使用默认值
+        config = {
+            'enabled': True,
+            'container_name': 'lightrag-api',
+            'service_name': 'lightrag-api',
+            'server_port': 9621
+        }
+    
+    # 准备环境变量
+    env = {}
+    
+    # 将LightRAG的所有配置转换为环境变量
+    if hasattr(lightrag_config, '__dict__'):
+        for key, value in lightrag_config.__dict__.items():
+            if key.startswith('_'):
+                continue
+            env_key = f"LIGHTRAG_{key.upper()}"
+            env[env_key] = str(value)
+    
+    # 添加项目的模型配置
+    env['OPENAI_API_KEY'] = getattr(settings, 'OPENAI_API_KEY', '')
+    env['OPENAI_API_BASE'] = getattr(settings, 'OPENAI_API_BASE', 'https://api.openai.com/v1')
+    
+    # 注入数据库配置
+    env['POSTGRES_HOST'] = getattr(settings, 'LIGHTRAG_PG_HOST', getattr(settings, 'POSTGRES_HOST', 'localhost'))
+    env['POSTGRES_PORT'] = str(getattr(settings, 'LIGHTRAG_PG_PORT', getattr(settings, 'POSTGRES_PORT', 5432)))
+    env['POSTGRES_USER'] = getattr(settings, 'LIGHTRAG_PG_USER', getattr(settings, 'POSTGRES_USER', 'postgres'))
+    env['POSTGRES_PASSWORD'] = getattr(settings, 'LIGHTRAG_PG_PASSWORD', getattr(settings, 'POSTGRES_PASSWORD', 'password'))
+    env['POSTGRES_DB'] = getattr(settings, 'LIGHTRAG_PG_DB', 'lightrag')
+    
+    # 获取服务管理器
     manager = get_service_manager()
+    
+    # 检查依赖的服务
+    depends_on = []
+    
+    # 如果使用PostgreSQL存储
+    if getattr(lightrag_config, 'graph_db_type', 'file') in ['postgres', 'postgresql']:
+        depends_on.append('postgres')
+    
+    # 如果使用Redis存储
+    if getattr(lightrag_config, 'graph_db_type', '') == 'redis':
+        depends_on.append('redis')
+    
+    # 服务名称
+    service_name = getattr(lightrag_config, 'service_name', 'lightrag-api')
     
     # 注册LightRAG服务
     manager.register_service(
-        service_name="lightrag-api",
+        service_name=service_name,
         service_type="docker",
         start_cmd="docker-compose up -d",
         stop_cmd="docker-compose down",
         startup_dir=lightrag_dir,
         health_check=is_lightrag_available,
-        depends_on=["postgres", "redis"],  # 假设这些服务已经注册
-        auto_start=True
+        depends_on=depends_on,
+        auto_start=getattr(lightrag_config, 'enabled', True),
+        environment=env
     )
     
     # 返回注册的服务
-    return manager.get_service_status("lightrag-api")
+    return manager.get_service_status(service_name)

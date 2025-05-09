@@ -62,6 +62,18 @@ register_service(AssistantService, assistant_service_dependency)
 register_service(ConversationService, conversation_service_dependency)
 register_service(ModelProviderService, model_provider_service_dependency)
 
+# LightRAG依赖注入
+from app.frameworks.lightrag.workdir_manager import get_workdir_manager
+from app.frameworks.lightrag.api_client import get_lightrag_api_client
+
+async def get_lightrag_manager_dependency():
+    """获取LightRAG工作目录管理器实例"""
+    return get_workdir_manager()
+
+async def get_lightrag_api_client_dependency():
+    """获取LightRAG API客户端实例"""
+    return get_lightrag_api_client()
+
 # 服务依赖注入装饰器
 def inject_service(service_class: Type[T]) -> Callable[..., T]:
     """依赖注入装饰器，用于获取指定类型的服务"""
