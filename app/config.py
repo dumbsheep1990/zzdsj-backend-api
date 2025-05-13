@@ -311,6 +311,87 @@ class Settings:
     searxng: SearxNGSettings = SearxNGSettings()
     lightrag: LightRAGSettings = LightRAGSettings()
     
+    # 系统全局默认模型配置
+    class SystemModelSettings(BaseSettings):
+        """系统全局默认模型设置"""
+        default_model: str = Field(get_config("system", "default_model", default="gpt-4"), env="SYSTEM_DEFAULT_MODEL")
+        default_embedding_model: str = Field(get_config("system", "default_embedding_model", default="text-embedding-ada-002"), env="SYSTEM_DEFAULT_EMBEDDING_MODEL")
+        
+        # 可用模型列表
+        available_models: List[Dict[str, Any]] = Field(
+            get_config("system", "available_models", default=[
+                {"id": "gpt-4", "name": "GPT-4", "provider": "openai", "category": "chat"},
+                {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo", "provider": "openai", "category": "chat"},
+                {"id": "text-embedding-ada-002", "name": "Embedding Ada 002", "provider": "openai", "category": "embedding"}
+            ]),
+            env="SYSTEM_AVAILABLE_MODELS"
+        )
+        
+        class Config:
+            env_prefix = "SYSTEM_"
+    
+    system_model: SystemModelSettings = SystemModelSettings()
+    
+    # OWL框架配置
+    class OwlSettings(BaseSettings):
+        """OWL框架设置"""
+        enabled: bool = Field(get_config("frameworks", "owl", "enabled", default=True), env="OWL_ENABLED")
+        
+        # 模型配置
+        default_model: Dict[str, Any] = {
+            "model_name": get_config("frameworks", "owl", "model", "default", "name", default=None) or get_config("system", "default_model", default="gpt-4"),
+            "temperature": get_config("frameworks", "owl", "model", "default", "temperature", default=0.7),
+            "max_tokens": get_config("frameworks", "owl", "model", "default", "max_tokens", default=1500)
+        }
+        
+        planner_model: Dict[str, Any] = {
+            "model_name": get_config("frameworks", "owl", "model", "planner", "name", default=None) or get_config("system", "default_model", default="gpt-4"),
+            "temperature": get_config("frameworks", "owl", "model", "planner", "temperature", default=0.2),
+            "max_tokens": get_config("frameworks", "owl", "model", "planner", "max_tokens", default=2000)
+        }
+        
+        executor_model: Dict[str, Any] = {
+            "model_name": get_config("frameworks", "owl", "model", "executor", "name", default=None) or get_config("system", "default_model", default="gpt-3.5-turbo"),
+            "temperature": get_config("frameworks", "owl", "model", "executor", "temperature", default=0.5),
+            "max_tokens": get_config("frameworks", "owl", "model", "executor", "max_tokens", default=1000)
+        }
+        
+        # MCP服务器配置路径
+        mcp_config_path: str = Field(
+            get_config("frameworks", "owl", "mcp_config_path", default="config/mcp_config.json"), 
+            env="OWL_MCP_CONFIG_PATH"
+        )
+        
+        # 获取指定角色的模型配置
+        def get_model_config(self, role: str = "default", user_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+            """获取指定角色的模型配置，支持用户自定义配置覆盖
+            
+            Args:
+                role: 角色名称，可选值为default, planner, executor
+                user_config: 用户自定义配置，优先级高于系统配置
+                
+            Returns:
+                Dict[str, Any]: 模型配置
+            """
+            # 获取默认配置
+            if role == "planner":
+                config = dict(self.planner_model)
+            elif role == "executor":
+                config = dict(self.executor_model)
+            else:
+                config = dict(self.default_model)
+                
+            # 用户配置覆盖
+            if user_config:
+                config.update(user_config)
+                
+            return config
+        
+        class Config:
+            env_prefix = "OWL_"
+    
+    owl: OwlSettings = OwlSettings()
+    
     # InfluxDB指标统计配置
     class MetricsSettings(BaseSettings):
         """指标统计设置"""

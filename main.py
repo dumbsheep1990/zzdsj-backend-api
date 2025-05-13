@@ -11,7 +11,7 @@ import logging
 
 from app.api import assistants, knowledge, chat, assistant, model_provider, assistant_qa, mcp, mcp_service
 from app.api import auth, user, api_key, resource_permission
-from app.api import system_config, sensitive_word, settings, lightrag
+from app.api import system_config, sensitive_word, settings, lightrag, owl, agent
 from app.config import settings
 from app.utils.database import init_db
 from app.utils.vector_store import init_milvus
@@ -123,6 +123,10 @@ app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(api_key.router)
 app.include_router(resource_permission.router)
+
+# 注册OWL框架API路由
+app.include_router(owl.router, prefix="/api/owl", tags=["OWL智能体框架"])
+app.include_router(agent.router, prefix="/api/agent", tags=["智能体服务"])
 
 @app.get("/", include_in_schema=False)
 def root():
