@@ -7,6 +7,9 @@ from app.core.owl_controller import OwlController
 from app.utils.database import get_db, AsyncSession
 from app.config import settings
 
+# 导入OWL子模块路由
+from app.api.owl import router as owl_sub_router
+
 router = APIRouter()
 
 # 初始化OWL控制器

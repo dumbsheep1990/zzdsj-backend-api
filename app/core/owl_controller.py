@@ -1,10 +1,20 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 import json
+import uuid
+import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agent_manager import AgentManager
 from app.frameworks.owl.utils.tool_chain_helper import ToolChainHelper
 from app.frameworks.owl.toolkits.base import OwlToolkitManager
+from app.frameworks.owl.agents.base import BaseAgent
+from app.frameworks.owl.agents.planner import PlannerAgent
+from app.frameworks.owl.agents.executor import ExecutorAgent
+from app.frameworks.owl.society.workflow import WorkflowManager
 from app.config import settings
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 class OwlController:
     """OWL框架控制器，为API层提供服务"""
@@ -14,6 +24,10 @@ class OwlController:
         self.agent_manager = AgentManager()
         self.toolkit_manager = None
         self.tool_chain_helper = None
+        self.workflow_manager = None
+        self.custom_agents = {}  # 用户创建的自定义智能体
+        self.task_history = {}   # 任务历史记录
+        self.custom_tools = {}   # 自定义工具
         self.initialized = False
         
     async def initialize(self) -> None:
@@ -31,6 +45,12 @@ class OwlController:
         # 初始化工具链助手
         self.tool_chain_helper = ToolChainHelper(self.toolkit_manager)
         await self.tool_chain_helper.initialize()
+        
+        # 初始化工作流管理器
+        self.workflow_manager = WorkflowManager()
+        
+        # 从数据库加载自定义智能体、自定义工具和任务历史
+        # TODO: 实现数据库持久化
         
         self.initialized = True
         
@@ -156,3 +176,337 @@ class OwlController:
             })
             
         return all_workflows
+    
+    # ============================== 智能体管理 ==============================
+    
+    async def create_agent(self, name: str, agent_type: str, description: Optional[str] = None,
+                         model_config: Optional[Dict[str, Any]] = None, 
+                         system_prompt: Optional[str] = None) -> Dict[str, Any]:
+        """创建自定义智能体
+        
+        Args:
+            name: 智能体名称
+            agent_type: 智能体类型，如planner或executor
+            description: 智能体描述
+            model_config: 模型配置
+            system_prompt: 系统提示词
+            
+        Returns:
+            Dict[str, Any]: 创建的智能体信息
+        """
+        if not self.initialized:
+            await self.initialize()
+            
+        # 生成唯一ID
+        agent_id = str(uuid.uuid4())
+        
+        # 获取模型配置
+        config = settings.owl.get_model_config(agent_type, model_config)
+        
+        # 创建智能体实例
+        if agent_type == "planner":
+            agent_instance = PlannerAgent(config)
+        elif agent_type == "executor":
+            agent_instance = ExecutorAgent(config)
+        else:
+            agent_instance = BaseAgent(config)
+            
+        # 设置系统提示词
+        if system_prompt:
+            agent_instance.set_system_message(system_prompt)
+            
+        # 保存智能体信息
+        created_at = datetime.datetime.now().isoformat()
+        self.custom_agents[agent_id] = {
+            "id": agent_id,
+            "name": name,
+            "type": agent_type,
+            "description": description,
+            "system_prompt": system_prompt,
+            "model_config": config,
+            "instance": agent_instance,
+            "created_at": created_at
+        }
+        
+        # 返回智能体信息（不包含实例）
+        return {
+            "id": agent_id,
+            "name": name,
+            "type": agent_type,
+            "description": description,
+            "created_at": created_at
+        }
+    
+    async def get_agent(self, agent_id: str) -> Optional[Dict[str, Any]]:
+        """获取智能体详情
+        
+        Args:
+            agent_id: 智能体ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: 智能体信息，如不存在则返回None
+        """
+        if not self.initialized:
+            await self.initialize()
+            
+        if agent_id not in self.custom_agents:
+            return None
+            
+        agent_info = self.custom_agents[agent_id]
+        # 返回不包含实例的信息
+        return {
+            "id": agent_info["id"],
+            "name": agent_info["name"],
+            "type": agent_info["type"],
+            "description": agent_info["description"],
+            "created_at": agent_info["created_at"]
+        }
+    
+    async def get_agents(self) -> List[Dict[str, Any]]:
+        """获取所有智能体
+        
+        Returns:
+            List[Dict[str, Any]]: 智能体列表
+        """
+        if not self.initialized:
+            await self.initialize()
+            
+        return [
+            {
+                "id": agent_info["id"],
+                "name": agent_info["name"],
+                "type": agent_info["type"],
+                "description": agent_info["description"],
+                "created_at": agent_info["created_at"]
+            }
+            for agent_info in self.custom_agents.values()
+        ]
+    
+    async def delete_agent(self, agent_id: str) -> bool:
+        """删除智能体
+        
+        Args:
+            agent_id: 智能体ID
+            
+        Returns:
+            bool: 是否成功删除
+        """
+        if not self.initialized:
+            await self.initialize()
+            
+        if agent_id not in self.custom_agents:
+            return False
+            
+        del self.custom_agents[agent_id]
+        return True
+    
+    # ============================== 工作流模板管理 ==============================
+    
+    async def create_workflow_template(self, name: str, description: str, 
+                                      template: Dict[str, Any], category: Optional[str] = None) -> Dict[str, Any]:
+        """创建工作流模板
+        
+        Args:
+            name: 模板名称
+            description: 模板描述
+            template: 工作流模板定义
+            category: 模板分类
+            
+        Returns:
+            Dict[str, Any]: 创建的模板信息
+        """
+        if not self.initialized:
+            await self.initialize()
+            
+        # 生成唯一ID
+        template_id = str(uuid.uuid4())
+        created_at = datetime.datetime.now().isoformat()
+        
+        # 注册模板
+        self.workflow_manager.register_template(name, {
+            "id": template_id,
+            "name": name,
+            "description": description,
+            "template": template,
+            "category": category,
+            "created_at": created_at
+        })
+        
+        # 返回模板信息
+        return {
+            "id": template_id,
+            "name": name,
+            "description": description,
+            "category": category,
+            "created_at": created_at
+        }
+    
+    async def get_workflow_templates(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
+        """获取工作流模板
+        
+        Args:
+            category: 模板分类
+            
+        Returns:
+            List[Dict[str, Any]]: 模板列表
+        """
+        if not self.initialized:
+            await self.initialize()
+            
+        templates = self.workflow_manager.get_templates()
+        
+        # 按分类过滤
+        if category:
+            templates = [t for t in templates if t.get("category") == category]
+            
+        return templates
+    
+    # ============================== 自定义工具管理 ==============================
+    
+    async def register_custom_tool(self, name: str, description: str, function_def: Dict[str, Any],
+                                 api_endpoint: Optional[str] = None, is_async: bool = False) -> Dict[str, Any]:
+        """注册自定义工具
+        
+        Args:
+            name: 工具名称
+            description: 工具描述
+            function_def: 函数定义
+            api_endpoint: API端点，如果是远程工具
+            is_async: 是否为异步工具
+            
+        Returns:
+            Dict[str, Any]: 注册的工具信息
+        """
+        if not self.initialized:
+            await self.initialize()
+            
+        # 检查工具是否已存在
+        if name in self.custom_tools or name in self.tool_chain_helper.available_tools:
+            raise ValueError(f"工具名称'{name}'已存在")
+            
+        # 生成唯一ID和创建时间
+        tool_id = str(uuid.uuid4())
+        created_at = datetime.datetime.now().isoformat()
+        
+        # 创建工具
+        from app.frameworks.owl.utils.tool_factory import create_custom_tool
+        custom_tool = await create_custom_tool(
+            name=name,
+            description=description,
+            function_def=function_def,
+            api_endpoint=api_endpoint,
+            is_async=is_async
+        )
+        
+        # 保存工具信息
+        self.custom_tools[tool_id] = {
+            "id": tool_id,
+            "name": name,
+            "description": description,
+            "function_def": function_def,
+            "api_endpoint": api_endpoint,
+            "is_async": is_async,
+            "tool": custom_tool,
+            "created_at": created_at
+        }
+        
+        # 注册到工具链助手
+        self.tool_chain_helper.register_tool(name, custom_tool, description)
+        
+        # 返回工具信息
+        return {
+            "id": tool_id,
+            "name": name,
+            "description": description,
+            "created_at": created_at
+        }
+    
+    # ============================== 任务历史管理 ==============================
+    
+    async def get_task_history(self, task_id: Optional[str] = None, user_id: Optional[str] = None,
+                            limit: int = 10, offset: int = 0) -> Dict[str, Any]:
+        """获取任务历史
+        
+        Args:
+            task_id: 任务ID
+            user_id: 用户ID
+            limit: 返回记录数量限制
+            offset: 分页偏移量
+            
+        Returns:
+            Dict[str, Any]: 任务历史记录及分页信息
+        """
+        if not self.initialized:
+            await self.initialize()
+            
+        # 过滤历史记录
+        filtered_history = list(self.task_history.values())
+        
+        # 按任务ID过滤
+        if task_id:
+            filtered_history = [h for h in filtered_history if h["id"] == task_id]
+            
+        # 按用户ID过滤
+        if user_id:
+            filtered_history = [h for h in filtered_history if h.get("user_id") == user_id]
+            
+        # 统计总记录数
+        total = len(filtered_history)
+        
+        # 排序并分页
+        sorted_history = sorted(filtered_history, key=lambda x: x["created_at"], reverse=True)
+        paginated_history = sorted_history[offset:offset + limit]
+        
+        # 返回结果
+        return {
+            "items": paginated_history,
+            "total": total,
+            "offset": offset,
+            "limit": limit
+        }
+    
+    async def get_task_details(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """获取任务详情
+        
+        Args:
+            task_id: 任务ID
+            
+        Returns:
+            Optional[Dict[str, Any]]: 任务详情，如不存在则返回None
+        """
+        if not self.initialized:
+            await self.initialize()
+            
+        if task_id not in self.task_history:
+            return None
+            
+        return self.task_history[task_id]
+    
+    async def _record_task(self, task: str, result: str, user_id: Optional[str] = None,
+                         tools_used: Optional[List[str]] = None) -> str:
+        """记录任务执行历史
+        
+        Args:
+            task: 任务描述
+            result: 任务结果
+            user_id: 用户ID
+            tools_used: 使用的工具列表
+            
+        Returns:
+            str: 任务ID
+        """
+        # 生成唯一ID
+        task_id = str(uuid.uuid4())
+        created_at = datetime.datetime.now().isoformat()
+        
+        # 保存任务历史
+        self.task_history[task_id] = {
+            "id": task_id,
+            "task": task,
+            "result": result,
+            "user_id": user_id,
+            "tools_used": tools_used or [],
+            "created_at": created_at
+        }
+        
+        return task_id

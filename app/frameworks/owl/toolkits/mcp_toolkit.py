@@ -101,7 +101,113 @@ class MCPTool:
         self.server_name = server_name
         self.name = name
         self.description = description
+        self.uri = None
+        self.tool_params = []
+        self.tool_returns = None
+        self.loaded = False
+
+    async def load_details(self) -> None:
+        """加载工具详细信息"""
+        if self.loaded:
+            return
+            
+        # 在真实实现中，从MCP服务器获取工具详情
+        # 例如：params，返回类型等
+        try:
+            from app.core.mcp_service_manager import MCPServiceManager
+            mcp_manager = MCPServiceManager()
+            
+            # 获取工具详情
+            tool_details = await mcp_manager.get_resource_details(self.server_name, self.name)
+            
+            if tool_details:
+                self.uri = tool_details.get("uri")
+                self.tool_params = tool_details.get("params", [])
+                self.tool_returns = tool_details.get("returns")
+                self.loaded = True
+            else:
+                # 如果获取失败，使用默认值
+                self._set_default_details()
+        except Exception as e:
+            # 如果获取失败，使用默认值
+            self._set_default_details()
+    
+    def _set_default_details(self) -> None:
+        """设置默认工具详情"""
+        # 设置通用参数
+        self.tool_params = [
+            {"name": "query", "type": "string", "description": "查询内容"}
+        ]
+        self.tool_returns = {"type": "object", "description": "工具执行结果"}
+        self.uri = f"mcp://{self.server_name}/{self.name}"
+        self.loaded = True
+    
+    async def __call__(self, **kwargs) -> Dict[str, Any]:
+        """调用MCP工具
         
+        Args:
+            **kwargs: 工具参数
+            
+        Returns:
+            Dict[str, Any]: 工具执行结果
+        """
+        if not self.loaded:
+            await self.load_details()
+            
+        # 验证参数
+        if self.tool_params:
+            self._validate_params(kwargs)
+            
+        try:
+            # 实际调用MCP工具
+            from app.core.mcp_service_manager import MCPServiceManager
+            mcp_manager = MCPServiceManager()
+            
+            # 执行工具调用
+            result = await mcp_manager.execute_resource(
+                server_name=self.server_name,
+                resource_name=self.name,
+                params=kwargs
+            )
+            
+            return result
+        except Exception as e:
+            # 如果调用失败，返回错误信息
+            return {
+                "error": str(e),
+                "status": "failed"
+            }
+    
+    def _validate_params(self, params: Dict[str, Any]) -> None:
+        """验证参数是否符合要求
+        
+        Args:
+            params: 参数字典
+            
+        Raises:
+            ValueError: 参数无效
+        """
+        for param_def in self.tool_params:
+            param_name = param_def.get("name")
+            param_required = param_def.get("required", False)
+            
+            if param_required and param_name not in params:
+                raise ValueError(f"缺少必需参数: {param_name}")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """将工具转换为字典表示
+        
+        Returns:
+            Dict[str, Any]: 工具字典表示
+        """
+        return {
+            "name": self.name,
+            "description": self.description,
+            "server_name": self.server_name,
+            "uri": self.uri,
+            "params": self.tool_params,
+            "returns": self.tool_returns
+        }
     async def __call__(self, *args, **kwargs) -> Any:
         """调用MCP工具
         
