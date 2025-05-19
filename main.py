@@ -12,8 +12,8 @@ import logging
 from app.api import assistants, knowledge, chat, assistant, model_provider, assistant_qa, mcp, mcp_service
 from app.api import auth, user, api_key, resource_permission
 from app.api import system_config, sensitive_word, settings, lightrag, agent
-# 导入新的OWL子模块路由
-from app.api.owl import router as owl_router
+# 导入工具相关API
+from app.api import owl_api, unified_tool_api
 from app.config import settings
 from app.utils.database import init_db
 from app.utils.vector_store import init_milvus
@@ -127,8 +127,10 @@ app.include_router(api_key.router)
 app.include_router(resource_permission.router)
 
 # 注册OWL框架API路由
-app.include_router(owl_router, prefix="/api", tags=["OWL智能体框架"])
+app.include_router(owl_api.router, prefix="/api", tags=["OWL智能体框架"])
 app.include_router(agent.router, prefix="/api/agent", tags=["智能体服务"])
+# 注册统一工具API路由
+app.include_router(unified_tool_api.router, prefix="/api", tags=["统一工具系统"])
 
 @app.get("/", include_in_schema=False)
 def root():
@@ -312,6 +314,12 @@ async def startup_event():
             start_heartbeat()
             logger.info("服务注册成功")
             
+            # 注册装饰器标记的应用服务
+            from app.utils.service_registry import register_decorated_services
+            logger.info("正在注册应用服务到Nacos...")
+            registered_count = register_decorated_services()
+            logger.info(f"应用服务注册完成: {registered_count}个服务已注册")
+            
             # 初始MCP服务注册器
             mcp_registrar = get_mcp_service_registrar()
             logger.info("MCP服务注册器初始化完成")
@@ -353,6 +361,16 @@ async def startup_event():
             logger.info("LightRAG服务已注册但未启用")
     except Exception as e:
         logger.error(f"初始化LightRAG服务时出错: {str(e)}", exc_info=True)
+    
+    # 第12步: 初始化OWL框架
+    try:
+        logger.info("正在初始化OWL框架...")
+        from app.startup.owl_init import register_owl_init
+        # 注册OWL框架初始化模块
+        register_owl_init(app)
+        logger.info("OWL框架初始化模块注册成功")
+    except Exception as e:
+        logger.error(f"注册OWL框架初始化模块时出错: {str(e)}", exc_info=True)
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -363,6 +381,15 @@ async def shutdown_event():
         mcp_registrar = get_mcp_service_registrar()
         mcp_registrar.stop()
         logger.info("已注销所有MCP服务")
+        
+        # 注销装饰器标记的应用服务
+        try:
+            from app.utils.service_registry import deregister_decorated_services
+            logger.info("正在从Nacos注销应用服务...")
+            deregistered_count = deregister_decorated_services()
+            logger.info(f"应用服务注销完成: {deregistered_count}个服务已注销")
+        except Exception as e:
+            logger.error(f"注销应用服务时出错: {str(e)}", exc_info=True)
         
         # 注销主服务
         logger.info("正在从Nacos注销主服务...")

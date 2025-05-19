@@ -3,6 +3,7 @@ import json
 import uuid
 import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.core.agent_manager import AgentManager
 from app.frameworks.owl.utils.tool_chain_helper import ToolChainHelper
@@ -11,6 +12,11 @@ from app.frameworks.owl.agents.base import BaseAgent
 from app.frameworks.owl.agents.planner import PlannerAgent
 from app.frameworks.owl.agents.executor import ExecutorAgent
 from app.frameworks.owl.society.workflow import WorkflowManager
+from app.frameworks.owl.toolkit_integrator import OwlToolkitIntegrator
+from app.frameworks.owl.utils.tool_factory import CustomTool
+from app.services.owl_tool_service import OwlToolService
+from app.startup.owl_toolkit_init import initialize_owl_toolkits
+from app.utils.database import get_db
 from app.config import settings
 from app.utils.logger import get_logger
 
@@ -19,16 +25,22 @@ logger = get_logger(__name__)
 class OwlController:
     """OWL框架控制器，为API层提供服务"""
     
-    def __init__(self):
-        """初始化OWL控制器"""
+    def __init__(self, db: Optional[Session] = None):
+        """初始化OWL控制器
+        
+        Args:
+            db: 数据库会话，用于初始化工具服务
+        """
         self.agent_manager = AgentManager()
         self.toolkit_manager = None
         self.tool_chain_helper = None
         self.workflow_manager = None
+        self.toolkit_integrator = None
         self.custom_agents = {}  # 用户创建的自定义智能体
         self.task_history = {}   # 任务历史记录
         self.custom_tools = {}   # 自定义工具
         self.initialized = False
+        self.db = db
         
     async def initialize(self) -> None:
         """初始化控制器"""
@@ -49,6 +61,14 @@ class OwlController:
         # 初始化工作流管理器
         self.workflow_manager = WorkflowManager()
         
+        # 初始化工具包集成器
+        if self.db:
+            # 在有数据库会话的情况下初始化工具包集成器
+            self.toolkit_integrator = await initialize_owl_toolkits(self.db)
+        else:
+            # 在没有数据库会话的情况下，只初始化基本组件
+            logger.warning("未提供数据库会话，OWL工具包集成器将不会初始化")
+            
         # 从数据库加载自定义智能体、自定义工具和任务历史
         # TODO: 实现数据库持久化
         
@@ -74,9 +94,21 @@ class OwlController:
         # 加载指定的工具
         selected_tools = []
         if tools:
+            # 首先从内部工具中查找
             all_tools = await self.toolkit_manager.get_tools()
             tool_map = {tool.name: tool for tool in all_tools if hasattr(tool, 'name')}
             selected_tools = [tool_map[name] for name in tools if name in tool_map]
+            
+            # 然后查找Camel工具
+            if self.toolkit_integrator and self.db:
+                for tool_name in tools:
+                    if tool_name not in tool_map:
+                        try:
+                            camel_tool = await self.toolkit_integrator.get_custom_tool(tool_name)
+                            if camel_tool:
+                                selected_tools.append(camel_tool)
+                        except Exception as e:
+                            logger.warning(f"加载Camel工具 {tool_name} 失败: {str(e)}")
         
         # 准备额外参数
         extra_params = {}
@@ -150,12 +182,28 @@ class OwlController:
             await self.initialize()
             
         all_tools = []
+        
+        # 从工具链助手获取工具
         for name, tool_info in self.tool_chain_helper.available_tools.items():
             all_tools.append({
                 "name": name,
-                "description": tool_info["description"]
+                "description": tool_info["description"],
+                "source": "internal"
             })
+        
+        # 从工具包集成器获取工具（如果已初始化）
+        if self.toolkit_integrator and self.db:
+            tool_service = OwlToolService(self.db)
+            db_tools = await tool_service.list_enabled_tools()
             
+            for tool in db_tools:
+                all_tools.append({
+                    "name": tool.name,
+                    "description": tool.description or f"{tool.toolkit_name}.{tool.function_name}",
+                    "source": "camel",
+                    "toolkit": tool.toolkit_name
+                })
+        
         return all_tools
     
     async def get_available_workflows(self) -> List[Dict[str, Any]]:
@@ -176,6 +224,133 @@ class OwlController:
             })
             
         return all_workflows
+        
+    async def execute_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """执行特定工具
+        
+        Args:
+            tool_name: 工具名称
+            parameters: 工具参数
+            
+        Returns:
+            Dict[str, Any]: 执行结果
+            
+        Raises:
+            ValueError: 如果工具不存在或执行失败
+        """
+        if not self.initialized:
+            await self.initialize()
+        
+        # 首先检查内部工具
+        if tool_name in self.tool_chain_helper.available_tools:
+            tool_instance = self.tool_chain_helper.available_tools[tool_name]["instance"]
+            try:
+                result = await tool_instance(**parameters)
+                return {
+                    "status": "success",
+                    "tool": tool_name,
+                    "source": "internal",
+                    "result": result
+                }
+            except Exception as e:
+                logger.error(f"执行内部工具 {tool_name} 失败: {str(e)}")
+                return {
+                    "status": "error",
+                    "tool": tool_name,
+                    "source": "internal",
+                    "error": str(e)
+                }
+        
+        # 然后检查Camel工具
+        if self.toolkit_integrator and self.db:
+            try:
+                result = await self.toolkit_integrator.execute_tool(tool_name, parameters)
+                if isinstance(result, dict) and "error" in result:
+                    return {
+                        "status": "error",
+                        "tool": tool_name,
+                        "source": "camel",
+                        "error": result["error"]
+                    }
+                return {
+                    "status": "success",
+                    "tool": tool_name,
+                    "source": "camel",
+                    "result": result
+                }
+            except ValueError as e:
+                # 工具不存在或未启用
+                pass
+            except Exception as e:
+                logger.error(f"执行Camel工具 {tool_name} 失败: {str(e)}")
+                return {
+                    "status": "error",
+                    "tool": tool_name,
+                    "source": "camel",
+                    "error": str(e)
+                }
+        
+        # 工具不存在
+        raise ValueError(f"工具 '{tool_name}' 不存在或未启用")
+    
+    async def get_tool_metadata(self, tool_name: str) -> Dict[str, Any]:
+        """获取工具元数据
+        
+        Args:
+            tool_name: 工具名称
+            
+        Returns:
+            Dict[str, Any]: 工具元数据
+            
+        Raises:
+            ValueError: 如果工具不存在
+        """
+        if not self.initialized:
+            await self.initialize()
+        
+        # 首先检查内部工具
+        if tool_name in self.tool_chain_helper.available_tools:
+            tool_info = self.tool_chain_helper.available_tools[tool_name]
+            tool_instance = tool_info["instance"]
+            
+            metadata = {
+                "name": tool_name,
+                "description": tool_info["description"],
+                "source": "internal"
+            }
+            
+            # 获取更多元数据（如果可用）
+            if hasattr(tool_instance, "to_dict"):
+                metadata.update(tool_instance.to_dict())
+            elif hasattr(tool_instance, "__dict__"):
+                metadata["attributes"] = {
+                    k: v for k, v in tool_instance.__dict__.items() 
+                    if not k.startswith("_") and not callable(v)
+                }
+            
+            return metadata
+        
+        # 然后检查Camel工具
+        if self.toolkit_integrator and self.db:
+            tool_service = OwlToolService(self.db)
+            tool = await tool_service.get_tool_by_name(tool_name)
+            
+            if tool:
+                return {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "source": "camel",
+                    "toolkit": tool.toolkit_name,
+                    "function_name": tool.function_name,
+                    "parameters_schema": tool.parameters_schema,
+                    "requires_api_key": tool.requires_api_key,
+                    "is_enabled": tool.is_enabled,
+                    "created_at": tool.created_at.isoformat() if hasattr(tool, "created_at") else None,
+                    "updated_at": tool.updated_at.isoformat() if hasattr(tool, "updated_at") else None
+                }
+        
+        # 工具不存在
+        raise ValueError(f"工具 '{tool_name}' 不存在")
     
     # ============================== 智能体管理 ==============================
     

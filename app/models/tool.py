@@ -1,37 +1,35 @@
-from sqlalchemy import Column, Integer, String, JSON, ForeignKey, Boolean
+import uuid
+from sqlalchemy import Column, String, JSON, ForeignKey, Boolean, Text, DateTime
+from sqlalchemy.sql import func
 from app.utils.database import Base
-from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 class Tool(Base):
     """工具定义模型"""
     __tablename__ = 'tools'
     
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    description = Column(String)
-    tool_type = Column(String, nullable=False)  # 工具类型
-    creator_id = Column(Integer, ForeignKey('users.id'))
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(Text)
+    function_def = Column(JSON, nullable=False)  # 函数定义(JSONSchema格式)
+    implementation_type = Column(String(50), default='python')  # 实现类型(python, api, mcp, model)
+    implementation = Column(Text)  # 实现代码或URL
     is_system = Column(Boolean, default=False)  # 是否系统工具
+    category = Column(String(50))  # 分类
+    framework = Column(String(50))  # 关联框架(llamaindex, owl, lightrag等)
+    permission_level = Column(String(50), default='standard')  # 权限级别
+    parameter_schema = Column(JSON)  # 参数验证模式
+    version = Column(String(20), default='1.0.0')  # 版本
     
-    # 实现信息
-    module_path = Column(String, nullable=False)  # 模块路径
-    class_name = Column(String, nullable=False)   # 类名
-    
-    # 参数定义
-    parameter_schema = Column(JSON)  # 参数模式定义
-    
-    # 输入输出格式
-    input_format = Column(JSON)   # 输入格式定义
-    output_format = Column(JSON)  # 输出格式定义
-    
-    # 标签和分类
+    # 保留有用的扩展字段
+    creator_id = Column(String(36), ForeignKey('users.id'))
     tags = Column(JSON)  # 工具标签
-    category = Column(String)  # 工具分类
+    input_format = Column(JSON)  # 输入格式定义(可选)
+    output_format = Column(JSON)  # 输出格式定义(可选)
     
-    # 创建和更新时间
-    created_at = Column(String, default=lambda: datetime.now().isoformat())
-    updated_at = Column(String, default=lambda: datetime.now().isoformat(), onupdate=lambda: datetime.now().isoformat())
+    # 统一使用DateTime类型并自动生成时间戳
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典表示

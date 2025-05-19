@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from app.utils.database import get_db
-from app.services.system_config_service import SystemConfigService
+from app.services.async_system_config_service import AsyncSystemConfigService
 from app.utils.config_validator import ConfigValidator
 from app.utils.service_health import ServiceHealthChecker
 from app.utils.config_state import config_state_manager
@@ -153,44 +153,46 @@ async def health_check(save_to_db: bool = False, db: Session = Depends(get_db)):
     }
 
 
-@router.post("/validate-config")
+@router.post("/validate")
 async def validate_config():
-    """验证系统配置"""
-    validation_result = ConfigValidator.validate_all_configs()
+    """验证当前系统配置是否正确完整"""
+    validator = ConfigValidator()
+    result = await validator.validate_all()
     
     # 更新配置状态
-    config_state_manager.update_validation_details(validation_result)
+    config_state_manager.set_validation_status(result["is_valid"], result)
     
-    return validation_result
+    return result
 
 
 @router.post("/bootstrap")
 async def run_bootstrap(db: Session = Depends(get_db)):
-    """运行完整的配置引导流程"""
-    result = await ConfigBootstrap.run_bootstrap()
-    return result
+    """启动配置初始化流程"""
+    bootstrap = ConfigBootstrap(db)
+    result = await bootstrap.run()
+    return {"success": result, "message": "Bootstrap process completed"}
 
 
 # ============ 配置类别管理 ============
 
 @router.get("/config-categories", response_model=List[ConfigCategory])
-def get_config_categories(db: Session = Depends(get_db)):
+async def get_config_categories(db: Session = Depends(get_db)):
     """获取所有配置类别"""
-    config_service = SystemConfigService(db)
-    return config_service.get_categories()
+    config_service = AsyncSystemConfigService(db)
+    return await config_service.get_categories()
 
 
 @router.post("/config-categories", response_model=ConfigCategory)
-def create_config_category(category: ConfigCategoryCreate, db: Session = Depends(get_db)):
+async def create_config_category(category: ConfigCategoryCreate, db: Session = Depends(get_db)):
     """创建配置类别"""
-    config_service = SystemConfigService(db)
+    config_service = AsyncSystemConfigService(db)
     
     # 检查名称是否已存在
-    existing = config_service.get_category_by_name(category.name)
+    existing = await config_service.get_category_by_name(category.name)
     if existing:
         raise HTTPException(status_code=400, detail="类别名称已存在")
     
-    return config_service.create_category(
+    return await config_service.create_category(
         name=category.name,
         description=category.description,
         order=category.order
@@ -198,35 +200,35 @@ def create_config_category(category: ConfigCategoryCreate, db: Session = Depends
 
 
 @router.get("/config-categories/{category_id}", response_model=ConfigCategory)
-def get_config_category(category_id: str, db: Session = Depends(get_db)):
+async def get_config_category(category_id: str, db: Session = Depends(get_db)):
     """获取特定配置类别"""
-    config_service = SystemConfigService(db)
-    category = config_service.get_category(category_id)
+    config_service = AsyncSystemConfigService(db)
+    category = await config_service.get_category(category_id)
     if not category:
         raise HTTPException(status_code=404, detail="配置类别不存在")
     return category
 
 
 @router.put("/config-categories/{category_id}", response_model=ConfigCategory)
-def update_config_category(
+async def update_config_category(
     category_id: str, 
     category: ConfigCategoryUpdate, 
     db: Session = Depends(get_db)
 ):
     """更新配置类别"""
-    config_service = SystemConfigService(db)
+    config_service = AsyncSystemConfigService(db)
     
     # 检查是否存在
-    if not config_service.get_category(category_id):
+    if not await config_service.get_category(category_id):
         raise HTTPException(status_code=404, detail="配置类别不存在")
     
     # 检查名称是否重复
     if category.name:
-        existing = config_service.get_category_by_name(category.name)
+        existing = await config_service.get_category_by_name(category.name)
         if existing and existing.id != category_id:
             raise HTTPException(status_code=400, detail="类别名称已存在")
     
-    updated = config_service.update_category(
+    updated = await config_service.update_category(
         id=category_id,
         name=category.name,
         description=category.description,
@@ -240,19 +242,19 @@ def update_config_category(
 
 
 @router.delete("/config-categories/{category_id}")
-def delete_config_category(category_id: str, db: Session = Depends(get_db)):
+async def delete_config_category(category_id: str, db: Session = Depends(get_db)):
     """删除配置类别"""
-    config_service = SystemConfigService(db)
+    config_service = AsyncSystemConfigService(db)
     
     # 检查是否存在
-    if not config_service.get_category(category_id):
+    if not await config_service.get_category(category_id):
         raise HTTPException(status_code=404, detail="配置类别不存在")
     
-    success = config_service.delete_category(category_id)
+    success = await config_service.delete_category(category_id)
     if not success:
         raise HTTPException(
             status_code=400, 
-            detail="删除失败，该类别可能是系统类别或包含配置项"
+            detail="删除失败，该类别可能是系统类别或存在关联配置项"
         )
     
     return {"success": True}
@@ -261,31 +263,31 @@ def delete_config_category(category_id: str, db: Session = Depends(get_db)):
 # ============ 配置项管理 ============
 
 @router.get("/configs", response_model=List[Config])
-def get_configs(
+async def get_configs(
     category_id: Optional[str] = None,
     include_sensitive: bool = False,
     db: Session = Depends(get_db)
 ):
     """获取配置项列表"""
-    config_service = SystemConfigService(db)
-    return config_service.get_configs(category_id, include_sensitive)
+    config_service = AsyncSystemConfigService(db)
+    return await config_service.get_configs(category_id, include_sensitive)
 
 
 @router.post("/configs", response_model=Config)
-def create_config(config: ConfigCreate, db: Session = Depends(get_db)):
+async def create_config(config: ConfigCreate, db: Session = Depends(get_db)):
     """创建配置项"""
-    config_service = SystemConfigService(db)
+    config_service = AsyncSystemConfigService(db)
     
     # 检查键是否已存在
-    existing = config_service.get_config_by_key(config.key)
+    existing = await config_service.get_config_by_key(config.key)
     if existing:
         raise HTTPException(status_code=400, detail="配置键已存在")
     
     # 检查类别是否存在
-    if not config_service.get_category(config.category_id):
+    if not await config_service.get_category(config.category_id):
         raise HTTPException(status_code=400, detail="配置类别不存在")
     
-    return config_service.create_config(
+    return await config_service.create_config(
         key=config.key,
         value=config.value,
         value_type=config.value_type,
@@ -300,107 +302,116 @@ def create_config(config: ConfigCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/configs/{config_id}", response_model=Config)
-def get_config(config_id: str, db: Session = Depends(get_db)):
+async def get_config(config_id: str, db: Session = Depends(get_db)):
     """获取特定配置项"""
-    config_service = SystemConfigService(db)
-    config = config_service.get_config(config_id)
+    config_service = AsyncSystemConfigService(db)
+    config = await config_service.get_config(config_id)
     if not config:
         raise HTTPException(status_code=404, detail="配置项不存在")
     return config
 
 
 @router.put("/configs/{config_id}", response_model=Config)
-def update_config(
+async def update_config(
     config_id: str, 
     config: ConfigUpdate, 
     db: Session = Depends(get_db)
 ):
     """更新配置项"""
-    config_service = SystemConfigService(db)
+    config_service = AsyncSystemConfigService(db)
     
-    # 检查是否存在
-    if not config_service.get_config(config_id):
+    # 检查配置项是否存在
+    existing = await config_service.get_config(config_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="配置项不存在")
     
-    updated = config_service.update_config(
-        id=config_id,
-        value=config.value,
-        description=config.description,
-        is_sensitive=config.is_sensitive,
-        validation_rules=config.validation_rules,
-        visible_level=config.visible_level,
-        change_source="user",
-        change_notes=config.change_notes
-    )
+    # 验证新值
+    validator = ConfigValidator()
+    if config.value is not None:
+        valid, error = validator.validate(config.value, existing.value_type, config.validation_rules or existing.validation_rules)
+        if not valid:
+            raise HTTPException(status_code=400, detail=f"参数验证失败: {error}")
     
-    if not updated:
-        raise HTTPException(status_code=400, detail="更新失败")
-    
-    return updated
+    # 构建更新数据
+    update_data = {}
+    if config.value is not None:
+        update_data['value'] = config.value
+    if config.description is not None:
+        update_data['description'] = config.description
+    if config.is_sensitive is not None:
+        update_data['is_sensitive'] = config.is_sensitive
+    if config.validation_rules is not None:
+        update_data['validation_rules'] = config.validation_rules
+    if config.visible_level is not None:
+        update_data['visible_level'] = config.visible_level
+        
+    return await config_service.update_config(config_id, update_data, config.change_notes)
 
 
 @router.delete("/configs/{config_id}")
-def delete_config(config_id: str, db: Session = Depends(get_db)):
+async def delete_config(config_id: str, db: Session = Depends(get_db)):
     """删除配置项"""
-    config_service = SystemConfigService(db)
+    config_service = AsyncSystemConfigService(db)
     
-    # 检查是否存在
-    if not config_service.get_config(config_id):
+    # 检查配置项是否存在
+    existing = await config_service.get_config(config_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="配置项不存在")
     
-    success = config_service.delete_config(config_id)
-    if not success:
-        raise HTTPException(
-            status_code=400, 
-            detail="删除失败，该配置可能是系统配置"
-        )
+    # 系统配置不允许删除
+    if existing.is_system:
+        raise HTTPException(status_code=403, detail="系统配置项不允许删除")
     
-    return {"success": True}
+    await config_service.delete_config(config_id)
+    
+    return {"status": "success", "message": "配置项已删除"}
 
 
 @router.get("/configs/{config_id}/history", response_model=List[ConfigHistoryItem])
-def get_config_history(config_id: str, db: Session = Depends(get_db)):
-    """获取配置项历史记录"""
-    config_service = SystemConfigService(db)
+async def get_config_history(config_id: str, db: Session = Depends(get_db)):
+    """获取配置项修改历史"""
+    config_service = AsyncSystemConfigService(db)
     
-    # 检查是否存在
-    if not config_service.get_config(config_id):
+    # 检查配置项是否存在
+    existing = await config_service.get_config(config_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="配置项不存在")
     
-    return config_service.get_config_history(config_id)
+    return await config_service.get_config_history(config_id)
 
 
 @router.get("/configs/by-key/{key}")
-def get_config_by_key(key: str, db: Session = Depends(get_db)):
+async def get_config_by_key(key: str, db: Session = Depends(get_db)):
     """通过键获取配置值"""
-    config_service = SystemConfigService(db)
-    value = config_service.get_config_value(key)
+    config_service = AsyncSystemConfigService(db)
+    value = await config_service.get_config_value(key)
     if value is None:
         raise HTTPException(status_code=404, detail="配置键不存在")
     return {"key": key, "value": value}
 
 
-@router.get("/service-health-records", response_model=Dict[str, ServiceHealth])
-def get_latest_health_records(db: Session = Depends(get_db)):
-    """获取最新的服务健康记录"""
-    config_service = SystemConfigService(db)
-    return config_service.get_latest_health_records()
+@router.get("/health/latest", response_model=Dict[str, ServiceHealth])
+async def get_latest_health_records(db: Session = Depends(get_db)):
+    """获取最新的服务健康状态记录"""
+    config_service = AsyncSystemConfigService(db)
+    return await config_service.get_latest_health_records()
 
 
-@router.post("/import-configs")
-def import_configs(configs: Dict[str, Any], db: Session = Depends(get_db)):
-    """从字典导入配置"""
-    config_service = SystemConfigService(db)
-    created, updated, errors = config_service.import_configs_from_dict(configs)
+@router.post("/import", status_code=201)
+async def import_configs(configs: Dict[str, Any], db: Session = Depends(get_db)):
+    """导入配置数据"""
+    config_service = AsyncSystemConfigService(db)
+    result = await config_service.import_configs(configs)
     return {
-        "created": created,
-        "updated": updated,
-        "errors": errors
+        "success": True,
+        "imported_count": result["imported"],
+        "updated_count": result["updated"],
+        "failed_count": result["failed"]
     }
 
 
-@router.get("/export-configs")
-def export_configs(include_sensitive: bool = False, db: Session = Depends(get_db)):
-    """导出配置到字典"""
-    config_service = SystemConfigService(db)
-    return config_service.export_configs_to_dict(include_sensitive)
+@router.get("/export")
+async def export_configs(include_sensitive: bool = False, db: Session = Depends(get_db)):
+    """导出全部配置数据"""
+    config_service = AsyncSystemConfigService(db)
+    return await config_service.export_configs(include_sensitive)

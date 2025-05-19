@@ -14,9 +14,9 @@ import uuid
 import logging
 from datetime import datetime
 
-from app.models.database import get_db
+from app.utils.database import get_db
 from app.models.assistant import Assistant, Conversation, Message
-from app.models.knowledge import KnowledgeBase
+from app.services.assistant_service import AssistantService
 from app.schemas.assistant import (
     AssistantCreate,
     AssistantUpdate,
@@ -52,37 +52,8 @@ async def create_assistant(
     """
     创建新助手
     """
-    # 创建助手记录
-    db_assistant = Assistant(
-        name=assistant.name,
-        description=assistant.description,
-        model=assistant.model,
-        capabilities=assistant.capabilities,
-        configuration=assistant.configuration,
-        system_prompt=assistant.system_prompt
-    )
-    
-    # 如果指定了知识库，添加知识库关系
-    if assistant.knowledge_base_ids:
-        knowledge_bases = db.query(KnowledgeBase).filter(
-            KnowledgeBase.id.in_(assistant.knowledge_base_ids)
-        ).all()
-        
-        if len(knowledge_bases) != len(assistant.knowledge_base_ids):
-            raise HTTPException(status_code=400, detail="一个或多个知识库未找到")
-        
-        db_assistant.knowledge_bases = knowledge_bases
-    
-    # 添加到数据库
-    db.add(db_assistant)
-    db.commit()
-    db.refresh(db_assistant)
-    
-    # 为助手生成访问URL
-    access_url = f"{settings.BASE_URL}/assistants/web/{db_assistant.id}"
-    db_assistant.access_url = access_url
-    db.commit()
-    
+    service = AssistantService(db)
+    db_assistant = await service.create_assistant(assistant)
     return db_assistant
 
 @router.get("/", response_model=AssistantList)
@@ -95,15 +66,9 @@ async def list_assistants(
     """
     列出所有助手，可选择按能力过滤
     """
-    query = db.query(Assistant)
-    
-    # 如果指定了能力，按能力过滤
-    if capabilities:
-        for capability in capabilities:
-            query = query.filter(Assistant.capabilities.contains([capability]))
-    
-    assistants = query.offset(skip).limit(limit).all()
-    return {"assistants": assistants, "total": query.count()}
+    service = AssistantService(db)
+    assistants = await service.get_assistants(skip, limit, capabilities)
+    return {"assistants": assistants, "total": len(assistants)}
 
 @router.get("/{assistant_id}", response_model=AssistantResponse)
 async def get_assistant(
@@ -113,7 +78,8 @@ async def get_assistant(
     """
     通过ID获取助手详情
     """
-    assistant = db.query(Assistant).filter(Assistant.id == assistant_id).first()
+    service = AssistantService(db)
+    assistant = await service.get_assistant_by_id(assistant_id)
     if not assistant:
         raise HTTPException(status_code=404, detail="助手未找到")
     
@@ -128,33 +94,9 @@ async def update_assistant(
     """
     更新助手
     """
-    db_assistant = db.query(Assistant).filter(Assistant.id == assistant_id).first()
-    if not db_assistant:
-        raise HTTPException(status_code=404, detail="助手未找到")
-    
-    # 更新基本字段
-    update_data = assistant_update.dict(exclude_unset=True)
-    
-    # 单独处理知识库关系
-    if "knowledge_base_ids" in update_data:
-        kb_ids = update_data.pop("knowledge_base_ids")
-        if kb_ids:
-            knowledge_bases = db.query(KnowledgeBase).filter(
-                KnowledgeBase.id.in_(kb_ids)
-            ).all()
-            
-            if len(knowledge_bases) != len(kb_ids):
-                raise HTTPException(status_code=400, detail="一个或多个知识库未找到")
-            
-            db_assistant.knowledge_bases = knowledge_bases
-    
-    # 更新剩余字段
-    for key, value in update_data.items():
-        setattr(db_assistant, key, value)
-    
-    db.commit()
-    db.refresh(db_assistant)
-    return db_assistant
+    service = AssistantService(db)
+    updated_assistant = await service.update_assistant(assistant_id, assistant_update)
+    return updated_assistant
 
 @router.delete("/{assistant_id}")
 async def delete_assistant(
@@ -164,13 +106,9 @@ async def delete_assistant(
     """
     删除助手
     """
-    db_assistant = db.query(Assistant).filter(Assistant.id == assistant_id).first()
-    if not db_assistant:
-        raise HTTPException(status_code=404, detail="助手未找到")
-    
-    db.delete(db_assistant)
-    db.commit()
-    return {"message": "助手已成功删除"}
+    service = AssistantService(db)
+    success = await service.delete_assistant(assistant_id)
+    return {"message": "助手删除成功"}
 
 @router.post("/{assistant_id}/conversations", response_model=ConversationResponse)
 async def create_conversation(
@@ -182,19 +120,18 @@ async def create_conversation(
     与助手创建新对话
     """
     # 检查助手是否存在
-    assistant = db.query(Assistant).filter(Assistant.id == assistant_id).first()
+    service = AssistantService(db)
+    assistant = await service.get_assistant_by_id(assistant_id)
     if not assistant:
         raise HTTPException(status_code=404, detail="助手未找到")
     
+    # 确保对话有标题
+    if not conversation.title:
+        conversation.title = f"对话 {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        
+    # 确保助手ID正确
+    conversation.assistant_id = assistant_id
+    
     # 创建对话
-    db_conversation = Conversation(
-        assistant_id=assistant_id,
-        title=conversation.title or f"对话 {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-        metadata=conversation.metadata
-    )
-    
-    db.add(db_conversation)
-    db.commit()
-    db.refresh(db_conversation)
-    
+    db_conversation = await service.create_conversation(conversation)
     return db_conversation

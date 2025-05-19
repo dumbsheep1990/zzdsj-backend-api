@@ -82,36 +82,34 @@ class ConfigBootstrap:
     @staticmethod
     async def sync_configs_to_db(db: Session) -> Dict[str, Any]:
         """将配置同步到数据库"""
-        from app.services.system_config_service import SystemConfigService
+        from app.services.async_system_config_service import AsyncSystemConfigService
         from app.config import settings
         
         logger.info("正在同步配置到数据库...")
         
         try:
             # 创建配置服务
-            config_service = SystemConfigService(db)
+            config_service = AsyncSystemConfigService(db)
             
             # 初始化默认类别
-            categories = config_service.initialize_default_categories()
+            categories = await config_service.initialize_default_categories()
             logger.info(f"已初始化 {len(categories)} 个默认配置类别")
             
             # 从设置同步配置
-            created, updated = config_service.sync_from_settings(settings)
+            created, updated = await config_service.sync_from_settings(settings)
             logger.info(f"已同步配置: 创建 {created} 项, 更新 {updated} 项")
             
             # 记录被环境变量覆盖的配置
             for env_key in config_state_manager.state.override_sources.get("env", []):
-                config = config_service.get_config_by_key(env_key)
-                if config:
-                    config_service.mark_config_overridden(env_key, "env")
+                await config_service.mark_config_overridden(env_key, "env")
             
             # 记录被文件覆盖的配置
             for file_override in config_state_manager.state.override_sources.get("file", []):
                 if ":" in file_override:
                     file_name, key = file_override.split(":", 1)
-                    config = config_service.get_config_by_key(key)
+                    config = await config_service.get_config_by_key(key)
                     if config:
-                        config_service.mark_config_overridden(key, f"file:{file_name}")
+                        await config_service.mark_config_overridden(key, f"file:{file_name}")
             
             return {
                 "success": True,
@@ -129,17 +127,17 @@ class ConfigBootstrap:
     @staticmethod
     async def save_service_health_to_db(db: Session, health_results: Dict[str, Dict[str, Any]]) -> bool:
         """将服务健康状态保存到数据库"""
-        from app.services.system_config_service import SystemConfigService
+        from app.services.async_system_config_service import AsyncSystemConfigService
         
         logger.info("正在保存服务健康状态到数据库...")
         
         try:
             # 创建配置服务
-            config_service = SystemConfigService(db)
+            config_service = AsyncSystemConfigService(db)
             
             # 保存每个服务的健康状态
             for service_name, details in health_results.items():
-                config_service.save_health_record(
+                await config_service.save_health_record(
                     service_name=service_name,
                     status=details.get("status", False),
                     response_time_ms=details.get("response_time_ms"),

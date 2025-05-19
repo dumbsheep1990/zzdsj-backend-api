@@ -1,6 +1,7 @@
 """
 系统配置服务 - 管理系统配置的持久化存储和操作
 """
+from app.utils.service_decorators import register_service
 import json
 import logging
 from typing import Dict, Any, List, Optional, Tuple, Union
@@ -65,6 +66,7 @@ class ConfigEncryption:
             return "[解密失败]"
 
 
+@register_service(service_type="system-config", priority="critical", description="系统配置管理服务")
 class SystemConfigService:
     """系统配置服务"""
     
