@@ -1,7 +1,9 @@
 """
 用户管理路由模块: 提供用户、角色和权限管理功能
+(桥接文件 - 仅用于向后兼容，所有新代码都应该使用app.api.frontend.user.manage模块)
 """
 
+import logging
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
@@ -30,6 +32,27 @@ from app.schemas.user import (
 )
 from app.models.user import User, Role, Permission, UserSettings
 
+# 导入新的用户管理路由处理函数
+from app.api.frontend.user.manage import (
+    get_users as new_get_users,
+    get_user as new_get_user,
+    update_user_me as new_update_user_me,
+    update_user as new_update_user,
+    delete_user as new_delete_user,
+    update_password_me as new_update_password_me,
+    update_settings_me as new_update_settings_me,
+    get_roles as new_get_roles,
+    create_role as new_create_role,
+    update_role as new_update_role,
+    delete_role as new_delete_role,
+    get_permissions as new_get_permissions,
+    assign_permissions_to_role as new_assign_permissions_to_role,
+    assign_roles_to_user as new_assign_roles_to_user
+)
+
+# 创建日志记录器
+logger = logging.getLogger(__name__)
+
 router = APIRouter(
     prefix="/api/v1/users",
     tags=["用户管理"],
@@ -47,8 +70,10 @@ def get_users(
     """
     获取所有用户列表
     """
-    users = db.query(User).offset(skip).limit(limit).all()
-    return users
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/，应使用新的端点: /api/frontend/user/"
+    )
+    return new_get_users(db=db, skip=skip, limit=limit, current_user=current_user)
 
 @router.get("/{user_id}", response_model=UserSchema)
 def get_user(
@@ -59,10 +84,10 @@ def get_user(
     """
     获取指定用户信息
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
-    return user
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/{user_id}，应使用新的端点: /api/frontend/user/{user_id}"
+    )
+    return new_get_user(user_id=user_id, db=db, current_user=current_user)
 
 @router.put("/me", response_model=UserSchema)
 def update_user_me(
@@ -73,23 +98,10 @@ def update_user_me(
     """
     更新当前用户信息
     """
-    if user_in.email and user_in.email != current_user.email:
-        # 检查邮箱是否已被使用
-        user_by_email = db.query(User).filter(User.email == user_in.email).first()
-        if user_by_email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="邮箱已被其他用户使用",
-            )
-    
-    # 更新用户信息
-    for field, value in user_in.model_dump(exclude_unset=True).items():
-        if field != "disabled" and field != "is_superuser":  # 普通用户无法修改这些字段
-            setattr(current_user, field, value)
-    
-    db.commit()
-    db.refresh(current_user)
-    return current_user
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/me，应使用新的端点: /api/frontend/user/me"
+    )
+    return new_update_user_me(user_in=user_in, db=db, current_user=current_user)
 
 @router.put("/{user_id}", response_model=UserSchema)
 def update_user(
@@ -101,26 +113,10 @@ def update_user(
     """
     更新指定用户信息（管理员权限）
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
-    
-    if user_in.email and user_in.email != user.email:
-        # 检查邮箱是否已被使用
-        user_by_email = db.query(User).filter(User.email == user_in.email).first()
-        if user_by_email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="邮箱已被其他用户使用",
-            )
-    
-    # 更新用户信息
-    for field, value in user_in.model_dump(exclude_unset=True).items():
-        setattr(user, field, value)
-    
-    db.commit()
-    db.refresh(user)
-    return user
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/{user_id}，应使用新的端点: /api/frontend/user/{user_id}"
+    )
+    return new_update_user(user_id=user_id, user_in=user_in, db=db, current_user=current_user)
 
 @router.delete("/{user_id}", response_model=UserSchema)
 def delete_user(
@@ -131,20 +127,10 @@ def delete_user(
     """
     删除指定用户（管理员权限）
     """
-    if current_user.id == user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="不能删除自己的账户",
-        )
-    
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
-    
-    # 不真正删除用户，而是禁用账户
-    user.disabled = True
-    db.commit()
-    return user
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/{user_id}，应使用新的端点: /api/frontend/user/{user_id}"
+    )
+    return new_delete_user(user_id=user_id, db=db, current_user=current_user)
 
 @router.put("/me/password", response_model=UserSchema)
 def update_password_me(
@@ -155,17 +141,10 @@ def update_password_me(
     """
     更新当前用户密码
     """
-    # 验证当前密码
-    if not verify_password(password_in.current_password, current_user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="当前密码不正确",
-        )
-    
-    # 更新密码
-    current_user.hashed_password = get_password_hash(password_in.new_password)
-    db.commit()
-    return current_user
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/me/password，应使用新的端点: /api/frontend/user/me/password"
+    )
+    return new_update_password_me(password_in=password_in, db=db, current_user=current_user)
 
 @router.put("/me/settings", response_model=UserSchema)
 def update_settings_me(
@@ -176,20 +155,10 @@ def update_settings_me(
     """
     更新当前用户设置
     """
-    # 获取用户设置
-    settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
-    if not settings:
-        # 如果没有设置记录，创建一个
-        settings = UserSettings(user_id=current_user.id)
-        db.add(settings)
-    
-    # 更新设置
-    for field, value in settings_in.model_dump(exclude_unset=True).items():
-        setattr(settings, field, value)
-    
-    db.commit()
-    db.refresh(current_user)
-    return current_user
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/me/settings，应使用新的端点: /api/frontend/user/me/settings"
+    )
+    return new_update_settings_me(settings_in=settings_in, db=db, current_user=current_user)
 
 # 角色管理接口
 @router.get("/roles", response_model=List[RoleSchema])
@@ -202,8 +171,10 @@ def get_roles(
     """
     获取所有角色列表
     """
-    roles = db.query(Role).offset(skip).limit(limit).all()
-    return roles
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/roles，应使用新的端点: /api/frontend/user/roles"
+    )
+    return new_get_roles(db=db, skip=skip, limit=limit, current_user=current_user)
 
 @router.post("/roles", response_model=RoleSchema)
 def create_role(
@@ -214,28 +185,10 @@ def create_role(
     """
     创建新角色
     """
-    # 检查角色名是否已存在
-    role = db.query(Role).filter(Role.name == role_in.name).first()
-    if role:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="角色名已存在",
-        )
-    
-    # 如果设置为默认角色，需要取消其他默认角色
-    if role_in.is_default:
-        db.query(Role).filter(Role.is_default == True).update({"is_default": False})
-    
-    # 创建新角色
-    db_role = Role(
-        name=role_in.name,
-        description=role_in.description,
-        is_default=role_in.is_default,
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/roles，应使用新的端点: /api/frontend/user/roles"
     )
-    db.add(db_role)
-    db.commit()
-    db.refresh(db_role)
-    return db_role
+    return new_create_role(role_in=role_in, db=db, current_user=current_user)
 
 @router.put("/roles/{role_id}", response_model=RoleSchema)
 def update_role(
@@ -247,30 +200,10 @@ def update_role(
     """
     更新角色信息
     """
-    role = db.query(Role).filter(Role.id == role_id).first()
-    if not role:
-        raise HTTPException(status_code=404, detail="角色不存在")
-    
-    # 如果更新角色名，检查是否已存在
-    if role_in.name and role_in.name != role.name:
-        existing_role = db.query(Role).filter(Role.name == role_in.name).first()
-        if existing_role:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="角色名已存在",
-            )
-    
-    # 如果设置为默认角色，需要取消其他默认角色
-    if role_in.is_default is not None and role_in.is_default and not role.is_default:
-        db.query(Role).filter(Role.is_default == True).update({"is_default": False})
-    
-    # 更新角色信息
-    for field, value in role_in.model_dump(exclude_unset=True).items():
-        setattr(role, field, value)
-    
-    db.commit()
-    db.refresh(role)
-    return role
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/roles/{role_id}，应使用新的端点: /api/frontend/user/roles/{role_id}"
+    )
+    return new_update_role(role_id=role_id, role_in=role_in, db=db, current_user=current_user)
 
 @router.delete("/roles/{role_id}", response_model=RoleSchema)
 def delete_role(
@@ -281,21 +214,10 @@ def delete_role(
     """
     删除角色
     """
-    role = db.query(Role).filter(Role.id == role_id).first()
-    if not role:
-        raise HTTPException(status_code=404, detail="角色不存在")
-    
-    # 检查角色是否有关联用户
-    if role.users:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="该角色有关联用户，无法删除",
-        )
-    
-    # 删除角色
-    db.delete(role)
-    db.commit()
-    return role
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/roles/{role_id}，应使用新的端点: /api/frontend/user/roles/{role_id}"
+    )
+    return new_delete_role(role_id=role_id, db=db, current_user=current_user)
 
 # 权限管理接口
 @router.get("/permissions", response_model=List[PermissionSchema])
@@ -308,8 +230,10 @@ def get_permissions(
     """
     获取所有权限列表
     """
-    permissions = db.query(Permission).offset(skip).limit(limit).all()
-    return permissions
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/permissions，应使用新的端点: /api/frontend/user/permissions"
+    )
+    return new_get_permissions(db=db, skip=skip, limit=limit, current_user=current_user)
 
 @router.put("/roles/{role_id}/permissions", response_model=RoleSchema)
 def assign_permissions_to_role(
@@ -321,24 +245,12 @@ def assign_permissions_to_role(
     """
     分配权限给角色
     """
-    role = db.query(Role).filter(Role.id == role_id).first()
-    if not role:
-        raise HTTPException(status_code=404, detail="角色不存在")
-    
-    # 清除现有权限
-    role.permissions = []
-    
-    # 如果提供了权限ID列表，添加权限
-    if permission_ids:
-        permissions = db.query(Permission).filter(Permission.id.in_(permission_ids)).all()
-        for permission in permissions:
-            role.permissions.append(permission)
-    
-    db.commit()
-    db.refresh(role)
-    return role
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/roles/{role_id}/permissions，应使用新的端点: /api/frontend/user/roles/{role_id}/permissions"
+    )
+    return new_assign_permissions_to_role(role_id=role_id, permission_ids=permission_ids, db=db, current_user=current_user)
 
-@router.put("/users/{user_id}/roles", response_model=UserSchema)
+@router.put("/{user_id}/roles", response_model=UserSchema)
 def assign_roles_to_user(
     user_id: str = Path(..., description="用户ID"),
     role_ids: List[str] = None,
@@ -348,19 +260,7 @@ def assign_roles_to_user(
     """
     分配角色给用户
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
-    
-    # 清除现有角色
-    user.roles = []
-    
-    # 如果提供了角色ID列表，添加角色
-    if role_ids:
-        roles = db.query(Role).filter(Role.id.in_(role_ids)).all()
-        for role in roles:
-            user.roles.append(role)
-    
-    db.commit()
-    db.refresh(user)
-    return user
+    logger.warning(
+        "使用已弃用的用户管理端点: /api/v1/users/{user_id}/roles，应使用新的端点: /api/frontend/user/{user_id}/roles"
+    )
+    return new_assign_roles_to_user(user_id=user_id, role_ids=role_ids, db=db, current_user=current_user)

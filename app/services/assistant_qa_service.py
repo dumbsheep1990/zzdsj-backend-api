@@ -13,7 +13,7 @@ from app.utils.database import get_db
 from app.models.assistant_qa import AssistantQA
 from app.repositories.assistant_qa_repository import AssistantQARepository
 from app.services.resource_permission_service import ResourcePermissionService
-from app.services.knowledge import KnowledgeService
+from app.services.unified_knowledge_service import UnifiedKnowledgeService
 
 @register_service(service_type="assistant-qa", priority="high", description="问答助手服务")
 class AssistantQAService:
@@ -22,13 +22,13 @@ class AssistantQAService:
     def __init__(self, 
                  db: Session = Depends(get_db), 
                  permission_service: ResourcePermissionService = Depends(),
-                 knowledge_service: KnowledgeService = Depends()):
+                 knowledge_service: UnifiedKnowledgeService = Depends()):
         """初始化问答助手服务
         
         Args:
             db: 数据库会话
             permission_service: 资源权限服务
-            knowledge_service: 知识库服务
+            knowledge_service: 统一知识库服务
         """
         self.db = db
         self.repository = AssistantQARepository()

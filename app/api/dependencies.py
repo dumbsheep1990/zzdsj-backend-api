@@ -7,7 +7,8 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.utils.database import get_db
-from app.services.knowledge import KnowledgeService
+# 导入统一知识库服务
+from app.services.unified_knowledge_service import UnifiedKnowledgeService, get_unified_knowledge_service
 from app.services.assistant import AssistantService
 from app.services.conversation import ConversationService
 
@@ -17,9 +18,9 @@ def get_db_session() -> Generator[Session, None, None]:
     return get_db()
 
 # 服务层依赖
-def get_knowledge_service(db: Session = Depends(get_db_session)) -> KnowledgeService:
-    """获取知识库服务依赖"""
-    return KnowledgeService(db)
+def get_knowledge_service(db: Session = Depends(get_db_session)) -> UnifiedKnowledgeService:
+    """获取统一知识库服务依赖"""
+    return get_unified_knowledge_service(db)
 
 def get_assistant_service(db: Session = Depends(get_db_session)) -> AssistantService:
     """获取助手服务依赖"""
@@ -32,7 +33,7 @@ def get_conversation_service(db: Session = Depends(get_db_session)) -> Conversat
 # 实体验证依赖
 async def validate_knowledge_base(
     kb_id: str,
-    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
+    knowledge_service: UnifiedKnowledgeService = Depends(get_knowledge_service)
 ) -> dict:
     """验证知识库存在"""
     kb = await knowledge_service.get_knowledge_base(kb_id)

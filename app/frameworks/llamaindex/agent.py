@@ -10,10 +10,11 @@ from llama_index.core.agent import ReActAgent
 from llama_index.agent.openai import OpenAIAgent
 from app.frameworks.llamaindex.core import get_llm, get_service_context
 from app.frameworks.llamaindex.retrieval import get_query_engine
-from app.services.knowledge import KnowledgeService
 from app.repositories.knowledge import KnowledgeBaseRepository
 from app.config import settings
 import logging
+# 导入统一知识库服务
+from app.services.unified_knowledge_service import get_unified_knowledge_service
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +37,14 @@ class KnowledgeAgent:
         
         # 初始化代理
         self.service_context = get_service_context(model_name=self.model)
-        self.agent = self._initialize_agent()
+        # 移除同步初始化，改为在需要时异步初始化
+        self.agent = None
     
-    def _initialize_agent(self):
+    async def _initialize_agent(self):
         """初始化LlamaIndex代理"""
         try:
             # 获取查询引擎工具
-            tools = self._get_knowledge_tools()
+            tools = await self._get_knowledge_tools()
             
             # 添加MCP工具
             from app.frameworks.llamaindex.tools import get_all_mcp_tools
@@ -73,7 +75,7 @@ class KnowledgeAgent:
             logger.error(f"初始化LlamaIndex代理时出错: {str(e)}")
             raise
     
-    def _get_knowledge_tools(self):
+    async def _get_knowledge_tools(self):
         """获取知识库工具"""
         tools = []
         
@@ -81,7 +83,7 @@ class KnowledgeAgent:
         for kb_id in self.knowledge_bases:
             try:
                 # 创建知识库查询引擎
-                kb_engine = self._create_kb_engine(kb_id)
+                kb_engine = await self._create_kb_engine(kb_id)
                 if kb_engine:
                     # 获取知识库信息
                     from app.config import get_db
@@ -117,14 +119,20 @@ class KnowledgeAgent:
         
         return tools
     
-    def _create_kb_engine(self, kb_id: str):
+    async def _create_kb_engine(self, kb_id: str):
         """为知识库创建查询引擎"""
         try:
             from app.config import get_db
             from app.frameworks.llamaindex.indexing import load_or_create_index
             
             db = next(get_db())
-            knowledge_service = KnowledgeService(db)
+            knowledge_service = get_unified_knowledge_service(db)
+            
+            # 检查知识库是否存在
+            kb = await knowledge_service.get_knowledge_base(kb_id)
+            if not kb:
+                logger.warning(f"知识库不存在: {kb_id}")
+                return None
             
             # 加载索引
             collection_name = f"kb_{kb_id}"
@@ -155,6 +163,10 @@ class KnowledgeAgent:
             代理响应
         """
         try:
+            # 确保代理已初始化
+            if self.agent is None:
+                self.agent = await self._initialize_agent()
+            
             # 执行查询
             response = await self.agent.aquery(query)
             

@@ -1,7 +1,9 @@
 """
 API密钥管理路由模块: 提供API密钥的创建、查询和管理功能
+(桥接文件 - 仅用于向后兼容，所有新代码都应该使用app.api.frontend.user.api_key模块)
 """
 
+import logging
 from typing import Any, List
 from datetime import datetime, timedelta
 
@@ -21,6 +23,17 @@ from app.schemas.user import (
 )
 from app.models.user import User, ApiKey as ApiKeyModel
 
+# 导入新的API密钥路由处理函数
+from app.api.frontend.user.api_key import (
+    get_api_keys as new_get_api_keys,
+    create_user_api_key as new_create_user_api_key,
+    update_api_key as new_update_api_key,
+    delete_api_key as new_delete_api_key
+)
+
+# 创建日志记录器
+logger = logging.getLogger(__name__)
+
 router = APIRouter(
     prefix="/api/v1/api-keys",
     tags=["API密钥管理"],
@@ -37,11 +50,10 @@ def get_api_keys(
     """
     获取当前用户的所有API密钥
     """
-    api_keys = db.query(ApiKeyModel).filter(
-        ApiKeyModel.user_id == current_user.id
-    ).offset(skip).limit(limit).all()
-    
-    return api_keys
+    logger.warning(
+        "使用已弃用的API密钥端点: /api/v1/api-keys/，应使用新的端点: /api/frontend/user/api-keys/"
+    )
+    return new_get_api_keys(db=db, skip=skip, limit=limit, current_user=current_user)
 
 @router.post("/", response_model=ApiKeyWithValue)
 def create_user_api_key(
@@ -52,36 +64,10 @@ def create_user_api_key(
     """
     为当前用户创建新的API密钥
     """
-    # 设置过期时间（如果提供）
-    expires_at = None
-    if api_key_in.expires_days:
-        expires_at = datetime.utcnow() + timedelta(days=api_key_in.expires_days)
-    
-    # 创建API密钥
-    api_key_value = create_api_key(db, current_user.id, api_key_in.name, api_key_in.description)
-    
-    # 获取创建的API密钥记录
-    api_key = db.query(ApiKeyModel).filter(
-        ApiKeyModel.key == api_key_value
-    ).first()
-    
-    # 设置过期时间
-    if expires_at:
-        api_key.expires_at = expires_at
-        db.commit()
-        db.refresh(api_key)
-    
-    # 返回包含密钥值的响应
-    return {
-        "id": api_key.id,
-        "name": api_key.name,
-        "description": api_key.description,
-        "is_active": api_key.is_active,
-        "expires_at": api_key.expires_at,
-        "last_used_at": api_key.last_used_at,
-        "created_at": api_key.created_at,
-        "key": api_key_value  # 这是唯一一次返回密钥值
-    }
+    logger.warning(
+        "使用已弃用的API密钥端点: /api/v1/api-keys/，应使用新的端点: /api/frontend/user/api-keys/"
+    )
+    return new_create_user_api_key(api_key_in=api_key_in, db=db, current_user=current_user)
 
 @router.put("/{api_key_id}", response_model=ApiKeySchema)
 def update_api_key(
@@ -93,22 +79,15 @@ def update_api_key(
     """
     更新API密钥信息
     """
-    # 检查API密钥是否存在并属于当前用户
-    api_key = db.query(ApiKeyModel).filter(
-        ApiKeyModel.id == api_key_id,
-        ApiKeyModel.user_id == current_user.id
-    ).first()
-    
-    if not api_key:
-        raise HTTPException(status_code=404, detail="API密钥不存在或不属于当前用户")
-    
-    # 更新API密钥信息
-    for field, value in api_key_in.model_dump(exclude_unset=True).items():
-        setattr(api_key, field, value)
-    
-    db.commit()
-    db.refresh(api_key)
-    return api_key
+    logger.warning(
+        "使用已弃用的API密钥端点: /api/v1/api-keys/{api_key_id}，应使用新的端点: /api/frontend/user/api-keys/{api_key_id}"
+    )
+    return new_update_api_key(
+        api_key_id=api_key_id,
+        api_key_in=api_key_in,
+        db=db,
+        current_user=current_user
+    )
 
 @router.delete("/{api_key_id}", response_model=ApiKeySchema)
 def delete_api_key(
@@ -119,16 +98,11 @@ def delete_api_key(
     """
     删除API密钥
     """
-    # 检查API密钥是否存在并属于当前用户
-    api_key = db.query(ApiKeyModel).filter(
-        ApiKeyModel.id == api_key_id,
-        ApiKeyModel.user_id == current_user.id
-    ).first()
-    
-    if not api_key:
-        raise HTTPException(status_code=404, detail="API密钥不存在或不属于当前用户")
-    
-    # 删除API密钥
-    db.delete(api_key)
-    db.commit()
-    return api_key
+    logger.warning(
+        "使用已弃用的API密钥端点: /api/v1/api-keys/{api_key_id}，应使用新的端点: /api/frontend/user/api-keys/{api_key_id}"
+    )
+    return new_delete_api_key(
+        api_key_id=api_key_id,
+        db=db,
+        current_user=current_user
+    )

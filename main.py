@@ -8,12 +8,19 @@ import atexit
 import os
 import asyncio
 import logging
+import json
 
 from app.api import assistants, knowledge, chat, assistant, model_provider, assistant_qa, mcp, mcp_service
 from app.api import auth, user, api_key, resource_permission
 from app.api import system_config, sensitive_word, settings, lightrag, agent
 # 导入工具相关API
-from app.api import owl_api, unified_tool_api
+from app.api import owl_api, unified_tool_api, base_tools
+# 导入高级检索和重排序模型API
+from app.api import advanced_retrieval, rerank_models
+# 导入上下文压缩API
+from app.api import context_compression
+# 导入前端API路由
+from app.api.frontend import frontend_router
 from app.config import settings
 from app.utils.database import init_db
 from app.utils.vector_store import init_milvus
@@ -24,7 +31,7 @@ from app.utils.mcp_service_registrar import get_mcp_service_registrar
 from app.utils.service_manager import get_service_manager, register_lightrag_service
 from app.core.mcp_service_manager import get_mcp_service_manager
 from app.middleware.sensitive_word_middleware import SensitiveWordMiddleware
-from app.startup import register_searxng_startup
+from app.startup import register_searxng_startup, register_context_compression
 from app.utils.config_manager import inject_config_to_env, get_base_dependencies
 
 # 导入日志系统
@@ -131,6 +138,15 @@ app.include_router(owl_api.router, prefix="/api", tags=["OWL智能体框架"])
 app.include_router(agent.router, prefix="/api/agent", tags=["智能体服务"])
 # 注册统一工具API路由
 app.include_router(unified_tool_api.router, prefix="/api", tags=["统一工具系统"])
+# 注册高级检索和重排序模型API路由
+app.include_router(advanced_retrieval.router, tags=["高级检索"])
+app.include_router(rerank_models.router, tags=["重排序模型"])
+# 注册基础工具API路由
+app.include_router(base_tools.router, prefix="/api", tags=["基础工具系统"])
+# 注册上下文压缩API路由
+app.include_router(context_compression.router, prefix="/api", tags=["上下文压缩"])
+# 注册前端API路由
+app.include_router(frontend_router)
 
 @app.get("/", include_in_schema=False)
 def root():
@@ -371,6 +387,27 @@ async def startup_event():
         logger.info("OWL框架初始化模块注册成功")
     except Exception as e:
         logger.error(f"注册OWL框架初始化模块时出错: {str(e)}", exc_info=True)
+        
+    # 第13步: 初始化工具系统
+    try:
+        logger.info("正在初始化基础工具系统...")
+        from app.startup.tools import init_tools
+        # 获取系统配置
+        config = get_config_manager().get_config()
+        # 初始化工具系统
+        init_tools(app, config)
+        logger.info("基础工具系统初始化成功")
+    except Exception as e:
+        logger.error(f"初始化基础工具系统时出错: {str(e)}", exc_info=True)
+        
+    # 第14步: 初始化上下文压缩功能
+    try:
+        logger.info("正在初始化上下文压缩功能...")
+        # 注册上下文压缩功能
+        register_context_compression(app)
+        logger.info("上下文压缩功能初始化成功")
+    except Exception as e:
+        logger.error(f"初始化上下文压缩功能时出错: {str(e)}", exc_info=True)
 
 @app.on_event("shutdown")
 async def shutdown_event():

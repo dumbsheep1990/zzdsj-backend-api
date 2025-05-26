@@ -5,7 +5,12 @@
 
 from typing import Dict, Any, List, Optional, Union, AsyncGenerator
 import json
-from app.messaging.core.models import Message, MessageType, DoneMessage
+import time
+from datetime import datetime
+from app.messaging.core.models import Message, MessageType, MessageRole, DoneMessage
+
+# 导入压缩上下文消息模块
+from app.messaging.core.compressed_context import CompressedContextMessage, convert_compressed_context_to_internal
 
 
 def format_to_json(message: Message) -> str:
@@ -211,8 +216,9 @@ def convert_from_openai_message(openai_message: Dict[str, Any]) -> Message:
     """
     from app.messaging.core.models import (
         MessageRole, TextMessage, FunctionCallMessage, 
-        FunctionReturnMessage, ImageMessage, VoiceMessage
+        FunctionReturnMessage, ImageMessage, VoiceMessage, CompressedContextMessage
     )
+    from app.messaging.core.compressed_context import convert_compressed_context_to_internal
     
     # 处理角色映射
     role_map = {

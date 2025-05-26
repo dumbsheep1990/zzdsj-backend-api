@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from typing import Callable, Type, TypeVar, Dict, Any, Generator
 
 from app.utils.database import get_db, get_db_session
-from app.services.knowledge import KnowledgeService
+# 导入统一知识库服务
+from app.services.unified_knowledge_service import UnifiedKnowledgeService, get_unified_knowledge_service
 from app.services.assistant import AssistantService
 from app.services.conversation import ConversationService
 from app.services.model_provider import ModelProviderService
@@ -40,9 +41,9 @@ async def async_db_dependency() -> Generator[Session, None, None]:
         yield db
 
 # 服务依赖函数
-def knowledge_service_dependency(db: Session = Depends(db_dependency)) -> KnowledgeService:
-    """获取知识库服务依赖"""
-    return KnowledgeService(db)
+def knowledge_service_dependency(db: Session = Depends(db_dependency)) -> UnifiedKnowledgeService:
+    """获取统一知识库服务依赖"""
+    return get_unified_knowledge_service(db)
 
 def assistant_service_dependency(db: Session = Depends(db_dependency)) -> AssistantService:
     """获取助手服务依赖"""
@@ -57,7 +58,7 @@ def model_provider_service_dependency(db: Session = Depends(db_dependency)) -> M
     return ModelProviderService(db)
 
 # 注册服务工厂
-register_service(KnowledgeService, knowledge_service_dependency)
+register_service(UnifiedKnowledgeService, knowledge_service_dependency)
 register_service(AssistantService, assistant_service_dependency)
 register_service(ConversationService, conversation_service_dependency)
 register_service(ModelProviderService, model_provider_service_dependency)

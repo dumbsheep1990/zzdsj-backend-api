@@ -4,5 +4,6 @@
 """
 
 from app.startup.searxng_service import register_searxng_startup
+from app.startup.context_compression import register_context_compression
 
-__all__ = ["register_searxng_startup"]
+__all__ = ["register_searxng_startup", "register_context_compression"]

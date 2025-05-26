@@ -2,13 +2,26 @@
 系统设置管理API
 
 提供系统设置的查询和更新接口，支持前端系统设置页面。
+(桥接文件 - 仅用于向后兼容，所有新代码都应该使用app.api.frontend.system.settings模块)
 """
 
+import logging
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 
 from app.schemas.settings import SystemSettings, MetricsSettings
 from app.services.settings_service import get_system_settings_service
+
+# 导入新的系统设置路由处理函数
+from app.api.frontend.system.settings import (
+    get_system_settings as new_get_system_settings,
+    update_system_settings as new_update_system_settings,
+    get_metrics_settings as new_get_metrics_settings,
+    update_metrics_settings as new_update_metrics_settings
+)
+
+# 创建日志记录器
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -18,8 +31,10 @@ async def get_system_settings():
     """
     获取系统设置
     """
-    service = get_system_settings_service()
-    return await service.get_settings()
+    logger.warning(
+        "使用已弃用的系统设置端点: /api/v1/settings/system，应使用新的端点: /api/frontend/system/settings/system"
+    )
+    return await new_get_system_settings()
 
 
 @router.patch("/system", response_model=SystemSettings)
@@ -29,8 +44,10 @@ async def update_system_settings(settings_update: SystemSettings):
     
     可以部分更新，仅提供需要修改的字段
     """
-    service = get_system_settings_service()
-    return await service.update_settings(settings_update)
+    logger.warning(
+        "使用已弃用的系统设置端点: /api/v1/settings/system，应使用新的端点: /api/frontend/system/settings/system"
+    )
+    return await new_update_system_settings(settings_update=settings_update)
 
 
 @router.get("/metrics", response_model=MetricsSettings)
@@ -38,12 +55,10 @@ async def get_metrics_settings():
     """
     获取指标统计设置
     """
-    service = get_system_settings_service()
-    system_settings = await service.get_settings()
-    # 如果指标设置不存在，则返回默认值
-    if not system_settings.metrics:
-        system_settings.metrics = MetricsSettings()
-    return system_settings.metrics
+    logger.warning(
+        "使用已弃用的系统设置端点: /api/v1/settings/metrics，应使用新的端点: /api/frontend/system/settings/metrics"
+    )
+    return await new_get_metrics_settings()
 
 
 @router.patch("/metrics", response_model=MetricsSettings)
@@ -51,16 +66,7 @@ async def update_metrics_settings(settings_update: MetricsSettings):
     """
     更新指标统计设置
     """
-    service = get_system_settings_service()
-    system_settings = await service.get_settings()
-    
-    # 创建系统设置更新
-    update_data = SystemSettings(metrics=settings_update)
-    
-    # 更新设置
-    updated = await service.update_settings(update_data)
-    
-    # 返回更新后的指标设置
-    if not updated.metrics:
-        updated.metrics = MetricsSettings()
-    return updated.metrics
+    logger.warning(
+        "使用已弃用的系统设置端点: /api/v1/settings/metrics，应使用新的端点: /api/frontend/system/settings/metrics"
+    )
+    return await new_update_metrics_settings(settings_update=settings_update)

@@ -27,6 +27,7 @@ class MessageType(str, Enum):
     DEEP_RESEARCH = "deep_research" # 深度研究消息
     CODE = "code"                   # 代码消息
     TABLE = "table"                 # 表格消息
+    COMPRESSED_CONTEXT = "compressed_context" # 压缩上下文消息
 
 
 class MessageRole(str, Enum):

@@ -1,4 +1,5 @@
 """
+[✅ 已迁移] 此文件已完成重构和迁移到 app/api/frontend/tools/unified.py
 统一工具API模块
 提供统一的工具管理和执行API接口
 """

@@ -442,5 +442,22 @@ class Settings:
     LIGHTRAG_KG_RELATION_THRESHOLD: float = get_config("frameworks", "lightrag", "kg_relation_threshold", default=0.7)
     LIGHTRAG_MAX_WORKERS: int = get_config("frameworks", "lightrag", "max_workers", default=4)
 
+    # 统一知识库管理配置
+    UNIFIED_KNOWLEDGE_CONFIG = {
+        # 默认切分策略
+        "default_chunking_strategy": get_config("knowledge", "default_chunking_strategy", default="semantic"),
+        # 支持的切分策略
+        "supported_strategies": ["sentence", "paragraph", "semantic", "character", "token", "markdown", "html", "recursive"],
+        # 语义切分阈值
+        "semantic_threshold": get_config("knowledge", "semantic_threshold", default=0.8),
+        # 启用Agno框架
+        "enable_agno_framework": get_config("knowledge", "enable_agno_framework", default=True),
+        # 启用异步处理
+        "enable_async_processing": get_config("knowledge", "enable_async_processing", default=True),
+        # 启用进度回调
+        "enable_progress_callback": get_config("knowledge", "enable_progress_callback", default=True),
+        # 最大并发任务数
+        "max_concurrent_tasks": get_config("knowledge", "max_concurrent_tasks", default=4)
+    }
 
 settings = Settings()
