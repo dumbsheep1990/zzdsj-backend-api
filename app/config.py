@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 from app.utils.config_manager import get_config
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
 
 class Settings:
     # 服务信息
