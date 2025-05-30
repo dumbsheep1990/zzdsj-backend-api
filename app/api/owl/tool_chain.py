@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from app.utils.database import get_db
 from app.repositories.tool_repository import ToolRepository
-from app.core.tool_orchestrator import ToolOrchestrator
+from core.tool_orchestrator import ToolOrchestrator
 from app.api.deps import get_current_user
 
 router = APIRouter()

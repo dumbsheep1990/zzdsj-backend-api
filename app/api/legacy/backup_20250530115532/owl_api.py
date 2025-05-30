@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, require_admin_role
-from app.core.owl_controller import OwlController
+from core.owl_controller import OwlController
 from app.models.user import User
 from app.schemas.owl import (
     ToolExecuteRequest, 

@@ -158,7 +158,7 @@ async def get_contexts_from_knowledge_base(
     返回:
         上下文列表
     """
-    from app.core.knowledge.knowledge_base_service import KnowledgeBaseService
+    from core.knowledge.knowledge_base_service import KnowledgeBaseService
     from app.frameworks.llamaindex.retrieval import query_index
     
     # 获取知识库信息

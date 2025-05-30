@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-from app.core.mcp_service_manager import get_mcp_service_manager
+from core.mcp_service_manager import get_mcp_service_manager
 from app.repositories.mcp import MCPServiceRepository, MCPToolRepository
 from app.utils.database import get_db
 from app.api.frontend.dependencies import ResponseFormatter, get_current_user, require_permission

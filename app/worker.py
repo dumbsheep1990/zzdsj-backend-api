@@ -29,7 +29,7 @@ def process_document_task(document_id: int):
     - 创建向量嵌入
     - 存储到向量数据库
     """
-    from app.core.knowledge.document_processor import process_document
+    from core.knowledge.document_processor import process_document
     from sqlalchemy.orm import Session
     from app.utils.database import SessionLocal
     
@@ -89,7 +89,7 @@ def generate_assistant_response_task(conversation_id: int, message_id: int):
     - 生成回复
     - 将回复保存到数据库
     """
-    from app.core.chat.chat_service import generate_assistant_response
+    from core.chat.chat_service import generate_assistant_response
     from app.models.chat import Conversation, Message
     from sqlalchemy.orm import Session
     from app.utils.database import SessionLocal

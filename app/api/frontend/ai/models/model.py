@@ -14,7 +14,7 @@ from app.schemas.model_provider import (
     ModelInfoCreate, ModelInfoUpdate, ModelInfo as ModelInfoSchema,
     ModelTestRequest, ModelTestResponse
 )
-from app.core.model_manager import test_model_connection
+from core.model_manager import test_model_connection
 
 # 配置日志
 logger = logging.getLogger(__name__)

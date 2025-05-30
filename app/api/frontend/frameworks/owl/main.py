@@ -15,7 +15,7 @@ from app.api.frontend.dependencies import (
 )
 from app.api.shared.responses import InternalResponseFormatter
 from app.api.shared.validators import ValidatorFactory
-from app.core.owl_controller import OwlController
+from core.owl_controller import OwlController
 from app.schemas.owl import (
     TaskRequest, 
     TaskResponse, 

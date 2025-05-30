@@ -114,7 +114,7 @@ class MCPTool:
         # 在真实实现中，从MCP服务器获取工具详情
         # 例如：params，返回类型等
         try:
-            from app.core.mcp_service_manager import MCPServiceManager
+            from core.mcp_service_manager import MCPServiceManager
             mcp_manager = MCPServiceManager()
             
             # 获取工具详情
@@ -160,7 +160,7 @@ class MCPTool:
             
         try:
             # 实际调用MCP工具
-            from app.core.mcp_service_manager import MCPServiceManager
+            from core.mcp_service_manager import MCPServiceManager
             mcp_manager = MCPServiceManager()
             
             # 执行工具调用

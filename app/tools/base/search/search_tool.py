@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from llama_index.core.tools import BaseTool, FunctionTool
 from llama_index.core.response_synthesizers import ResponseMode
-from app.core.searxng_manager import get_searxng_manager
+from core.searxng_manager import get_searxng_manager
 
 logger = logging.getLogger(__name__)
 

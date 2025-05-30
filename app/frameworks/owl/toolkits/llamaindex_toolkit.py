@@ -11,7 +11,7 @@ from llama_index.core.node_parser import SentenceSplitter
 from llama_index.readers.file import PDFReader, DocxReader, UnstructuredReader
 
 from app.utils.logging import get_logger
-from app.core.knowledge.document_manager import DocumentManager
+from core.knowledge.document_manager import DocumentManager
 from app.utils.file_utils import get_file_extension
 
 logger = get_logger(__name__)

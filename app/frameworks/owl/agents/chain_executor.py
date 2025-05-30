@@ -825,7 +825,7 @@ class AgentChainExecutor:
         # 从工厂获取，实际实现应根据系统架构定制
         try:
             # 示例获取Agent的代码，实际需要替换
-            from app.core.agent_manager import get_agent_by_id
+            from core.agent_manager import get_agent_by_id
             agent = await get_agent_by_id(agent_id)
             
             # 缓存Agent

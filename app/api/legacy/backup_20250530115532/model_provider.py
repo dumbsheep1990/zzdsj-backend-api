@@ -17,7 +17,7 @@ from app.schemas.model_provider import (
     ModelInfoCreate, ModelInfoUpdate, ModelInfo as ModelInfoSchema,
     ModelTestRequest, ModelTestResponse, ModelProviderList
 )
-from app.core.model_manager import test_model_connection, get_model_client
+from core.model_manager import test_model_connection, get_model_client
 
 # 导入新的模型提供商和模型API路由处理函数
 from app.api.frontend.ai.models.provider import (

@@ -29,7 +29,7 @@ from app.utils.service_discovery import register_service, deregister_service, st
 from app.utils.config_bootstrap import ConfigBootstrap
 from app.utils.mcp_service_registrar import get_mcp_service_registrar
 from app.utils.service_manager import get_service_manager, register_lightrag_service
-from app.core.mcp_service_manager import get_mcp_service_manager
+from core.mcp_service_manager import get_mcp_service_manager
 from app.middleware.sensitive_word_middleware import SensitiveWordMiddleware
 from app.startup import register_searxng_startup, register_context_compression
 from app.utils.config_manager import inject_config_to_env, get_base_dependencies

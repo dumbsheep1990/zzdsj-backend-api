@@ -257,7 +257,7 @@ class WorkdirManager:
         Returns:
             LLM模型函数
         """
-        from app.core.model_manager import get_model_manager
+        from core.model_manager import get_model_manager
         
         # 获取模型管理器
         model_manager = get_model_manager()
@@ -290,7 +290,7 @@ class WorkdirManager:
         Returns:
             嵌入模型函数
         """
-        from app.core.model_manager import get_model_manager
+        from core.model_manager import get_model_manager
         from lightrag.utils import EmbeddingFunc
         
         # 获取模型管理器

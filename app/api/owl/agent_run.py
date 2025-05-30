@@ -7,7 +7,7 @@ from app.utils.database import get_db
 from app.repositories.agent_run_repository import AgentRunRepository
 from app.repositories.agent_definition_repository import AgentDefinitionRepository
 from app.schemas.agent_definition import AgentRunRequest, AgentRunResponse
-from app.core.agent_builder import AgentBuilder
+from core.agent_builder import AgentBuilder
 from app.api.deps import get_current_user
 
 router = APIRouter()

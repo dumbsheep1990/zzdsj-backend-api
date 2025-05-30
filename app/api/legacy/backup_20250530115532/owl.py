@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.core.owl_controller import OwlController
+from core.owl_controller import OwlController
 from app.utils.database import get_db, AsyncSession
 from app.config import settings
 

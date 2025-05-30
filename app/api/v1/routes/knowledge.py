@@ -35,7 +35,7 @@ from app.messaging.core.models import (
     Message as CoreMessage, MessageRole, TextMessage
 )
 from app.frameworks.llamaindex.core import get_service_context
-from app.core.knowledge.document_processor import process_document
+from core.knowledge.document_processor import process_document
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

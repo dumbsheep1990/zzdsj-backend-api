@@ -11,7 +11,7 @@ from app.schemas.assistant_qa import (
     QuestionCreate, QuestionUpdate, QuestionResponse, QuestionList,
     AnswerSettingsUpdate, DocumentSegmentSettingsUpdate
 )
-from app.core.assistant_qa_manager import AssistantQAManager
+from core.assistant_qa_manager import AssistantQAManager
 from app.utils.database import get_db
 from app.api.frontend.dependencies import ResponseFormatter
 

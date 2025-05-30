@@ -116,7 +116,7 @@ async def transcribe_audio(
         
         # 获取语音管理器
         try:
-            from app.core.voice.voice_manager import VoiceAgentManager
+            from core.voice.voice_manager import VoiceAgentManager
             voice_manager = VoiceAgentManager()
         except ImportError:
             raise HTTPException(
@@ -201,7 +201,7 @@ async def synthesize_speech(
         
         # 获取语音管理器
         try:
-            from app.core.voice.voice_manager import VoiceAgentManager
+            from core.voice.voice_manager import VoiceAgentManager
             voice_manager = VoiceAgentManager()
         except ImportError:
             raise HTTPException(
@@ -532,7 +532,7 @@ async def update_voice_settings(
         # 这里应该实现实际的数据库更新逻辑
         # 更新语音管理器设置
         try:
-            from app.core.voice.voice_manager import VoiceAgentManager
+            from core.voice.voice_manager import VoiceAgentManager
             voice_manager = VoiceAgentManager()
             voice_manager.update_settings(update_data)
         except ImportError:

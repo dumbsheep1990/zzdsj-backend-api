@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from app.core.agent_manager import AgentManager
+from core.agent_manager import AgentManager
 from app.utils.database import get_db, AsyncSession
 from app.api.frontend.dependencies import ResponseFormatter
 

@@ -10,7 +10,7 @@ from unittest.mock import patch, MagicMock
 from app.main import app
 from app.models.mcp import MCPServiceConfig, MCPTool
 from app.repositories.mcp import MCPServiceRepository, MCPToolRepository
-from app.core.mcp_service_manager import MCPServiceManager
+from core.mcp_service_manager import MCPServiceManager
 from app.utils.database import SessionLocal
 
 client = TestClient(app)

@@ -22,7 +22,7 @@ from app.schemas.agent_chain import (
 from app.api.v1.dependencies import (
     ResponseFormatter, get_request_context, get_agent_adapter
 )
-from app.core.agent_chain.chain_executor import (
+from core.agent_chain.chain_executor import (
     AgentChainExecutor, get_agent_chain_executor
 )
 from app.messaging.core.models import MessageRole, TextMessage

@@ -6,7 +6,7 @@ SearxNG服务启动模块
 import asyncio
 import logging
 from fastapi import FastAPI
-from app.core.searxng_manager import get_searxng_manager
+from core.searxng_manager import get_searxng_manager
 from app.config import settings
 
 logger = logging.getLogger(__name__)

@@ -573,7 +573,7 @@ async def chat_with_voice(
         
         # 获取语音管理器（需要从依赖注入获取）
         try:
-            from app.core.voice.voice_manager import VoiceAgentManager
+            from core.voice.voice_manager import VoiceAgentManager
             voice_manager = VoiceAgentManager()
         except ImportError:
             raise HTTPException(
@@ -636,7 +636,7 @@ async def text_to_speech(
         
         # 获取语音管理器
         try:
-            from app.core.voice.voice_manager import VoiceAgentManager
+            from core.voice.voice_manager import VoiceAgentManager
             voice_manager = VoiceAgentManager()
         except ImportError:
             raise HTTPException(
