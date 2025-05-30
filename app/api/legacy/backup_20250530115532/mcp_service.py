@@ -1,17 +1,25 @@
 """
 MCP服务管理API模块
 提供MCP服务的部署、启动、停止、重启和状态查询等接口
+[迁移桥接] - 该文件已迁移至 app/api/frontend/mcp/service.py
 """
 
-from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Query
-from pydantic import BaseModel, Field
-from datetime import datetime
+from fastapi import APIRouter
+import logging
 
-from app.core.mcp_service_manager import get_mcp_service_manager
-from app.api.dependencies import get_current_user
-from app.repositories.mcp import MCPServiceRepository, MCPToolRepository
-from app.utils.database import get_db
+# 导入新的API模块
+from app.api.frontend.mcp.service import router as new_router
+
+# 创建路由
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# 记录迁移警告
+logger.warning("使用已弃用的app/api/mcp_service.py，该文件已迁移至app/api/frontend/mcp/service.py")
+
+# 将所有请求转发到新的路由处理器
+for route in new_router.routes:
+    router.routes.append(route)
 
 # 创建路由器
 router = APIRouter(prefix="/api/mcp-services", tags=["MCP服务管理"])

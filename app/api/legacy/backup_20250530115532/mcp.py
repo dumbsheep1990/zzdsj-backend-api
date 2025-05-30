@@ -1,11 +1,25 @@
 """
 MCP服务和工具API模块
 提供自定义MCP服务和第三方MCP工具的REST API接口
+[迁移桥接] - 该文件已迁移至 app/api/frontend/mcp/client.py
 """
 
-from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
+from fastapi import APIRouter
+import logging
+
+# 导入新的API模块
+from app.api.frontend.mcp.client import router as new_router
+
+# 创建路由
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# 记录迁移警告
+logger.warning("使用已弃用的app/api/mcp.py，该文件已迁移至app/api/frontend/mcp/client.py")
+
+# 将所有请求转发到新的路由处理器
+for route in new_router.routes:
+    router.routes.append(route)
 
 from app.frameworks.fastmcp.server import get_mcp_server, get_server_status, restart_server
 from app.frameworks.fastmcp.tools import register_tool, list_tools, get_tool, get_tool_schema

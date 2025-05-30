@@ -1,14 +1,24 @@
 """
 系统配置API - 提供配置管理和系统自检API
+[迁移桥接] - 该文件已迁移至 app/api/frontend/system/config.py
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
-from sqlalchemy.orm import Session
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
-from app.utils.database import get_db
-from app.services.async_system_config_service import AsyncSystemConfigService
-from app.utils.config_validator import ConfigValidator
+from fastapi import APIRouter
+import logging
+
+# 导入新的API模块
+from app.api.frontend.system.config import router as new_router
+
+# 创建路由
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# 记录迁移警告
+logger.warning("使用已弃用的app/api/system_config.py，该文件已迁移至app/api/frontend/system/config.py")
+
+# 将所有请求转发到新的路由处理器
+for route in new_router.routes:
+    router.routes.append(route)
 from app.utils.service_health import ServiceHealthChecker
 from app.utils.config_state import config_state_manager
 from app.utils.config_bootstrap import ConfigBootstrap

@@ -1,27 +1,24 @@
-from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, File, UploadFile, Form
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-import base64
-import io
-import time
-from datetime import datetime
+"""
+对话管理和聊天API模块: 提供对话创建、消息交互和语音功能
+[迁移桥接] - 该文件已迁移至 app/api/frontend/chat/conversations.py
+"""
 
-from app.utils.database import get_db
-from app.services.chat_service import ChatService
-from app.core.voice.voice_manager import VoiceAgentManager
-from app.schemas.chat import (
-    Conversation as ConversationSchema,
-    ConversationCreate,
-    ConversationUpdate,
-    ConversationWithMessages,
-    Message as MessageSchema,
-    MessageCreate,
-    ChatRequest,
-    ChatResponse
-)
+from fastapi import APIRouter
+import logging
 
+# 导入新的API模块
+from app.api.frontend.chat.conversations import router as new_router
+
+# 创建路由
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# 记录迁移警告
+logger.warning("使用已弃用的app/api/chat.py，该文件已迁移至app/api/frontend/chat/conversations.py")
+
+# 将所有请求转发到新的路由处理器
+for route in new_router.routes:
+    router.routes.append(route)
 
 
 def get_voice_manager():

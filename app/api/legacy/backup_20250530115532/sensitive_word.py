@@ -1,15 +1,25 @@
 """
 敏感词管理API模块
 提供敏感词的查询、添加、删除等功能
+[迁移桥接] - 该文件已迁移至 app/api/frontend/system/sensitive_word.py
 """
 
-from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, Field
+from fastapi import APIRouter
+import logging
 
-from app.utils.sensitive_word_filter import get_sensitive_word_filter, SensitiveWordFilterType
+# 导入新的API模块
+from app.api.frontend.system.sensitive_word import router as new_router
 
-router = APIRouter(prefix="/api/sensitive-words", tags=["敏感词管理"])
+# 创建路由
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# 记录迁移警告
+logger.warning("使用已弃用的app/api/sensitive_word.py，该文件已迁移至app/api/frontend/system/sensitive_word.py")
+
+# 将所有请求转发到新的路由处理器
+for route in new_router.routes:
+    router.routes.append(route)
 
 class SensitiveWordResponse(BaseModel):
     """敏感词响应模型"""

@@ -1,22 +1,24 @@
 """
-语音功能API接口
-提供语音输入输出及设置管理的接口
+语音功能API接口: 提供语音输入输出及设置管理的接口
+[迁移桥接] - 该文件已迁移至 app/api/frontend/voice/processing.py
 """
 
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query, Body
-from fastapi.responses import StreamingResponse
-from typing import Optional, Dict, Any
-import io
+from fastapi import APIRouter
 import logging
 
-from app.core.voice.voice_manager import VoiceAgentManager
-from app.schemas.voice import VoiceSettings, VoiceSettingsUpdate, VoiceResponse
-from app.utils.database import get_db
-from sqlalchemy.orm import Session
-from app.models.voice import VoiceSettingsDB
+# 导入新的API模块
+from app.api.frontend.voice.processing import router as new_router
 
-router = APIRouter(prefix="/voice", tags=["voice"])
+# 创建路由
+router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# 记录迁移警告
+logger.warning("使用已弃用的app/api/voice.py，该文件已迁移至app/api/frontend/voice/processing.py")
+
+# 将所有请求转发到新的路由处理器
+for route in new_router.routes:
+    router.routes.append(route)
 
 
 def get_voice_manager():

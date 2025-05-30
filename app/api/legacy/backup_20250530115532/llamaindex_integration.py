@@ -1,25 +1,24 @@
 """
-LlamaIndex集成API模块
-提供LlamaIndex框架集成的RESTful API端点
+LlamaIndex集成API模块: 提供LlamaIndex框架集成的RESTful API端点
+[迁移桥接] - 该文件已迁移至 app/api/frontend/integrations/llamaindex.py
 """
 
-from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter
+import logging
 
-from app.utils.database import get_db
-from app.models.llamaindex_integration import LlamaIndexIntegration
-from app.schemas.llamaindex_integration import (
-    LlamaIndexIntegrationCreate,
-    LlamaIndexIntegrationUpdate,
-    LlamaIndexIntegrationResponse,
-    IndexSettingsUpdate,
-    StorageContextUpdate
-)
-from app.services.llamaindex_integration_service import LlamaIndexIntegrationService
-from app.api.deps import get_current_user
+# 导入新的API模块
+from app.api.frontend.integrations.llamaindex import router as new_router
 
-router = APIRouter(prefix="/llamaindex", tags=["LlamaIndex集成"])
+# 创建路由
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# 记录迁移警告
+logger.warning("使用已弃用的app/api/llamaindex_integration.py，该文件已迁移至app/api/frontend/integrations/llamaindex.py")
+
+# 将所有请求转发到新的路由处理器
+for route in new_router.routes:
+    router.routes.append(route)
 
 @router.post("/", response_model=LlamaIndexIntegrationResponse, status_code=status.HTTP_201_CREATED)
 async def create_llamaindex_integration(
