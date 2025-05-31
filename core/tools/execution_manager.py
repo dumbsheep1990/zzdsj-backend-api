@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from app.repositories.tool_execution_repository import ToolExecutionRepository
-from app.core.tools.tool_manager import ToolManager
+from .tool_manager import ToolManager
 
 logger = logging.getLogger(__name__)
 

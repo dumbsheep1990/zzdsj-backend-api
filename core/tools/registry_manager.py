@@ -11,7 +11,8 @@ from datetime import datetime
 from packaging import version
 
 from app.repositories.tool_registry_repository import ToolRegistryRepository
-from app.core.tools.tool_manager import ToolManager
+from app.repositories.tool_repository import ToolRepository
+from .tool_manager import ToolManager
 
 logger = logging.getLogger(__name__)
 

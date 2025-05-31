@@ -12,9 +12,10 @@ import uuid
 from app.utils.database import get_db
 
 # 导入核心业务逻辑层
-from app.core.agents.chain_manager import ChainManager
+from core.agents import ChainManager
 
 from app.services.resource_permission_service import ResourcePermissionService
+from app.repositories.agent_run_repository import AgentRunRepository
 
 class AgentChainService:
     """智能体链服务类 - 已重构为使用核心业务逻辑层"""

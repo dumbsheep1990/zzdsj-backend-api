@@ -10,11 +10,12 @@ import uuid
 from datetime import datetime
 
 # 导入核心业务逻辑层
-from app.core.chat.conversation_manager import ConversationManager
+from core.chat import ConversationManager
 
 # 导入数据模型（用于兼容性）
 from app.models.assistant import Conversation, Message
 from app.config import settings
+from app.repositories.conversation_repository import ConversationRepository
 
 logger = logging.getLogger(__name__)
 

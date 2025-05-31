@@ -24,9 +24,7 @@ from app.schemas.knowledge import (
 )
 
 # 导入核心业务逻辑层
-from app.core.knowledge.knowledge_manager import KnowledgeBaseManager
-from app.core.knowledge.document_processor import DocumentProcessor
-from app.core.knowledge.chunking_manager import ChunkingManager
+from core.knowledge import KnowledgeBaseManager, DocumentProcessor, ChunkingManager
 
 # 导入工具
 from app.utils.object_storage import upload_file, get_file_url

@@ -12,7 +12,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 导入核心业务逻辑层
-from app.core.agents.owl_manager import OwlAgentManager
+from core.agents import OwlAgentManager
 
 from app.frameworks.owl.agents.interfaces import (
     AgentConfig, AgentInputSchema, AgentOutputSchema, 
@@ -21,6 +21,7 @@ from app.frameworks.owl.agents.interfaces import (
 from app.frameworks.owl.utils.decorators import AgentInput, AgentOutput
 from app.frameworks.owl.utils.message_adapter import AgentMessageAdapter, AgentChainMessageAdapter
 from app.messaging.core.models import Message, MessageRole
+from app.repositories.agent_definition_repository import AgentDefinitionRepository
 
 
 class OwlAgentService:

@@ -9,13 +9,36 @@ from .agent_manager import AgentManager
 from .agent_chain.chain_executor import ChainExecutor
 from .agent_chain.message_router import MessageRouter
 
+# 新增：智能体核心业务逻辑模块
+from .agents import (
+    AgentManager as CoreAgentManager,
+    ConversationManager as AgentConversationManager,
+    MemoryManager,
+    ToolManager as AgentToolManager,
+    WorkflowManager,
+    ChainManager,
+    OwlAgentManager
+)
+
 # 助手和聊天模块
 from .assistant_qa import AssistantQAManager
 from .chat_manager import ChatManager
 
+# 新增：聊天核心业务逻辑模块
+from .chat.conversation_manager import ConversationManager
+
 # 服务管理模块
 from .mcp_service import McpServiceManager
 from .model_manager import ModelManager
+
+# 新增：集成管理模块
+from .integrations import (
+    MCPIntegrationManager,
+    LlamaIndexIntegrationManager,
+    LightRAGIntegrationManager,
+    OwlIntegrationManager,
+    FrameworkIntegrationManager
+)
 
 # 配置和控制模块
 from .nl_config import NLConfigParser
@@ -28,6 +51,13 @@ from .auth import UserManager, PermissionManager, AuthService
 # 工具和搜索模块
 from .searxng import SearxngManager
 from .tool_orchestrator import ToolOrchestrator
+
+# 新增：工具核心业务逻辑模块
+from .tools import (
+    ToolManager,
+    ExecutionManager,
+    RegistryManager
+)
 
 # 语音模块（如果存在__init__.py文件）
 try:
@@ -44,9 +74,26 @@ __all__ = [
     "ChainExecutor",
     "MessageRouter",
     
+    # 智能体核心业务逻辑
+    "CoreAgentManager",
+    "AgentConversationManager",
+    "MemoryManager",
+    "AgentToolManager",
+    "WorkflowManager",
+    "ChainManager",
+    "OwlAgentManager",
+    
     # 助手和聊天
     "AssistantQAManager",
     "ChatManager",
+    "ConversationManager",
+    
+    # 集成管理
+    "MCPIntegrationManager",
+    "LlamaIndexIntegrationManager", 
+    "LightRAGIntegrationManager",
+    "OwlIntegrationManager",
+    "FrameworkIntegrationManager",
     
     # 服务管理
     "McpServiceManager",
@@ -68,6 +115,9 @@ __all__ = [
     # 工具和搜索
     "SearxngManager", 
     "ToolOrchestrator",
+    "ToolManager",
+    "ExecutionManager",
+    "RegistryManager",
     
     # 语音（可选）
     "VoiceManager",

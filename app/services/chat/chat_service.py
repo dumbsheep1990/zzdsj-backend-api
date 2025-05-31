@@ -7,7 +7,7 @@ import base64
 from app.utils.service_decorators import register_service
 
 # 导入核心业务逻辑层
-from app.core.chat.conversation_manager import ConversationManager
+from core.chat import ConversationManager
 
 from app.models.chat import Conversation, Message, MessageReference
 from app.models.assistants import Assistant
@@ -21,6 +21,7 @@ from app.schemas.chat import (
     ChatResponse
 )
 from core.chat.chat_service import process_chat_request
+from app.repositories.conversation_repository import ConversationRepository
 
 @register_service(service_type="chat", priority="high", description="聊天交互服务")
 class ChatService:

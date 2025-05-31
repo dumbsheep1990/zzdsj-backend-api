@@ -1,6 +1,7 @@
 """
 工具执行服务模块
 处理工具调用和执行记录相关的业务逻辑
+已重构为使用核心业务逻辑层，遵循分层架构原则
 """
 
 import time
@@ -11,12 +12,14 @@ from sqlalchemy.orm import Session
 
 from app.utils.database import get_db
 from app.models.tool_execution import ToolExecution
-from app.repositories.tool_execution_repository import ToolExecutionRepository
-from app.services.tool_service import ToolService
+# 导入核心业务逻辑层
+from core.tools import ExecutionManager
+from app.services.tools.tool_service import ToolService
 from app.services.resource_permission_service import ResourcePermissionService
+from app.repositories.tool_execution_repository import ToolExecutionRepository
 
 class ToolExecutionService:
-    """工具执行服务类"""
+    """工具执行服务类 - 已重构为使用核心业务逻辑层"""
     
     def __init__(self, 
                  db: Session = Depends(get_db), 
@@ -30,7 +33,8 @@ class ToolExecutionService:
             permission_service: 资源权限服务
         """
         self.db = db
-        self.repository = ToolExecutionRepository()
+        # 使用核心业务逻辑层
+        self.execution_manager = ExecutionManager(db)
         self.tool_service = tool_service
         self.permission_service = permission_service
     
@@ -69,47 +73,56 @@ class ToolExecutionService:
                 detail="没有权限使用此工具"
             )
         
-        # 创建执行记录
-        execution_id = str(uuid.uuid4())
-        execution_data = {
-            "id": execution_id,
-            "tool_id": tool_id,
-            "input_params": input_params,
-            "user_id": user_id,
-            "agent_run_id": agent_run_id,
-            "status": "running"
-        }
+        # 准备执行上下文
+        context = {"agent_run_id": agent_run_id} if agent_run_id else {}
         
-        await self.repository.create(execution_data, self.db)
+        # 使用核心层创建执行任务
+        create_result = await self.execution_manager.create_execution(
+            tool_id=tool_id,
+            input_data=input_params,
+            user_id=user_id,
+            context=context
+        )
         
-        # 执行工具
-        start_time = time.time()
+        if not create_result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=create_result["error"]
+            )
+        
+        execution_id = create_result["data"]["execution_id"]
+        
+        # 开始执行
+        start_result = await self.execution_manager.start_execution(execution_id)
+        if not start_result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=start_result["error"]
+            )
+        
+        # 执行工具并记录结果
         try:
-            # 这里需要根据工具的实现类型进行实际调用
-            # 例如: 内置工具、Shell命令、API调用、Python函数等
             result = await self._invoke_tool(tool, input_params)
             
-            execution_time = int((time.time() - start_time) * 1000)  # 毫秒
-            
-            # 更新执行记录
-            await self.repository.mark_complete(
-                execution_id, result, execution_time, self.db
+            # 标记完成
+            complete_result = await self.execution_manager.complete_execution(
+                execution_id, result
             )
             
-            return {
-                "execution_id": execution_id,
-                "status": "success",
-                "result": result,
-                "execution_time": execution_time
-            }
+            if complete_result["success"]:
+                execution_data = complete_result["data"]
+                return {
+                    "execution_id": execution_id,
+                    "status": "success",
+                    "result": result,
+                    "execution_time": execution_data.get("execution_time", 0)
+                }
+            else:
+                raise Exception(complete_result["error"])
             
         except Exception as e:
-            execution_time = int((time.time() - start_time) * 1000)  # 毫秒
-            
-            # 更新执行记录
-            await self.repository.mark_failed(
-                execution_id, str(e), execution_time, self.db
-            )
+            # 标记失败
+            await self.execution_manager.fail_execution(execution_id, str(e))
             
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -219,19 +232,22 @@ class ToolExecutionService:
         Raises:
             HTTPException: 如果没有权限
         """
-        # 获取执行记录
-        execution = await self.repository.get_by_id(execution_id, self.db)
-        if not execution:
+        # 使用核心层获取执行记录
+        result = await self.execution_manager.get_execution(execution_id)
+        if not result["success"]:
             return None
         
+        execution_data = result["data"]
+        
         # 检查权限
-        if execution.user_id != user_id and not await self._check_admin_permission(user_id):
+        if execution_data["user_id"] != user_id and not await self._check_admin_permission(user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="没有权限访问此执行记录"
             )
         
-        return execution
+        # 转换为ToolExecution对象以保持兼容性
+        return ToolExecution(**execution_data)
     
     async def list_executions_by_tool(self, tool_id: str, user_id: str, skip: int = 0, limit: int = 100) -> List[ToolExecution]:
         """获取指定工具的执行记录列表
@@ -259,8 +275,15 @@ class ToolExecutionService:
                 detail="没有权限访问此工具的执行记录"
             )
         
-        # 获取执行记录列表
-        return await self.repository.list_by_tool_id(tool_id, skip, limit, self.db)
+        # 使用核心层获取执行记录列表
+        result = await self.execution_manager.list_executions(
+            tool_id=tool_id, skip=skip, limit=limit
+        )
+        
+        if result["success"]:
+            return [ToolExecution(**execution_data) for execution_data in result["data"]["executions"]]
+        
+        return []
     
     async def list_executions_by_user(self, user_id: str, skip: int = 0, limit: int = 100) -> List[ToolExecution]:
         """获取指定用户的执行记录列表
@@ -273,69 +296,49 @@ class ToolExecutionService:
         Returns:
             List[ToolExecution]: 执行记录列表
         """
-        # 获取执行记录列表
-        return await self.repository.list_by_user_id(user_id, skip, limit, self.db)
+        # 使用核心层获取用户的执行记录列表
+        result = await self.execution_manager.list_executions(
+            user_id=user_id, skip=skip, limit=limit
+        )
+        
+        if result["success"]:
+            return [ToolExecution(**execution_data) for execution_data in result["data"]["executions"]]
+        
+        return []
     
-    async def list_executions_by_agent_run(self, agent_run_id: str, user_id: str) -> List[ToolExecution]:
-        """获取指定智能体运行的执行记录列表
-        
-        Args:
-            agent_run_id: 智能体运行ID
-            user_id: 用户ID
-            
-        Returns:
-            List[ToolExecution]: 执行记录列表
-            
-        Raises:
-            HTTPException: 如果没有权限
-        """
-        # 获取执行记录列表
-        executions = await self.repository.list_by_agent_run_id(agent_run_id, self.db)
-        
-        # 检查权限
-        if not executions:
-            return []
-        
-        # 检查当前用户是否为记录的创建者或管理员
-        sample_execution = executions[0]
-        if sample_execution.user_id != user_id and not await self._check_admin_permission(user_id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="没有权限访问此智能体运行的执行记录"
-            )
-        
-        return executions
-    
-    async def delete_execution(self, execution_id: str, user_id: str) -> bool:
-        """删除工具执行记录
+    async def cancel_execution(self, execution_id: str, user_id: str) -> bool:
+        """取消工具执行
         
         Args:
             execution_id: 执行记录ID
             user_id: 用户ID
             
         Returns:
-            bool: 是否成功删除
+            bool: 是否成功取消
             
         Raises:
             HTTPException: 如果没有权限或执行记录不存在
         """
-        # 获取执行记录
-        execution = await self.repository.get_by_id(execution_id, self.db)
-        if not execution:
+        # 获取执行记录以检查权限
+        execution_result = await self.execution_manager.get_execution(execution_id)
+        if not execution_result["success"]:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="执行记录不存在"
             )
         
+        execution_data = execution_result["data"]
+        
         # 检查权限
-        if execution.user_id != user_id and not await self._check_admin_permission(user_id):
+        if execution_data["user_id"] != user_id and not await self._check_admin_permission(user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="没有权限删除此执行记录"
+                detail="没有权限取消此执行记录"
             )
         
-        # 删除执行记录
-        return await self.repository.delete(execution_id, self.db)
+        # 使用核心层取消执行
+        result = await self.execution_manager.cancel_execution(execution_id)
+        return result["success"]
     
     async def _check_admin_permission(self, user_id: str) -> bool:
         """检查用户是否为管理员
@@ -346,7 +349,7 @@ class ToolExecutionService:
         Returns:
             bool: 是否为管理员
         """
-        from app.services.user_service import UserService
+        from app.services.auth.user_service import UserService
         user_service = UserService(self.db)
         user = await user_service.get_by_id(user_id)
         return user and user.role == "admin"

@@ -16,9 +16,10 @@ from app.models.agent_template import AgentTemplate
 from app.models.agent_run import AgentRun
 
 # 导入核心业务逻辑层
-from app.core.agents.agent_manager import AgentManager
+from core.agents import AgentManager
 
 from app.services.resource_permission_service import ResourcePermissionService
+from app.repositories.agent_definition_repository import AgentDefinitionRepository
 
 @register_service(service_type="agent", priority="high", description="智能体管理服务")
 class AgentService:

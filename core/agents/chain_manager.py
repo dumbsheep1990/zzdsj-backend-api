@@ -10,7 +10,8 @@ import json
 from datetime import datetime
 
 from app.repositories.agent_run_repository import AgentRunRepository
-from app.core.agents.agent_manager import AgentManager
+from app.repositories.conversation_chain_repository import ConversationChainRepository
+from .agent_manager import AgentManager
 
 
 class ChainManager:

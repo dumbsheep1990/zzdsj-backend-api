@@ -6,9 +6,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 # 使用核心层而不是直接访问服务层
-from app.core.knowledge.retrieval_manager import RetrievalManager
-from app.core.knowledge.vector_manager import VectorManager
+from core.knowledge import RetrievalManager, VectorManager
 from app.utils.storage_detector import StorageDetector
+from app.repositories.knowledge_base_repository import KnowledgeBaseRepository
 
 logger = logging.getLogger(__name__)
 
