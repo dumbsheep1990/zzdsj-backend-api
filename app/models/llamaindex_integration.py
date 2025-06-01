@@ -6,7 +6,7 @@ LlamaIndex集成模型模块
 import uuid
 from sqlalchemy import Column, String, JSON, Integer, ForeignKey, DateTime
 from sqlalchemy.sql import func
-from app.utils.database import Base
+from app.utils.core.database import Base
 from typing import Dict, Any, Optional
 
 class LlamaIndexIntegration(Base):

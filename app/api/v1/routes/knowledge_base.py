@@ -13,7 +13,7 @@ import io
 from datetime import datetime
 
 # 导入依赖
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.api.dependencies import get_current_user
 from app.models.user import User
 

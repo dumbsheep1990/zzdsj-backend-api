@@ -3,7 +3,7 @@ from typing import Dict, Any
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from core.nl_config_parser import NLConfigParser
 from app.api.deps import get_current_user
 

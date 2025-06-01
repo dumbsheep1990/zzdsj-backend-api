@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.owl_tool import OwlTool, OwlToolkit
 from app.services.owl_tool_service import OwlToolService
 from app.services.user_service import UserService

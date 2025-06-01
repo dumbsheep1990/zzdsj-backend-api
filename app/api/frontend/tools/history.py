@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.services.base_tools_service import BaseToolsService, get_base_tools_service
 from app.schemas.base_tools import (
     SubQuestionRecordCreate,

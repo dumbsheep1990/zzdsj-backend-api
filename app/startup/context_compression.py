@@ -7,9 +7,9 @@ import logging
 from typing import Dict, Any
 from fastapi import FastAPI
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
+from app.utils.core.config import get_config_manager
 from app.tools.advanced.context_compression.middleware import ContextCompressionMiddleware
-from app.utils.config_manager import get_config_manager
 
 logger = logging.getLogger(__name__)
 

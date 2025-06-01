@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import json
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 # 导入core层业务逻辑
 from core.monitoring import MonitoringManager, MetricsCollector, AlertManager
 

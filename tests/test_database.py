@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.utils.database import get_db, init_db, check_connection
+from app.utils.core.database import get_db, init_db, check_connection
 from app.models.assistants import Assistant
 from app.models.knowledge import KnowledgeBase, Document
 from app.models.model_provider import ModelProvider

@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.agent_definition import AgentDefinition
 from app.models.agent_template import AgentTemplate
 from app.models.agent_run import AgentRun

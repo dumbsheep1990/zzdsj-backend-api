@@ -13,7 +13,7 @@ import os
 from core.model_manager import get_model_client
 from app.models.model_provider import ModelProvider, ModelInfo
 from app.models.assistant import Assistant
-from app.utils.redis_client import get_cache, set_cache
+from app.utils.core.cache import get_cache, set_cache
 
 logger = logging.getLogger(__name__)
 

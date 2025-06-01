@@ -9,6 +9,7 @@ from .interfaces import MemoryConfig, MemoryType
 from typing import Any, Dict, List, Optional, Tuple
 import json
 from datetime import datetime
+from app.utils.core.database import get_db_engine
 
 class SemanticMemory(BaseMemory[Dict[str, Any]]):
     """语义记忆实现，基于向量相似度检索"""
@@ -29,7 +30,6 @@ class SemanticMemory(BaseMemory[Dict[str, Any]]):
             from app.utils.elasticsearch_client import get_elasticsearch_client
             return get_elasticsearch_client()
         elif vector_backend == "pgvector":
-            from app.utils.database import get_db_engine
             return get_db_engine()
         else:
             # 默认使用内存向量存储

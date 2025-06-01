@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
-from app.utils.database import Base
+from app.utils.core.database import Base
 
 
 class ContextCompressionTool(Base):

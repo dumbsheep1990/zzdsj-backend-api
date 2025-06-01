@@ -12,7 +12,7 @@ from typing import Dict, List, Any, Optional, Callable, Union
 from functools import wraps
 
 from app.config import settings
-from app.utils.token_metrics import record_llm_usage
+from app.utils.monitoring.token_metrics import record_llm_usage
 
 logger = logging.getLogger(__name__)
 

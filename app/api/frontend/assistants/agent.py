@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from core.agent_manager import AgentManager
-from app.utils.database import get_db, AsyncSession
+from app.utils.core.database import get_db, AsyncSession
 from app.api.frontend.dependencies import ResponseFormatter
 
 router = APIRouter()

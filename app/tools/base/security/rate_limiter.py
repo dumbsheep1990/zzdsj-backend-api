@@ -17,8 +17,8 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 from fastapi import FastAPI, status
 
-from app.utils.config_manager import get_config_manager
-from app.utils.redis_client import get_redis_client
+from app.utils.core.config import get_config_manager
+from app.utils.core.cache import get_redis_client
 
 logger = logging.getLogger(__name__)
 

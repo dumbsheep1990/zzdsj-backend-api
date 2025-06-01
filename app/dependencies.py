@@ -6,7 +6,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from typing import Callable, Type, TypeVar, Dict, Any, Generator
 
-from app.utils.database import get_db, get_db_session
+from app.utils.core.database import get_db, get_db_session
 # 导入统一知识库服务
 from app.services.unified_knowledge_service import UnifiedKnowledgeService, get_unified_knowledge_service
 from app.services.assistant import AssistantService

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 import logging
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 # 导入核心业务逻辑层
 from app.repositories.tool_repository import ToolRepository
 from core.tools import ToolManager

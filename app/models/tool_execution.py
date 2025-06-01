@@ -6,7 +6,7 @@
 import uuid
 from sqlalchemy import Column, String, JSON, ForeignKey, Integer, Text, DateTime
 from sqlalchemy.sql import func
-from app.utils.database import Base
+from app.utils.core.database import Base
 from typing import Dict, Any, Optional
 
 class ToolExecution(Base):

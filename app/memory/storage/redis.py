@@ -8,6 +8,7 @@ from typing import Dict, List, Any, Optional
 import json
 import hashlib
 from datetime import datetime
+from app.utils.core.cache import get_redis_client
 
 class RedisMemoryStorage:
     """Redis记忆存储后端"""
@@ -20,7 +21,6 @@ class RedisMemoryStorage:
             redis_client: Redis客户端实例，如果为None则创建新客户端
             ttl: 记忆生存时间(秒)
         """
-        from app.utils.redis_client import get_redis_client
         self.redis = redis_client or get_redis_client()
         self.memory_id = memory_id
         self.ttl = ttl

@@ -22,17 +22,18 @@ from app.api import context_compression
 # 导入前端API路由
 from app.api.frontend import frontend_router
 from app.config import settings
-from app.utils.database import init_db
+from app.utils.core.database import init_database as init_db
 from app.utils.vector_store import init_milvus
 from app.utils.object_storage import init_minio
 from app.utils.service_discovery import register_service, deregister_service, start_heartbeat
-from app.utils.config_bootstrap import ConfigBootstrap
+from app.utils.core.config import ConfigBootstrap, validate_config
 from app.utils.mcp_service_registrar import get_mcp_service_registrar
 from app.utils.service_manager import get_service_manager, register_lightrag_service
 from core.mcp_service_manager import get_mcp_service_manager
 from app.middleware.sensitive_word_middleware import SensitiveWordMiddleware
 from app.startup import register_searxng_startup, register_context_compression
-from app.utils.config_manager import inject_config_to_env, get_base_dependencies
+from app.utils.core.config import inject_config_to_env, get_base_dependencies
+from app.utils.core.config import get_config_manager
 
 # 导入日志系统
 from app.middleware.logging_middleware import setup_logging, get_logger
@@ -54,7 +55,6 @@ app = FastAPI(
 )
 
 # 从配置中加载CORS设置
-from app.utils.config_manager import get_config_manager
 config = get_config_manager().get_config()
 
 # 检查是否启用CORS
@@ -232,8 +232,8 @@ async def startup_event():
     inject_config_to_env()
     
     # 注册日志配置环境变量映射
-    from app.utils.config_manager import get_config_manager
-    register_logging_env_mappings(get_config_manager())
+    config_manager = get_config_manager()
+    register_logging_env_mappings(config_manager)
     
     # 第2步: 初始化日志系统
     print("正在初始化日志系统...")
@@ -266,15 +266,17 @@ async def startup_event():
     if missing_deps:
         logger.warning(f"以下必要的依赖配置缺失或不完整: {', '.join(missing_deps)}")
     
-    # 第4步: 运行配置自检和引导
+    # 第4步: 运行配置自检和引导流程
     logger.info("正在执行配置自检和引导流程...")
-    from app.utils.config_bootstrap import bootstrap_config
-    await bootstrap_config()
+    config_manager = get_config_manager()
+    bootstrap = ConfigBootstrap()
+    await bootstrap.bootstrap_config()
     
     # 第5步: 初始化数据库
     logger.info("正在初始化数据库...")
-    from app.utils.database import initialize_database
-    await initialize_database()
+    from app.utils.core.database.migration import get_migrator
+    migrator = get_migrator()
+    migrator.init_db(create_tables=True, seed_data=True)
     
     # 第6步: 生成数据库模式文档
     try:
@@ -290,8 +292,8 @@ async def startup_event():
         logger.error(f"生成数据库模式文档时出错: {str(e)}", exc_info=True)
     
     # 第7步: 执行配置验证
-    from app.utils.config_validator import validate_services_health
-    service_health = await validate_services_health()
+    config_data = config_manager.get_all()
+    service_health = validate_config(config_data)
     
     # 第8步: Milvus初始化
     milvus_available = service_health.get("milvus", False)

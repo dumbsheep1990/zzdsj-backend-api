@@ -8,7 +8,7 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Bool
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
-from app.utils.database import Base
+from app.utils.core.database import Base
 
 class AgentMemory(Base):
     """智能体记忆绑定关系表"""

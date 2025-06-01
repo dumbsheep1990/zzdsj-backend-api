@@ -14,7 +14,7 @@ import uuid
 import logging
 from datetime import datetime
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.assistant import Assistant, Conversation, Message
 from app.services.assistant_service import AssistantService
 from app.schemas.assistant import (

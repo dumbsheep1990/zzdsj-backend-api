@@ -9,7 +9,7 @@ import os
 import json
 from datetime import datetime
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 # 导入统一知识库服务
 from app.services.unified_knowledge_service import get_unified_knowledge_service
 from app.schemas.knowledge import (

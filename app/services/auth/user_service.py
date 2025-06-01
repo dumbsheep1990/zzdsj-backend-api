@@ -13,7 +13,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 # 导入core层业务逻辑
 from core.auth import AuthService
 

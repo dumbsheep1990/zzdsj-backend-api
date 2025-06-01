@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from core.mcp_service_manager import get_mcp_service_manager
 from app.repositories.mcp import MCPServiceRepository, MCPToolRepository
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.api.frontend.dependencies import ResponseFormatter, get_current_user, require_permission
 
 # 创建路由器

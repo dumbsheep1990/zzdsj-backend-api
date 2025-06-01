@@ -8,7 +8,7 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.utils.auth import (
     get_current_user,
     get_current_active_user,

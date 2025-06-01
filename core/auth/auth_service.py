@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 from .user_manager import UserManager
 from .permission_manager import PermissionManager
-from app.utils.config_manager import get_config
+from app.utils.core.config import get_config
 
 logger = logging.getLogger(__name__)
 

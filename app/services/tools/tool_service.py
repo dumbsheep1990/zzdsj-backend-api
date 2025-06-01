@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.tool import Tool
 # 导入核心业务逻辑层
 from core.tools import ToolManager

@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional, TypeVar, Type, Generic, Union, cast
 from pydantic import BaseModel
 
 from app.config import settings
-from app.utils.async_redis_client import get_redis_client
+from app.utils.core.cache import get_redis_client
 
 logger = logging.getLogger(__name__)
 

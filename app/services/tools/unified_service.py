@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional, Union, Type
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.owl_tool import OwlTool, OwlToolkit
 from app.services.base_tool_service import BaseToolService
 from app.services.owl_tool_service import OwlToolService

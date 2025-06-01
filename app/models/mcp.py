@@ -9,7 +9,7 @@ from sqlalchemy.sql import func
 from uuid import uuid4
 import datetime
 
-from app.utils.database import Base
+from app.utils.core.database import Base
 
 class MCPServiceConfig(Base):
     """MCP服务配置表"""

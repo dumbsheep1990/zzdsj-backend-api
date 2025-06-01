@@ -6,7 +6,7 @@ from typing import Generator, Optional
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 # 导入统一知识库服务
 from app.services.unified_knowledge_service import UnifiedKnowledgeService, get_unified_knowledge_service
 from app.services.assistant import AssistantService

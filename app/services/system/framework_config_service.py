@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.framework_config import FrameworkConfig
 from app.repositories.framework_config_repository import FrameworkConfigRepository
 from app.services.resource_permission_service import ResourcePermissionService

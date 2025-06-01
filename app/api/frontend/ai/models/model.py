@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 import time
 import logging
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.model_provider import ModelProvider, ModelInfo
 from app.schemas.model_provider import (
     ModelInfoCreate, ModelInfoUpdate, ModelInfo as ModelInfoSchema,

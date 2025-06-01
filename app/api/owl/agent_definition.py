@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.repositories.agent_definition_repository import AgentDefinitionRepository
 from app.schemas.agent_definition import (
     AgentDefinitionCreate, 

@@ -3,8 +3,11 @@ OWL智能体工具配置模块
 提供从环境变量加载工具配置的功能
 """
 import os
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import List, Dict, Optional, Set
+from pathlib import Path
+import json
 
 
 # 基础工具配置

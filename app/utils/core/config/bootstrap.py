@@ -7,10 +7,10 @@ import os
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy.orm import Session
-from app.utils.config_validator import ConfigValidator
-from app.utils.service_health import ServiceHealthChecker
-from app.utils.config_state import config_state_manager
-from app.utils.database import db_manager
+from app.utils.core.config.validator import ConfigValidator
+from app.utils.monitoring.health_monitor import ServiceHealthChecker
+from app.utils.core.config.state import config_state_manager
+from app.utils.core.database import get_session_manager
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class ConfigBootstrap:
     @staticmethod
     async def sync_configs_to_db(db: Session) -> Dict[str, Any]:
         """将配置同步到数据库"""
-        from app.services.async_system_config_service import AsyncSystemConfigService
+        from app.services.system.async_config_service import AsyncSystemConfigService
         from app.config import settings
         
         logger.info("正在同步配置到数据库...")
@@ -127,7 +127,7 @@ class ConfigBootstrap:
     @staticmethod
     async def save_service_health_to_db(db: Session, health_results: Dict[str, Dict[str, Any]]) -> bool:
         """将服务健康状态保存到数据库"""
-        from app.services.async_system_config_service import AsyncSystemConfigService
+        from app.services.system.async_config_service import AsyncSystemConfigService
         
         logger.info("正在保存服务健康状态到数据库...")
         
@@ -171,14 +171,15 @@ class ConfigBootstrap:
         # 第2步: 如果数据库可用，同步配置到数据库
         if db_available:
             try:
-                db_result = db_manager.execute_with_session(
+                session_manager = get_session_manager()
+                db_result = session_manager.execute_with_session(
                     lambda db: asyncio.run(cls.sync_configs_to_db(db))
                 )
                 result["db_sync"] = db_result
                 
                 # 第3步: 保存服务健康状态到数据库
                 health_results = bootstrap_result.get("service_details", {})
-                health_record = db_manager.execute_with_session(
+                health_record = session_manager.execute_with_session(
                     lambda db: asyncio.run(cls.save_service_health_to_db(db, health_results))
                 )
                 result["health_record"] = health_record
@@ -190,3 +191,44 @@ class ConfigBootstrap:
             result["db_sync"] = {"success": False, "error": "数据库服务不可用"}
         
         return result
+
+def inject_config_to_env() -> None:
+    """将配置注入到环境变量中"""
+    from app.config import settings
+    
+    # 将重要配置注入到环境变量
+    os.environ.setdefault("DATABASE_URL", settings.DATABASE_URL)
+    os.environ.setdefault("REDIS_HOST", settings.REDIS_HOST)
+    os.environ.setdefault("REDIS_PORT", str(settings.REDIS_PORT))
+    os.environ.setdefault("OPENAI_API_KEY", settings.OPENAI_API_KEY)
+    
+
+def get_config_group(group_name: str) -> Dict[str, Any]:
+    """获取配置组"""
+    from app.config import settings
+    
+    if group_name == "database":
+        return {
+            "url": settings.DATABASE_URL,
+            "pool_size": 10,
+            "max_overflow": 20
+        }
+    elif group_name == "redis":
+        return {
+            "host": settings.REDIS_HOST,
+            "port": settings.REDIS_PORT,
+            "db": settings.REDIS_DB,
+            "password": settings.REDIS_PASSWORD
+        }
+    elif group_name == "llm":
+        return {
+            "openai_api_key": settings.OPENAI_API_KEY,
+            "default_model": settings.DEFAULT_MODEL
+        }
+    else:
+        return {}
+
+
+def get_base_dependencies() -> List[str]:
+    """获取基础依赖列表"""
+    return ["database", "redis", "minio"]

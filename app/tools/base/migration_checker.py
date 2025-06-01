@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 # 导入配置检查相关
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.config import settings
 
 # 导入新的统一工具

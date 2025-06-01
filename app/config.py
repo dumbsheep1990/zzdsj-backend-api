@@ -1,230 +1,178 @@
-from typing import List, Dict, Any
-from app.utils.config_manager import get_config
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
+from typing import List, Dict, Any, Optional
+import os
 
 class Settings:
     # 服务信息
-    PROJECT_NAME: str = get_config("service", "name", default="智政知识库问答系统")
+    PROJECT_NAME: str = os.getenv("SERVICE_NAME", "智政知识库问答系统")
     API_V1_STR: str = "/api"
-    SERVICE_NAME: str = get_config("service", "name", default="knowledge-qa-backend")
-    SERVICE_IP: str = get_config("service", "ip", default="127.0.0.1")
-    SERVICE_PORT: int = get_config("service", "port", default=8000)
+    SERVICE_NAME: str = os.getenv("SERVICE_NAME", "knowledge-qa-backend")
+    SERVICE_IP: str = os.getenv("SERVICE_IP", "127.0.0.1")
+    SERVICE_PORT: int = int(os.getenv("SERVICE_PORT", "8000"))
     
     # 数据库
-    DATABASE_URL: str = get_config("database", "url", default="postgresql://postgres:postgres@localhost:5432/knowledge_qa")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/knowledge_qa")
     
     # CORS跨域
-    CORS_ORIGINS: List[str] = get_config("cors", "origins", default=["http://localhost", "http://localhost:3000", "http://localhost:8080", "*"])
+    CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:3000", "http://localhost:8080", "*"]
     
     # 认证与安全配置
-    JWT_SECRET_KEY: str = get_config("security", "jwt_secret_key", default="23f0767704249cd7be7181a0dad23c74e0739c98ce54d7140fc2e94dfa584fb0")
-    JWT_ALGORITHM: str = get_config("security", "jwt_algorithm", default="HS256")
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = get_config("security", "jwt_access_token_expire_minutes", default=30)
-    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = get_config("security", "jwt_refresh_token_expire_days", default=7)
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "23f0767704249cd7be7181a0dad23c74e0739c98ce54d7140fc2e94dfa584fb0")
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "7"))
     
     # LLM配置
-    OPENAI_API_KEY: str = get_config("llm", "openai_api_key", default="")
-    DEFAULT_MODEL: str = get_config("llm", "default_model", default="gpt-4")
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "gpt-4")
     
     # 模型提供商配置
     # OpenAI配置
-    OPENAI_API_BASE: str = get_config("model_providers", "openai", "api_base", default="https://api.openai.com/v1")
+    OPENAI_API_BASE: str = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
     
     # 语音功能配置
-    VOICE_ENABLED: bool = get_config("voice", "enabled", default=False)
+    VOICE_ENABLED: bool = os.getenv("VOICE_ENABLED", "false").lower() == "true"
     
     # 语音转文本(STT)配置
-    STT_MODEL_NAME: str = get_config("voice", "stt", "model_name", default="xunfei-stt")
-    STT_LANGUAGE: str = get_config("voice", "stt", "language", default="zh-CN")
-    STT_SAMPLING_RATE: int = get_config("voice", "stt", "sampling_rate", default=16000)
+    STT_MODEL_NAME: str = os.getenv("STT_MODEL_NAME", "xunfei-stt")
+    STT_LANGUAGE: str = os.getenv("STT_LANGUAGE", "zh-CN")
+    STT_SAMPLING_RATE: int = int(os.getenv("STT_SAMPLING_RATE", "16000"))
     
     # 文本转语音(TTS)配置
-    TTS_MODEL_NAME: str = get_config("voice", "tts", "model_name", default="xunfei-tts")
-    TTS_VOICE: str = get_config("voice", "tts", "voice", default="xiaoyan")
-    TTS_SPEED: float = get_config("voice", "tts", "speed", default=50)
-    TTS_AUDIO_FORMAT: str = get_config("voice", "tts", "audio_format", default="mp3")
+    TTS_MODEL_NAME: str = os.getenv("TTS_MODEL_NAME", "xunfei-tts")
+    TTS_VOICE: str = os.getenv("TTS_VOICE", "xiaoyan")
+    TTS_SPEED: float = float(os.getenv("TTS_SPEED", "50"))
+    TTS_AUDIO_FORMAT: str = os.getenv("TTS_AUDIO_FORMAT", "mp3")
     
     # 讯飞语音服务配置
-    XUNFEI_APP_ID: str = get_config("voice", "xunfei", "app_id", default="")
-    XUNFEI_API_KEY: str = get_config("voice", "xunfei", "api_key", default="")
-    XUNFEI_API_SECRET: str = get_config("voice", "xunfei", "api_secret", default="")
+    XUNFEI_APP_ID: str = os.getenv("XUNFEI_APP_ID", "")
+    XUNFEI_API_KEY: str = os.getenv("XUNFEI_API_KEY", "")
+    XUNFEI_API_SECRET: str = os.getenv("XUNFEI_API_SECRET", "")
     
     # MiniMax语音服务配置
-    MINIMAX_API_KEY: str = get_config("voice", "minimax", "api_key", default="")
-    MINIMAX_GROUP_ID: str = get_config("voice", "minimax", "group_id", default="")
+    MINIMAX_API_KEY: str = os.getenv("MINIMAX_API_KEY", "")
+    MINIMAX_GROUP_ID: str = os.getenv("MINIMAX_GROUP_ID", "")
     
     # 阿里云语音服务配置
-    ALIYUN_ACCESS_KEY_ID: str = get_config("voice", "aliyun", "access_key_id", default="")
-    ALIYUN_ACCESS_KEY_SECRET: str = get_config("voice", "aliyun", "access_key_secret", default="")
-    ALIYUN_SPEECH_APPKEY: str = get_config("voice", "aliyun", "speech_appkey", default="")
-    OPENAI_ORGANIZATION: str = get_config("model_providers", "openai", "organization", default="")
+    ALIYUN_ACCESS_KEY_ID: str = os.getenv("ALIYUN_ACCESS_KEY_ID", "")
+    ALIYUN_ACCESS_KEY_SECRET: str = os.getenv("ALIYUN_ACCESS_KEY_SECRET", "")
+    ALIYUN_SPEECH_APPKEY: str = os.getenv("ALIYUN_SPEECH_APPKEY", "")
+    OPENAI_ORGANIZATION: str = os.getenv("OPENAI_ORGANIZATION", "")
     
     # 智谱AI配置
-    ZHIPU_API_KEY: str = get_config("model_providers", "zhipu", "api_key", default="")
+    ZHIPU_API_KEY: str = os.getenv("ZHIPU_API_KEY", "")
     
     # DeepSeek配置
-    DEEPSEEK_API_KEY: str = get_config("model_providers", "deepseek", "api_key", default="")
-    DEEPSEEK_API_BASE: str = get_config("model_providers", "deepseek", "api_base", default="https://api.deepseek.com/v1")
+    DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
+    DEEPSEEK_API_BASE: str = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com/v1")
     
     # Ollama配置
-    OLLAMA_API_BASE: str = get_config("model_providers", "ollama", "api_base", default="http://localhost:11434")
+    OLLAMA_API_BASE: str = os.getenv("OLLAMA_API_BASE", "http://localhost:11434")
     
     # VLLM配置
-    VLLM_API_BASE: str = get_config("model_providers", "vllm", "api_base", default="http://localhost:8000")
+    VLLM_API_BASE: str = os.getenv("VLLM_API_BASE", "http://localhost:8000")
     
     # 通义千问配置
-    DASHSCOPE_API_KEY: str = get_config("model_providers", "dashscope", "api_key", default="")
+    DASHSCOPE_API_KEY: str = os.getenv("DASHSCOPE_API_KEY", "")
     
     # Anthropic配置
-    ANTHROPIC_API_KEY: str = get_config("model_providers", "anthropic", "api_key", default="")
-    ANTHROPIC_API_BASE: str = get_config("model_providers", "anthropic", "api_base", default="https://api.anthropic.com")
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    ANTHROPIC_API_BASE: str = os.getenv("ANTHROPIC_API_BASE", "https://api.anthropic.com")
     
     # TogetherAI配置
-    TOGETHER_API_KEY: str = get_config("model_providers", "together", "api_key", default="")
-    TOGETHER_API_BASE: str = get_config("model_providers", "together", "api_base", default="https://api.together.xyz/v1")
+    TOGETHER_API_KEY: str = os.getenv("TOGETHER_API_KEY", "")
+    TOGETHER_API_BASE: str = os.getenv("TOGETHER_API_BASE", "https://api.together.xyz/v1")
     
     # 千问API配置
-    QWEN_API_KEY: str = get_config("model_providers", "qwen", "api_key", default="")
-    QWEN_API_BASE: str = get_config("model_providers", "qwen", "api_base", default="https://dashscope.aliyuncs.com/api/v1")
+    QWEN_API_KEY: str = os.getenv("QWEN_API_KEY", "")
+    QWEN_API_BASE: str = os.getenv("QWEN_API_BASE", "https://dashscope.aliyuncs.com/api/v1")
     
     # 百度文心一言配置
-    BAIDU_API_KEY: str = get_config("model_providers", "baidu", "api_key", default="")
-    BAIDU_SECRET_KEY: str = get_config("model_providers", "baidu", "secret_key", default="")
-    BAIDU_API_BASE: str = get_config("model_providers", "baidu", "api_base", default="https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop")
+    BAIDU_API_KEY: str = os.getenv("BAIDU_API_KEY", "")
+    BAIDU_SECRET_KEY: str = os.getenv("BAIDU_SECRET_KEY", "")
+    BAIDU_API_BASE: str = os.getenv("BAIDU_API_BASE", "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop")
     
     # 月之暗面配置
-    MOONSHOT_API_KEY: str = get_config("model_providers", "moonshot", "api_key", default="")
-    MOONSHOT_API_BASE: str = get_config("model_providers", "moonshot", "api_base", default="https://api.moonshot.cn/v1")
+    MOONSHOT_API_KEY: str = os.getenv("MOONSHOT_API_KEY", "")
+    MOONSHOT_API_BASE: str = os.getenv("MOONSHOT_API_BASE", "https://api.moonshot.cn/v1")
     
     # 智谱GLM配置
-    GLM_API_KEY: str = get_config("model_providers", "glm", "api_key", default="")
-    GLM_API_BASE: str = get_config("model_providers", "glm", "api_base", default="https://open.bigmodel.cn/api/paas/v4")
+    GLM_API_KEY: str = os.getenv("GLM_API_KEY", "")
+    GLM_API_BASE: str = os.getenv("GLM_API_BASE", "https://open.bigmodel.cn/api/paas/v4")
     
     # MiniMax配置
-    MINIMAX_API_KEY: str = get_config("model_providers", "minimax", "api_key", default="")
-    MINIMAX_GROUP_ID: str = get_config("model_providers", "minimax", "group_id", default="")
-    MINIMAX_API_BASE: str = get_config("model_providers", "minimax", "api_base", default="https://api.minimax.chat/v1")
+    MINIMAX_API_KEY: str = os.getenv("MINIMAX_API_KEY", "")
+    MINIMAX_GROUP_ID: str = os.getenv("MINIMAX_GROUP_ID", "")
+    MINIMAX_API_BASE: str = os.getenv("MINIMAX_API_BASE", "https://api.minimax.chat/v1")
     
     # 百川配置
-    BAICHUAN_API_KEY: str = get_config("model_providers", "baichuan", "api_key", default="")
-    BAICHUAN_SECRET_KEY: str = get_config("model_providers", "baichuan", "secret_key", default="")
-    BAICHUAN_API_BASE: str = get_config("model_providers", "baichuan", "api_base", default="https://api.baichuan-ai.com/v1")
+    BAICHUAN_API_KEY: str = os.getenv("BAICHUAN_API_KEY", "")
+    BAICHUAN_SECRET_KEY: str = os.getenv("BAICHUAN_SECRET_KEY", "")
+    BAICHUAN_API_BASE: str = os.getenv("BAICHUAN_API_BASE", "https://api.baichuan-ai.com/v1")
     
     # 向量存储 - Milvus配置
-    MILVUS_HOST: str = get_config("vector_store", "milvus", "host", default="localhost")
-    MILVUS_PORT: str = get_config("vector_store", "milvus", "port", default="19530")
-    MILVUS_COLLECTION: str = get_config("vector_store", "milvus", "collection", default="document_vectors")
+    MILVUS_HOST: str = os.getenv("MILVUS_HOST", "localhost")
+    MILVUS_PORT: str = os.getenv("MILVUS_PORT", "19530")
+    MILVUS_COLLECTION: str = os.getenv("MILVUS_COLLECTION", "document_vectors")
     
     # 向量存储 - Elasticsearch配置
-    ELASTICSEARCH_URL: str = get_config("vector_store", "elasticsearch", "url", default="http://localhost:9200")
-    ELASTICSEARCH_USERNAME: str = get_config("vector_store", "elasticsearch", "username", default="")
-    ELASTICSEARCH_PASSWORD: str = get_config("vector_store", "elasticsearch", "password", default="")
-    ELASTICSEARCH_CLOUD_ID: str = get_config("vector_store", "elasticsearch", "cloud_id", default="")
-    ELASTICSEARCH_API_KEY: str = get_config("vector_store", "elasticsearch", "api_key", default="")
-    ELASTICSEARCH_INDEX: str = get_config("vector_store", "elasticsearch", "index", default="document_index")
-    ELASTICSEARCH_DEFAULT_ANALYZER: str = get_config("vector_store", "elasticsearch", "analyzer", default="standard")
-    ELASTICSEARCH_EMBEDDING_DIM: int = get_config("vector_store", "elasticsearch", "embedding_dim", default=1536)
-    ELASTICSEARCH_SIMILARITY: str = get_config("vector_store", "elasticsearch", "similarity", default="cosine")
-    ELASTICSEARCH_HYBRID_SEARCH: bool = get_config("vector_store", "elasticsearch", "hybrid_search", default=True)
-    ELASTICSEARCH_HYBRID_WEIGHT: float = get_config("vector_store", "elasticsearch", "hybrid_weight", default=0.5)
+    ELASTICSEARCH_URL: str = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
+    ELASTICSEARCH_USERNAME: str = os.getenv("ELASTICSEARCH_USERNAME", "")
+    ELASTICSEARCH_PASSWORD: str = os.getenv("ELASTICSEARCH_PASSWORD", "")
+    ELASTICSEARCH_CLOUD_ID: str = os.getenv("ELASTICSEARCH_CLOUD_ID", "")
+    ELASTICSEARCH_API_KEY: str = os.getenv("ELASTICSEARCH_API_KEY", "")
+    ELASTICSEARCH_INDEX: str = os.getenv("ELASTICSEARCH_INDEX", "document_index")
+    ELASTICSEARCH_DEFAULT_ANALYZER: str = os.getenv("ELASTICSEARCH_DEFAULT_ANALYZER", "standard")
+    ELASTICSEARCH_EMBEDDING_DIM: int = int(os.getenv("ELASTICSEARCH_EMBEDDING_DIM", "1536"))
+    ELASTICSEARCH_SIMILARITY: str = os.getenv("ELASTICSEARCH_SIMILARITY", "cosine")
+    ELASTICSEARCH_HYBRID_SEARCH: bool = os.getenv("ELASTICSEARCH_HYBRID_SEARCH", "true").lower() == "true"
+    ELASTICSEARCH_HYBRID_WEIGHT: float = float(os.getenv("ELASTICSEARCH_HYBRID_WEIGHT", "0.5"))
     
     # 文档处理配置
-    DOCUMENT_SPLITTER_TYPE: str = get_config("document_processing", "splitter_type", default="sentence")
-    DOCUMENT_CHUNK_SIZE: int = get_config("document_processing", "chunk_size", default=1000)
-    DOCUMENT_CHUNK_OVERLAP: int = get_config("document_processing", "chunk_overlap", default=200)
-    DOCUMENT_PROCESSING_CONCURRENCY: int = get_config("document_processing", "concurrency", default=4)
-    EMBEDDING_BATCH_SIZE: int = get_config("document_processing", "embedding_batch_size", default=16)
-    DOCUMENT_PROCESSING_TIMEOUT: int = get_config("document_processing", "timeout", default=3600)
-    DOCUMENT_SEMANTIC_CHUNK_STRATEGY: str = get_config("document_processing", "semantic_chunk_strategy", default="auto")
-    DOCUMENT_USE_METADATA_EXTRACTION: bool = get_config("document_processing", "use_metadata_extraction", default=True)
+    DOCUMENT_SPLITTER_TYPE: str = os.getenv("DOCUMENT_SPLITTER_TYPE", "sentence")
+    DOCUMENT_CHUNK_SIZE: int = int(os.getenv("DOCUMENT_CHUNK_SIZE", "1000"))
+    DOCUMENT_CHUNK_OVERLAP: int = int(os.getenv("DOCUMENT_CHUNK_OVERLAP", "200"))
+    DOCUMENT_PROCESSING_CONCURRENCY: int = int(os.getenv("DOCUMENT_PROCESSING_CONCURRENCY", "4"))
+    EMBEDDING_BATCH_SIZE: int = int(os.getenv("EMBEDDING_BATCH_SIZE", "16"))
+    DOCUMENT_PROCESSING_TIMEOUT: int = int(os.getenv("DOCUMENT_PROCESSING_TIMEOUT", "3600"))
+    DOCUMENT_SEMANTIC_CHUNK_STRATEGY: str = os.getenv("DOCUMENT_SEMANTIC_CHUNK_STRATEGY", "auto")
+    DOCUMENT_USE_METADATA_EXTRACTION: bool = os.getenv("DOCUMENT_USE_METADATA_EXTRACTION", "true").lower() == "true"
     
     # Redis配置
-    REDIS_HOST: str = get_config("redis", "host", default="localhost")
-    REDIS_PORT: int = get_config("redis", "port", default=6379)
-    REDIS_DB: int = get_config("redis", "db", default=0)
-    REDIS_PASSWORD: str = get_config("redis", "password", default="")
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+    REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD", "")
     
     # MinIO配置
-    MINIO_ENDPOINT: str = get_config("storage", "minio", "endpoint", default="localhost:9000")
-    MINIO_ACCESS_KEY: str = get_config("storage", "minio", "access_key", default="minioadmin")
-    MINIO_SECRET_KEY: str = get_config("storage", "minio", "secret_key", default="minioadmin")
-    MINIO_SECURE: bool = get_config("storage", "minio", "secure", default=False)
-    MINIO_BUCKET: str = get_config("storage", "minio", "bucket", default="knowledge-docs")
+    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+    MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+    MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
+    MINIO_BUCKET: str = os.getenv("MINIO_BUCKET", "knowledge-docs")
     
     # RabbitMQ配置
-    RABBITMQ_HOST: str = get_config("message_queue", "rabbitmq", "host", default="localhost")
-    RABBITMQ_PORT: int = get_config("message_queue", "rabbitmq", "port", default=5672)
-    RABBITMQ_USER: str = get_config("message_queue", "rabbitmq", "user", default="guest")
-    RABBITMQ_PASSWORD: str = get_config("message_queue", "rabbitmq", "password", default="guest")
+    RABBITMQ_HOST: str = os.getenv("RABBITMQ_HOST", "localhost")
+    RABBITMQ_PORT: int = int(os.getenv("RABBITMQ_PORT", "5672"))
+    RABBITMQ_USER: str = os.getenv("RABBITMQ_USER", "guest")
+    RABBITMQ_PASSWORD: str = os.getenv("RABBITMQ_PASSWORD", "guest")
     
     # Nacos配置
-    NACOS_SERVER_ADDRESSES: str = get_config("service_discovery", "nacos", "server_addresses", default="127.0.0.1:8848")
-    NACOS_NAMESPACE: str = get_config("service_discovery", "nacos", "namespace", default="public")
-    NACOS_GROUP: str = get_config("service_discovery", "nacos", "group", default="DEFAULT_GROUP")
+    NACOS_SERVER_ADDRESSES: str = os.getenv("NACOS_SERVER_ADDRESSES", "127.0.0.1:8848")
+    NACOS_NAMESPACE: str = os.getenv("NACOS_NAMESPACE", "public")
+    NACOS_GROUP: str = os.getenv("NACOS_GROUP", "DEFAULT_GROUP")
     
     # Celery配置
-    CELERY_BROKER_URL: str = get_config("celery", "broker_url", default="amqp://guest:guest@localhost:5672//")
-    CELERY_RESULT_BACKEND: str = get_config("celery", "result_backend", default="redis://localhost:6379/0")
+    CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672//")
+    CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
     
     # 框架配置
-    # LightRAG配置
-    class LightRAGSettings(BaseSettings):
-        """LightRAG设置"""
-        enabled: bool = Field(False, env="LIGHTRAG_ENABLED")
-        base_dir: str = Field("./data/lightrag", env="LIGHTRAG_BASE_DIR")
-        embedding_dim: int = Field(1536, env="LIGHTRAG_EMBEDDING_DIM")
-        max_token_size: int = Field(8192, env="LIGHTRAG_MAX_TOKEN_SIZE")
-        
-        # 存储配置
-        graph_db_type: str = Field("file", env="LIGHTRAG_GRAPH_DB_TYPE")  # 可选: file, postgres, redis
-        pg_host: str = Field("lightrag-postgres", env="LIGHTRAG_PG_HOST")
-        pg_port: int = Field(5432, env="LIGHTRAG_PG_PORT")
-        pg_user: str = Field("postgres", env="LIGHTRAG_PG_USER")
-        pg_password: str = Field("password", env="LIGHTRAG_PG_PASSWORD")
-        pg_db: str = Field("lightrag", env="LIGHTRAG_PG_DB")
-        redis_host: str = Field("localhost", env="LIGHTRAG_REDIS_HOST")
-        redis_port: int = Field(6379, env="LIGHTRAG_REDIS_PORT")
-        redis_db: int = Field(1, env="LIGHTRAG_REDIS_DB")
-        redis_password: str = Field("", env="LIGHTRAG_REDIS_PASSWORD")
-        
-        # 服务器配置
-        server_host: str = Field("0.0.0.0", env="LIGHTRAG_SERVER_HOST")
-        server_port: int = Field(9621, env="LIGHTRAG_SERVER_PORT")
-        api_url: str = Field("http://localhost:9621", env="LIGHTRAG_API_URL")
-        container_name: str = Field("lightrag-api", env="LIGHTRAG_CONTAINER_NAME")
-        image_name: str = Field("hkuds/lightrag:latest", env="LIGHTRAG_IMAGE_NAME")
-        docker_network: str = Field("zz-backend-network", env="LIGHTRAG_DOCKER_NETWORK")
-        service_name: str = Field("lightrag-api", env="LIGHTRAG_SERVICE_NAME")
-        
-        # LLM配置
-        llm_binding: str = Field("openai", env="LIGHTRAG_LLM_BINDING")
-        llm_model: str = Field("gpt-4o-mini", env="LIGHTRAG_LLM_MODEL")
-        llm_api_base: str = Field("https://api.openai.com/v1", env="LIGHTRAG_LLM_API_BASE")
-        llm_api_key: str = Field("", env="LIGHTRAG_LLM_API_KEY")
-        
-        # 嵌入模型配置
-        embedding_binding: str = Field("openai", env="LIGHTRAG_EMBEDDING_BINDING")
-        embedding_model: str = Field("text-embedding-3-small", env="LIGHTRAG_EMBEDDING_MODEL")
-        embedding_api_base: str = Field("https://api.openai.com/v1", env="LIGHTRAG_EMBEDDING_API_BASE")
-        embedding_api_key: str = Field("", env="LIGHTRAG_EMBEDDING_API_KEY")
-        
-        # 高级配置
-        use_semantic_chunking: bool = Field(False, env="LIGHTRAG_USE_SEMANTIC_CHUNKING")
-        use_knowledge_graph: bool = Field(False, env="LIGHTRAG_USE_KNOWLEDGE_GRAPH")
-        kg_relation_threshold: float = Field(0.7, env="LIGHTRAG_KG_RELATION_THRESHOLD")
-        max_workers: int = Field(4, env="LIGHTRAG_MAX_WORKERS")
-        
-        # Nacos注册配置
-        register_to_nacos: bool = Field(True, env="LIGHTRAG_REGISTER_TO_NACOS")
-        
-        class Config:
-            env_prefix = "LIGHTRAG_"
-    
     # LlamaIndex配置（替代LangChain）
-    EMBEDDING_MODEL: str = get_config("frameworks", "llamaindex", "embedding_model", default="text-embedding-ada-002")
-    CHAT_MODEL: str = get_config("frameworks", "llamaindex", "llm_model", default="gpt-3.5-turbo")
-    MEMORY_TYPE: str = get_config("frameworks", "llamaindex", "memory_type", default="conversation_buffer")
-    MEMORY_K: int = get_config("frameworks", "llamaindex", "memory_k", default=5)
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-ada-002")
+    CHAT_MODEL: str = os.getenv("CHAT_MODEL", "gpt-3.5-turbo")
+    MEMORY_TYPE: str = os.getenv("MEMORY_TYPE", "conversation_buffer")
+    MEMORY_K: int = int(os.getenv("MEMORY_K", "5"))
     
     # 保留LangChain配置（为了兼容性，但已不再使用）
     LANGCHAIN_EMBEDDING_MODEL: str = EMBEDDING_MODEL
@@ -236,228 +184,87 @@ class Settings:
     LANGCHAIN_LANGSMITH_PROJECT: str = "knowledge-qa"
     
     # Haystack配置
-    HAYSTACK_READER_MODEL: str = get_config("frameworks", "haystack", "reader_model", default="deepset/roberta-base-squad2")
-    HAYSTACK_RETRIEVER_TYPE: str = get_config("frameworks", "haystack", "retriever_type", default="embedding")
-    HAYSTACK_USE_BM25: bool = get_config("frameworks", "haystack", "use_bm25", default=True)
-    HAYSTACK_TOP_K: int = get_config("frameworks", "haystack", "top_k", default=5)
-    HAYSTACK_EMBEDDING_MODEL: str = get_config("frameworks", "haystack", "embedding_model", default="sentence-transformers/all-MiniLM-L6-v2")
-    HAYSTACK_RERANK_DOCUMENTS: bool = get_config("frameworks", "haystack", "rerank_documents", default=False)
-    HAYSTACK_RERANKER_MODEL: str = get_config("frameworks", "haystack", "reranker_model", default="cross-encoder/ms-marco-MiniLM-L-6-v2")
+    HAYSTACK_READER_MODEL: str = os.getenv("HAYSTACK_READER_MODEL", "deepset/roberta-base-squad2")
+    HAYSTACK_RETRIEVER_TYPE: str = os.getenv("HAYSTACK_RETRIEVER_TYPE", "embedding")
+    HAYSTACK_USE_BM25: bool = os.getenv("HAYSTACK_USE_BM25", "true").lower() == "true"
+    HAYSTACK_TOP_K: int = int(os.getenv("HAYSTACK_TOP_K", "5"))
+    HAYSTACK_EMBEDDING_MODEL: str = os.getenv("HAYSTACK_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    HAYSTACK_RERANK_DOCUMENTS: bool = os.getenv("HAYSTACK_RERANK_DOCUMENTS", "false").lower() == "true"
+    HAYSTACK_RERANKER_MODEL: str = os.getenv("HAYSTACK_RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
     
     # LlamaIndex配置
-    LLAMAINDEX_CHUNK_SIZE: int = get_config("frameworks", "llamaindex", "chunk_size", default=DOCUMENT_CHUNK_SIZE)
-    LLAMAINDEX_CHUNK_OVERLAP: int = get_config("frameworks", "llamaindex", "chunk_overlap", default=DOCUMENT_CHUNK_OVERLAP)
-    LLAMAINDEX_EMBEDDING_MODEL: str = get_config("frameworks", "llamaindex", "embedding_model", default="text-embedding-ada-002")
-    LLAMAINDEX_LLM_MODEL: str = get_config("frameworks", "llamaindex", "llm_model", default="gpt-3.5-turbo")
-    LLAMAINDEX_INDEX_TYPE: str = get_config("frameworks", "llamaindex", "index_type", default="vector_store")
-    LLAMAINDEX_USE_KNOWLEDGE_GRAPH: bool = get_config("frameworks", "llamaindex", "use_knowledge_graph", default=False)
-    LLAMAINDEX_DEFAULT_STORE: str = get_config("frameworks", "llamaindex", "default_store", default="elasticsearch")
+    LLAMAINDEX_CHUNK_SIZE: int = int(os.getenv("LLAMAINDEX_CHUNK_SIZE", str(DOCUMENT_CHUNK_SIZE)))
+    LLAMAINDEX_CHUNK_OVERLAP: int = int(os.getenv("LLAMAINDEX_CHUNK_OVERLAP", str(DOCUMENT_CHUNK_OVERLAP)))
+    LLAMAINDEX_EMBEDDING_MODEL: str = os.getenv("LLAMAINDEX_EMBEDDING_MODEL", "text-embedding-ada-002")
+    LLAMAINDEX_LLM_MODEL: str = os.getenv("LLAMAINDEX_LLM_MODEL", "gpt-3.5-turbo")
+    LLAMAINDEX_INDEX_TYPE: str = os.getenv("LLAMAINDEX_INDEX_TYPE", "vector_store")
+    LLAMAINDEX_USE_KNOWLEDGE_GRAPH: bool = os.getenv("LLAMAINDEX_USE_KNOWLEDGE_GRAPH", "false").lower() == "true"
+    LLAMAINDEX_DEFAULT_STORE: str = os.getenv("LLAMAINDEX_DEFAULT_STORE", "elasticsearch")
     
     # Agno配置
-    AGNO_AGENT_TYPE: str = get_config("frameworks", "agno", "agent_type", default="conversational")
-    AGNO_MODEL: str = get_config("frameworks", "agno", "model", default="gpt-3.5-turbo")
-    AGNO_MAX_ITERATIONS: int = get_config("frameworks", "agno", "max_iterations", default=5)
-    AGNO_MEMORY_TYPE: str = get_config("frameworks", "agno", "memory_type", default="conversation_buffer")
-    AGNO_MEMORY_K: int = get_config("frameworks", "agno", "memory_k", default=5)
+    AGNO_AGENT_TYPE: str = os.getenv("AGNO_AGENT_TYPE", "conversational")
+    AGNO_MODEL: str = os.getenv("AGNO_MODEL", "gpt-3.5-turbo")
+    AGNO_MAX_ITERATIONS: int = int(os.getenv("AGNO_MAX_ITERATIONS", "5"))
+    AGNO_MEMORY_TYPE: str = os.getenv("AGNO_MEMORY_TYPE", "conversation_buffer")
+    AGNO_MEMORY_K: int = int(os.getenv("AGNO_MEMORY_K", "5"))
     
     # 框架集成配置
     # 统一入口 - LlamaIndex（替代LangChain）
-    FRAMEWORK_ENTRY_POINT: str = get_config("framework_integration", "entry_point", default="llamaindex")
+    FRAMEWORK_ENTRY_POINT: str = os.getenv("FRAMEWORK_ENTRY_POINT", "llamaindex")
     
     # QA助手 - Agno与检索集成
-    QA_ASSISTANT_FRAMEWORK: str = get_config("framework_integration", "qa_assistant", "framework", default="agno")
-    QA_RETRIEVER_FRAMEWORK: str = get_config("framework_integration", "qa_assistant", "retriever", default="haystack")
-    QA_INDEXER_FRAMEWORK: str = get_config("framework_integration", "qa_assistant", "indexer", default="llamaindex")
+    QA_ASSISTANT_FRAMEWORK: str = os.getenv("QA_ASSISTANT_FRAMEWORK", "agno")
+    QA_RETRIEVER_FRAMEWORK: str = os.getenv("QA_RETRIEVER_FRAMEWORK", "haystack")
+    QA_INDEXER_FRAMEWORK: str = os.getenv("QA_INDEXER_FRAMEWORK", "llamaindex")
     
     # QA管理 - LlamaIndex与Agno协作（替代LangChain）
-    QA_MANAGEMENT_CONVERSATION_FRAMEWORK: str = get_config("framework_integration", "qa_management", "conversation", default="llamaindex")
-    QA_MANAGEMENT_MEMORY_FRAMEWORK: str = get_config("framework_integration", "qa_management", "memory", default="agno")
-    QA_MANAGEMENT_API_FRAMEWORK: str = get_config("framework_integration", "qa_management", "api", default="llamaindex")
+    QA_MANAGEMENT_CONVERSATION_FRAMEWORK: str = os.getenv("QA_MANAGEMENT_CONVERSATION_FRAMEWORK", "llamaindex")
+    QA_MANAGEMENT_MEMORY_FRAMEWORK: str = os.getenv("QA_MANAGEMENT_MEMORY_FRAMEWORK", "agno")
+    QA_MANAGEMENT_API_FRAMEWORK: str = os.getenv("QA_MANAGEMENT_API_FRAMEWORK", "llamaindex")
     
     # 知识库管理 - LlamaIndex与Haystack分工
-    KNOWLEDGE_MANAGEMENT_INDEXING_FRAMEWORK: str = get_config("framework_integration", "knowledge_management", "indexing", default="llamaindex")
-    KNOWLEDGE_MANAGEMENT_SEARCH_FRAMEWORK: str = get_config("framework_integration", "knowledge_management", "search", default="haystack")
+    KNOWLEDGE_MANAGEMENT_INDEXING_FRAMEWORK: str = os.getenv("KNOWLEDGE_MANAGEMENT_INDEXING_FRAMEWORK", "llamaindex")
+    KNOWLEDGE_MANAGEMENT_SEARCH_FRAMEWORK: str = os.getenv("KNOWLEDGE_MANAGEMENT_SEARCH_FRAMEWORK", "haystack")
     
     # 敏感词过滤配置
-    SENSITIVE_WORD_FILTER_TYPE: str = get_config("sensitive_word", "filter_type", default="local")
-    SENSITIVE_WORD_FILTER_RESPONSE: str = get_config("sensitive_word", "default_response", 
-                                                default="很抱歉，您的消息包含敏感内容，请调整后重新发送。")
-    SENSITIVE_WORD_DICT_PATH: str = get_config("sensitive_word", "dict_path", default="")
-    SENSITIVE_WORD_API_URL: str = get_config("sensitive_word", "api_url", default="")
-    SENSITIVE_WORD_API_KEY: str = get_config("sensitive_word", "api_key", default="")
-    SENSITIVE_WORD_API_TIMEOUT: float = get_config("sensitive_word", "api_timeout", default=3.0)
-    SENSITIVE_WORD_CACHE_ENABLED: bool = get_config("sensitive_word", "cache_enabled", default=True)
-    SENSITIVE_WORD_CACHE_TTL: int = get_config("sensitive_word", "cache_ttl", default=3600)
+    SENSITIVE_WORD_FILTER_TYPE: str = os.getenv("SENSITIVE_WORD_FILTER_TYPE", "local")
+    SENSITIVE_WORD_FILTER_RESPONSE: str = os.getenv("SENSITIVE_WORD_FILTER_RESPONSE", "很抱歉，您的消息包含敏感内容，请调整后重新发送。")
+    SENSITIVE_WORD_DICT_PATH: str = os.getenv("SENSITIVE_WORD_DICT_PATH", "")
+    SENSITIVE_WORD_API_URL: str = os.getenv("SENSITIVE_WORD_API_URL", "")
+    SENSITIVE_WORD_API_KEY: str = os.getenv("SENSITIVE_WORD_API_KEY", "")
+    SENSITIVE_WORD_API_TIMEOUT: float = float(os.getenv("SENSITIVE_WORD_API_TIMEOUT", "3.0"))
+    SENSITIVE_WORD_CACHE_ENABLED: bool = os.getenv("SENSITIVE_WORD_CACHE_ENABLED", "true").lower() == "true"
+    SENSITIVE_WORD_CACHE_TTL: int = int(os.getenv("SENSITIVE_WORD_CACHE_TTL", "3600"))
     
-    # SearxNG 搜索引擎配置
-    class SearxNGSettings(BaseSettings):
-        """SearxNG搜索引擎设置"""
-        enabled: bool = Field(True, env="SEARXNG_ENABLED")
-        auto_deploy: bool = Field(True, env="SEARXNG_AUTO_DEPLOY")
-        host: str = Field("localhost", env="SEARXNG_HOST") 
-        port: int = Field(8888, env="SEARXNG_PORT")
-        default_engines: List[str] = Field(["google", "bing", "baidu", "wikipedia"], env="SEARXNG_DEFAULT_ENGINES")
-        default_language: str = Field("zh-CN", env="SEARXNG_DEFAULT_LANGUAGE")
-        max_results: int = Field(10, env="SEARXNG_MAX_RESULTS")
-        timeout: float = Field(10.0, env="SEARXNG_TIMEOUT")
-        
-        class Config:
-            env_prefix = "SEARXNG_"
-    
-    # 组件配置
-    llamaindex: LlamaIndexSettings = LlamaIndexSettings()
-    haystack: HaystackSettings = HaystackSettings()
-    agno: AgnoSettings = AgnoSettings()
-    searxng: SearxNGSettings = SearxNGSettings()
-    lightrag: LightRAGSettings = LightRAGSettings()
-    
-    # 系统全局默认模型配置
-    class SystemModelSettings(BaseSettings):
-        """系统全局默认模型设置"""
-        default_model: str = Field(get_config("system", "default_model", default="gpt-4"), env="SYSTEM_DEFAULT_MODEL")
-        default_embedding_model: str = Field(get_config("system", "default_embedding_model", default="text-embedding-ada-002"), env="SYSTEM_DEFAULT_EMBEDDING_MODEL")
-        
-        # 可用模型列表
-        available_models: List[Dict[str, Any]] = Field(
-            get_config("system", "available_models", default=[
-                {"id": "gpt-4", "name": "GPT-4", "provider": "openai", "category": "chat"},
-                {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo", "provider": "openai", "category": "chat"},
-                {"id": "text-embedding-ada-002", "name": "Embedding Ada 002", "provider": "openai", "category": "embedding"}
-            ]),
-            env="SYSTEM_AVAILABLE_MODELS"
-        )
-        
-        class Config:
-            env_prefix = "SYSTEM_"
-    
-    system_model: SystemModelSettings = SystemModelSettings()
-    
-    # OWL框架配置
-    class OwlSettings(BaseSettings):
-        """OWL框架设置"""
-        enabled: bool = Field(get_config("frameworks", "owl", "enabled", default=True), env="OWL_ENABLED")
-        
-        # 模型配置
-        default_model: Dict[str, Any] = {
-            "model_name": get_config("frameworks", "owl", "model", "default", "name", default=None) or get_config("system", "default_model", default="gpt-4"),
-            "temperature": get_config("frameworks", "owl", "model", "default", "temperature", default=0.7),
-            "max_tokens": get_config("frameworks", "owl", "model", "default", "max_tokens", default=1500)
-        }
-        
-        planner_model: Dict[str, Any] = {
-            "model_name": get_config("frameworks", "owl", "model", "planner", "name", default=None) or get_config("system", "default_model", default="gpt-4"),
-            "temperature": get_config("frameworks", "owl", "model", "planner", "temperature", default=0.2),
-            "max_tokens": get_config("frameworks", "owl", "model", "planner", "max_tokens", default=2000)
-        }
-        
-        executor_model: Dict[str, Any] = {
-            "model_name": get_config("frameworks", "owl", "model", "executor", "name", default=None) or get_config("system", "default_model", default="gpt-3.5-turbo"),
-            "temperature": get_config("frameworks", "owl", "model", "executor", "temperature", default=0.5),
-            "max_tokens": get_config("frameworks", "owl", "model", "executor", "max_tokens", default=1000)
-        }
-        
-        # MCP服务器配置路径
-        mcp_config_path: str = Field(
-            get_config("frameworks", "owl", "mcp_config_path", default="config/mcp_config.json"), 
-            env="OWL_MCP_CONFIG_PATH"
-        )
-        
-        # 获取指定角色的模型配置
-        def get_model_config(self, role: str = "default", user_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-            """获取指定角色的模型配置，支持用户自定义配置覆盖
-            
-            Args:
-                role: 角色名称，可选值为default, planner, executor
-                user_config: 用户自定义配置，优先级高于系统配置
-                
-            Returns:
-                Dict[str, Any]: 模型配置
-            """
-            # 获取默认配置
-            if role == "planner":
-                config = dict(self.planner_model)
-            elif role == "executor":
-                config = dict(self.executor_model)
-            else:
-                config = dict(self.default_model)
-                
-            # 用户配置覆盖
-            if user_config:
-                config.update(user_config)
-                
-            return config
-        
-        class Config:
-            env_prefix = "OWL_"
-    
-    owl: OwlSettings = OwlSettings()
-    
-    # InfluxDB指标统计配置
-    class MetricsSettings(BaseSettings):
-        """指标统计设置"""
-        enabled: bool = Field(get_config("metrics", "enabled", default=False), env="METRICS_ENABLED")
-        provider: str = Field(get_config("metrics", "provider", default="influxdb"), env="METRICS_PROVIDER")
-        token_statistics: bool = Field(get_config("metrics", "token_statistics", default=True), env="METRICS_TOKEN_STATISTICS")
-        
-        # InfluxDB设置
-        influxdb_url: str = Field(get_config("metrics", "influxdb", "url", default="http://localhost:8086"), env="INFLUXDB_URL")
-        influxdb_token: str = Field(get_config("metrics", "influxdb", "token", default=""), env="INFLUXDB_TOKEN")
-        influxdb_org: str = Field(get_config("metrics", "influxdb", "org", default="knowledge_qa_org"), env="INFLUXDB_ORG")
-        influxdb_bucket: str = Field(get_config("metrics", "influxdb", "bucket", default="llm_metrics"), env="INFLUXDB_BUCKET")
-        influxdb_batch_size: int = Field(get_config("metrics", "influxdb", "batch_size", default=50), env="INFLUXDB_BATCH_SIZE")
-        influxdb_flush_interval: int = Field(get_config("metrics", "influxdb", "flush_interval", default=10), env="INFLUXDB_FLUSH_INTERVAL")
-        
-        class Config:
-            env_prefix = "METRICS_"
-    
-    metrics: MetricsSettings = MetricsSettings()
-
     # 遗留路径（保留以兼容）
-    VECTOR_STORE_PATH: str = get_config("paths", "vector_store", default="./vector_store")
-    KNOWLEDGE_BASE_PATH: str = get_config("paths", "knowledge_base", default="./knowledge_base")
+    VECTOR_STORE_PATH: str = os.getenv("VECTOR_STORE_PATH", "./vector_store")
+    KNOWLEDGE_BASE_PATH: str = os.getenv("KNOWLEDGE_BASE_PATH", "./knowledge_base")
     
     # LightRAG配置
-    LIGHTRAG_ENABLED: bool = get_config("frameworks", "lightrag", "enabled", default=False)
-    LIGHTRAG_BASE_DIR: str = get_config("frameworks", "lightrag", "base_dir", default="./data/lightrag")
-    LIGHTRAG_DEFAULT_EMBEDDING_DIM: int = get_config("frameworks", "lightrag", "embedding_dim", default=1536)
-    LIGHTRAG_MAX_TOKEN_SIZE: int = get_config("frameworks", "lightrag", "max_token_size", default=8192)
+    LIGHTRAG_ENABLED: bool = os.getenv("LIGHTRAG_ENABLED", "false").lower() == "true"
+    LIGHTRAG_BASE_DIR: str = os.getenv("LIGHTRAG_BASE_DIR", "./data/lightrag")
+    LIGHTRAG_DEFAULT_EMBEDDING_DIM: int = int(os.getenv("LIGHTRAG_DEFAULT_EMBEDDING_DIM", "1536"))
+    LIGHTRAG_MAX_TOKEN_SIZE: int = int(os.getenv("LIGHTRAG_MAX_TOKEN_SIZE", "8192"))
     
     # LightRAG存储配置
-    LIGHTRAG_GRAPH_DB_TYPE: str = get_config("frameworks", "lightrag", "graph_db_type", default="file")  # 可选: file, postgres, redis
-    LIGHTRAG_PG_HOST: str = get_config("frameworks", "lightrag", "pg_host", default="lightrag-postgres")
-    LIGHTRAG_PG_PORT: int = get_config("frameworks", "lightrag", "pg_port", default=5432)
-    LIGHTRAG_PG_USER: str = get_config("frameworks", "lightrag", "pg_user", default="postgres")
-    LIGHTRAG_PG_PASSWORD: str = get_config("frameworks", "lightrag", "pg_password", default="password")
-    LIGHTRAG_PG_DB: str = get_config("frameworks", "lightrag", "pg_db", default="lightrag")
+    LIGHTRAG_GRAPH_DB_TYPE: str = os.getenv("LIGHTRAG_GRAPH_DB_TYPE", "file")  # 可选: file, postgres, redis
+    LIGHTRAG_PG_HOST: str = os.getenv("LIGHTRAG_PG_HOST", "lightrag-postgres")
+    LIGHTRAG_PG_PORT: int = int(os.getenv("LIGHTRAG_PG_PORT", "5432"))
+    LIGHTRAG_PG_USER: str = os.getenv("LIGHTRAG_PG_USER", "postgres")
+    LIGHTRAG_PG_PASSWORD: str = os.getenv("LIGHTRAG_PG_PASSWORD", "password")
+    LIGHTRAG_PG_DB: str = os.getenv("LIGHTRAG_PG_DB", "lightrag")
     
     # LightRAG和Redis存储配置
-    LIGHTRAG_REDIS_HOST: str = get_config("frameworks", "lightrag", "redis_host", default=REDIS_HOST)
-    LIGHTRAG_REDIS_PORT: int = get_config("frameworks", "lightrag", "redis_port", default=REDIS_PORT)
-    LIGHTRAG_REDIS_DB: int = get_config("frameworks", "lightrag", "redis_db", default=1)
-    LIGHTRAG_REDIS_PASSWORD: str = get_config("frameworks", "lightrag", "redis_password", default=REDIS_PASSWORD)
+    LIGHTRAG_REDIS_HOST: str = os.getenv("LIGHTRAG_REDIS_HOST", REDIS_HOST)
+    LIGHTRAG_REDIS_PORT: int = int(os.getenv("LIGHTRAG_REDIS_PORT", str(REDIS_PORT)))
+    LIGHTRAG_REDIS_DB: int = int(os.getenv("LIGHTRAG_REDIS_DB", "1"))
+    LIGHTRAG_REDIS_PASSWORD: str = os.getenv("LIGHTRAG_REDIS_PASSWORD", REDIS_PASSWORD)
     
     # LightRAG知识图谱高级配置
-    LIGHTRAG_USE_SEMANTIC_CHUNKING: bool = get_config("frameworks", "lightrag", "use_semantic_chunking", default=False)
-    LIGHTRAG_USE_KNOWLEDGE_GRAPH: bool = get_config("frameworks", "lightrag", "use_knowledge_graph", default=False)
-    LIGHTRAG_KG_RELATION_THRESHOLD: float = get_config("frameworks", "lightrag", "kg_relation_threshold", default=0.7)
-    LIGHTRAG_MAX_WORKERS: int = get_config("frameworks", "lightrag", "max_workers", default=4)
+    LIGHTRAG_USE_SEMANTIC_CHUNKING: bool = os.getenv("LIGHTRAG_USE_SEMANTIC_CHUNKING", "false").lower() == "true"
+    LIGHTRAG_USE_KNOWLEDGE_GRAPH: bool = os.getenv("LIGHTRAG_USE_KNOWLEDGE_GRAPH", "false").lower() == "true"
+    LIGHTRAG_KG_RELATION_THRESHOLD: float = float(os.getenv("LIGHTRAG_KG_RELATION_THRESHOLD", "0.7"))
+    LIGHTRAG_MAX_WORKERS: int = int(os.getenv("LIGHTRAG_MAX_WORKERS", "4"))
 
-    # 统一知识库管理配置
-    UNIFIED_KNOWLEDGE_CONFIG = {
-        # 默认切分策略
-        "default_chunking_strategy": get_config("knowledge", "default_chunking_strategy", default="semantic"),
-        # 支持的切分策略
-        "supported_strategies": ["sentence", "paragraph", "semantic", "character", "token", "markdown", "html", "recursive"],
-        # 语义切分阈值
-        "semantic_threshold": get_config("knowledge", "semantic_threshold", default=0.8),
-        # 启用Agno框架
-        "enable_agno_framework": get_config("knowledge", "enable_agno_framework", default=True),
-        # 启用异步处理
-        "enable_async_processing": get_config("knowledge", "enable_async_processing", default=True),
-        # 启用进度回调
-        "enable_progress_callback": get_config("knowledge", "enable_progress_callback", default=True),
-        # 最大并发任务数
-        "max_concurrent_tasks": get_config("knowledge", "max_concurrent_tasks", default=4)
-    }
-
+# 创建设置实例
 settings = Settings()

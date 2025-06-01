@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.repositories.agent_run_repository import AgentRunRepository
 from app.repositories.agent_definition_repository import AgentDefinitionRepository
 from app.schemas.agent_definition import AgentRunRequest, AgentRunResponse

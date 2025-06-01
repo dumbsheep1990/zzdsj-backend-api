@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.memory.manager import get_memory_manager
 from app.schemas.memory import (
     MemoryCreateRequest, 

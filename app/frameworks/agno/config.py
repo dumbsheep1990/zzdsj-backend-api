@@ -3,7 +3,7 @@ Agno配置模块：为Agno框架集成提供配置管理
 """
 
 from typing import Dict, Any, Optional
-from app.utils.config_manager import get_config
+from app.utils.core.config import get_config
 
 
 class AgnoConfig:

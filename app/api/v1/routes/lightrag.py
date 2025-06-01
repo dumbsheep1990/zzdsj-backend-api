@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from enum import Enum
 
 from app.utils.logger import setup_logger
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.messaging.core.models import MessageRole, TextMessage
 from app.messaging.services.message_service import MessageService
 from app.messaging.services.stream_service import StreamService

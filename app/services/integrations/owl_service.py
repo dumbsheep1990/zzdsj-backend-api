@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.owl_integration import OwlIntegration
 from app.repositories.owl_integration_repository import OwlIntegrationRepository
 from app.services.resource_permission_service import ResourcePermissionService

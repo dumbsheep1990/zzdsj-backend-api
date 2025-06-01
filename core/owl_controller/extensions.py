@@ -12,7 +12,7 @@ from app.repositories.agent_template_repository import AgentTemplateRepository
 from app.repositories.tool_repository import ToolRepository
 from app.repositories.agent_run_repository import AgentRunRepository
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 
 logger = logging.getLogger(__name__)
 

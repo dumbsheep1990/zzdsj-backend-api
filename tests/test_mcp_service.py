@@ -11,7 +11,7 @@ from app.main import app
 from app.models.mcp import MCPServiceConfig, MCPTool
 from app.repositories.mcp import MCPServiceRepository, MCPToolRepository
 from core.mcp_service_manager import MCPServiceManager
-from app.utils.database import SessionLocal
+from app.utils.core.database import SessionLocal
 
 client = TestClient(app)
 

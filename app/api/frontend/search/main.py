@@ -15,7 +15,7 @@ from app.services.hybrid_search_service import get_hybrid_search_service, Search
 from app.services.unified_knowledge_service import get_unified_knowledge_service
 from app.schemas.search import SearchRequest as SchemaSearchRequest, SearchResponse as SchemaSearchResponse, SearchResultItem, SearchStrategy
 from app.utils.storage_detector import StorageDetector
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.api.frontend.responses import ResponseFormatter
 
 router = APIRouter()

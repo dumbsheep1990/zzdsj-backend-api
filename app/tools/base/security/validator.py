@@ -15,7 +15,7 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 from fastapi import FastAPI, status
 
-from app.utils.config_manager import get_config_manager
+from app.utils.core.config import get_config_manager
 
 logger = logging.getLogger(__name__)
 

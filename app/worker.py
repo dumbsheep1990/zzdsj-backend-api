@@ -1,6 +1,7 @@
 from celery import Celery
 from app.config import settings
 import time
+from app.utils.core.database import SessionLocal
 
 # 初始化Celery应用
 celery_app = Celery(
@@ -31,7 +32,6 @@ def process_document_task(document_id: int):
     """
     from core.knowledge.document_processor import process_document
     from sqlalchemy.orm import Session
-    from app.utils.database import SessionLocal
     
     # 获取数据库会话
     db = SessionLocal()
@@ -57,7 +57,6 @@ def rebuild_vector_store_task():
     from app.utils.vector_store import init_milvus
     from app.models.knowledge import Document
     from sqlalchemy.orm import Session
-    from app.utils.database import SessionLocal
     
     # 获取数据库会话
     db = SessionLocal()
@@ -92,7 +91,6 @@ def generate_assistant_response_task(conversation_id: int, message_id: int):
     from core.chat.chat_service import generate_assistant_response
     from app.models.chat import Conversation, Message
     from sqlalchemy.orm import Session
-    from app.utils.database import SessionLocal
     
     # 获取数据库会话
     db = SessionLocal()

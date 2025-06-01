@@ -10,7 +10,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.services.advanced_retrieval_service import get_advanced_retrieval_service, AdvancedRetrievalConfig, SourceWeight, FusionConfig, RerankConfig
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.api.frontend.responses import ResponseFormatter
 
 router = APIRouter()

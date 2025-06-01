@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional, Union
 import logging
 from fastapi import Request, Depends
 from pydantic import BaseModel, Field
+from app.utils.core.database import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +93,6 @@ class BaseToolsIntegration:
         
         # 获取数据库会话和基础工具服务
         try:
-            from app.utils.database import get_db
             from app.services.base_tools_service import get_base_tools_service
             from fastapi import Depends
             

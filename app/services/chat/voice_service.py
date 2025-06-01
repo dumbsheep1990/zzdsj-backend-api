@@ -13,7 +13,7 @@ import os
 import tempfile
 from datetime import datetime
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.voice import VoiceConfig, VoiceTask
 from app.repositories.voice_repository import VoiceConfigRepository, VoiceTaskRepository
 from app.services.resource_permission_service import ResourcePermissionService

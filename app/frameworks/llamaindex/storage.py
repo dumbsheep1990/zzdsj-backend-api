@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 import json
 import logging
 
-from app.utils.database import db_manager
+from app.utils.core.database import db_manager
 from app.models.knowledge import DocumentChunk
 from app.models.assistants import Assistant
 

@@ -25,7 +25,7 @@ from app.api.shared.exceptions import (
 )
 
 # 导入数据库模型
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.models.user import User
 
 logger = logging.getLogger(__name__)

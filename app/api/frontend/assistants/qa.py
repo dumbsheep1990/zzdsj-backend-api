@@ -12,7 +12,7 @@ from app.schemas.assistant_qa import (
     AnswerSettingsUpdate, DocumentSegmentSettingsUpdate
 )
 from core.assistant_qa_manager import AssistantQAManager
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.api.frontend.dependencies import ResponseFormatter
 
 router = APIRouter()

@@ -29,7 +29,7 @@ from app.tools.base.document_chunking import (
 
 # 导入数据库模型
 from app.models.knowledge import KnowledgeBase, Document, DocumentChunk as DBDocumentChunk
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 
 logger = logging.getLogger(__name__)
 

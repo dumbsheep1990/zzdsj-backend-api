@@ -5,7 +5,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Table, Text, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.utils.database import Base
+from app.utils.core.database import Base
 import enum
 import uuid
 

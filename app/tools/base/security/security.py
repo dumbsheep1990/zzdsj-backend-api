@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from app.tools.base.security.validator import add_host_validator_middleware
 from app.middleware.rate_limiter import add_rate_limiter_middleware
 from app.middleware.sensitive_word_middleware import SensitiveWordMiddleware
-from app.utils.config_manager import get_config_manager
+from app.utils.core.config import get_config_manager
 
 logger = logging.getLogger(__name__)
 

@@ -16,7 +16,7 @@ from app.frameworks.owl.toolkit_integrator import OwlToolkitIntegrator
 from app.frameworks.owl.utils.tool_factory import CustomTool
 from app.services.owl_tool_service import OwlToolService
 from app.startup.owl_toolkit_init import initialize_owl_toolkits
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.config import settings
 from app.utils.logger import get_logger
 

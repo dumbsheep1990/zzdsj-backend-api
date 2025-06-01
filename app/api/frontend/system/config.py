@@ -7,12 +7,12 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.services.async_system_config_service import AsyncSystemConfigService
-from app.utils.config_validator import ConfigValidator
+from app.utils.core.config.validator import ConfigValidator
 from app.utils.service_health import ServiceHealthChecker
-from app.utils.config_state import config_state_manager
-from app.utils.config_bootstrap import ConfigBootstrap
+from app.utils.core.config.state import config_state_manager
+from app.utils.core.config import ConfigBootstrap
 from app.api.frontend.dependencies import ResponseFormatter, get_current_user, require_permission
 import asyncio
 

@@ -5,7 +5,7 @@
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table, func
 from sqlalchemy.orm import relationship
 import uuid
-from app.utils.database import Base
+from app.utils.core.database import Base
 from sqlalchemy.dialects.postgresql import ARRAY
 from .resource_permission import ResourcePermission, KnowledgeBaseAccess, AssistantAccess, ModelConfigAccess, MCPConfigAccess, UserResourceQuota
 

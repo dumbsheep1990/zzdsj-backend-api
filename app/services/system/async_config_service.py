@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
 from app.models.system_config import SystemConfig, ConfigCategory, ConfigHistory, ServiceHealthRecord
-from app.utils.config_manager import get_config
+from app.utils.core.config import get_config
 import base64
 import os
 from cryptography.fernet import Fernet

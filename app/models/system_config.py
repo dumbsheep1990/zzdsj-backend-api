@@ -4,7 +4,7 @@
 from sqlalchemy import Column, String, Text, JSON, Integer, Boolean, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.utils.database import Base
+from app.utils.core.database import Base
 import uuid
 
 class ConfigCategory(Base):

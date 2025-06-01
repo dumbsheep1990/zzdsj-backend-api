@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import uuid
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 
 # 导入核心业务逻辑层
 from core.agents import ChainManager

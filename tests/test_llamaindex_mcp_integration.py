@@ -9,7 +9,7 @@ from app.frameworks.llamaindex.mcp_client import MCPToolClient
 from app.frameworks.llamaindex.mcp_requests import MCPRequestBuilder
 from app.frameworks.llamaindex.tools import create_mcp_tool, get_all_mcp_tools
 from app.frameworks.integration.mcp_integration import MCPIntegrationService
-from app.utils.database import SessionLocal
+from app.utils.core.database import SessionLocal
 
 
 # 测试数据

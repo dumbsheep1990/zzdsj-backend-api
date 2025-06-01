@@ -5,7 +5,7 @@ from app.repositories.agent_definition_repository import AgentDefinitionReposito
 from app.repositories.tool_repository import ToolRepository
 from app.frameworks.owl.agents.base import BaseAgent
 from app.frameworks.owl.utils.tool_factory import create_custom_tool
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from sqlalchemy.orm import Session
 import logging
 

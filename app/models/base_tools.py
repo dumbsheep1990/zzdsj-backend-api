@@ -9,7 +9,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 
-from app.utils.database import Base
+from app.utils.core.database import Base
 
 def generate_uuid():
     """生成UUID"""

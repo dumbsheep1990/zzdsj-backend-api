@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from app.repositories.tool_repository import ToolRepository
 from app.schemas.tool import ToolCreate, ToolResponse, ToolUpdate
 from app.api.deps import get_current_user

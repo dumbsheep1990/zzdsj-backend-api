@@ -7,7 +7,7 @@ import logging
 from fastapi import FastAPI
 from sqlalchemy.orm import Session
 
-from app.utils.database import get_db
+from app.utils.core.database import get_db
 from core.owl_controller import OwlController
 from app.startup.owl_toolkit_init import initialize_owl_toolkits
 
