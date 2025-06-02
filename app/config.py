@@ -2,6 +2,96 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List, Dict, Any, Optional
 import os
+import secrets
+import warnings
+import json
+from core.system_config import get_config_manager
+
+# 获取配置管理器实例
+config_manager = get_config_manager()
+
+def generate_secure_key() -> str:
+    """生成安全的密钥"""
+    return secrets.token_hex(32)
+
+def get_jwt_secret_key() -> str:
+    """获取JWT密钥，优先使用环境变量，否则生成安全密钥"""
+    key = os.getenv("JWT_SECRET_KEY")
+    if not key:
+        warnings.warn(
+            "JWT_SECRET_KEY环境变量未设置！正在生成临时密钥。"
+            "生产环境中请设置JWT_SECRET_KEY环境变量。",
+            UserWarning
+        )
+        return generate_secure_key()
+    
+    # 检查是否是默认的不安全密钥
+    if key == "23f0767704249cd7be7181a0dad23c74e0739c98ce54d7140fc2e94dfa584fb0":
+        warnings.warn(
+            "检测到默认JWT密钥！这在生产环境中不安全。"
+            "请设置一个新的随机JWT_SECRET_KEY。",
+            UserWarning
+        )
+    
+    return key
+
+def get_database_url() -> str:
+    """获取数据库连接URL，优先使用环境变量"""
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        # 从单独的配置项构建URL
+        host = os.getenv("POSTGRES_HOST", config_manager.get("postgres_host", "localhost"))
+        port = os.getenv("POSTGRES_PORT", "5432")
+        user = os.getenv("POSTGRES_USER", "postgres")
+        password = os.getenv("POSTGRES_PASSWORD", "postgres")
+        db = os.getenv("POSTGRES_DB", "knowledge_qa")
+        
+        url = f"postgresql://{user}:{password}@{host}:{port}/{db}"
+        
+        if password == "postgres":
+            warnings.warn(
+                "检测到默认数据库密码！生产环境中请设置强密码。",
+                UserWarning
+            )
+    
+    return url
+
+def get_celery_broker_url() -> str:
+    """获取Celery代理URL，优先使用环境变量"""
+    url = os.getenv("CELERY_BROKER_URL")
+    if not url:
+        # 从RabbitMQ配置构建URL
+        host = os.getenv("RABBITMQ_HOST", "localhost")
+        port = os.getenv("RABBITMQ_PORT", "5672")
+        user = os.getenv("RABBITMQ_USER", "guest")
+        password = os.getenv("RABBITMQ_PASSWORD", "guest")
+        
+        url = f"amqp://{user}:{password}@{host}:{port}//"
+        
+        if password == "guest":
+            warnings.warn(
+                "检测到默认RabbitMQ密码！生产环境中请设置强密码。",
+                UserWarning
+            )
+    
+    return url
+
+def get_celery_result_backend() -> str:
+    """获取Celery结果后端URL，优先使用环境变量"""
+    url = os.getenv("CELERY_RESULT_BACKEND")
+    if not url:
+        # 从Redis配置构建URL
+        host = os.getenv("REDIS_HOST", "localhost")
+        port = os.getenv("REDIS_PORT", "6379")
+        password = os.getenv("REDIS_PASSWORD", "")
+        db = os.getenv("REDIS_DB", "0")
+        
+        if password:
+            url = f"redis://:{password}@{host}:{port}/{db}"
+        else:
+            url = f"redis://{host}:{port}/{db}"
+    
+    return url
 
 class Settings:
     # 服务信息
@@ -12,16 +102,19 @@ class Settings:
     SERVICE_PORT: int = int(os.getenv("SERVICE_PORT", "8000"))
     
     # 数据库
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/knowledge_qa")
+    DATABASE_URL: str = get_database_url()
     
     # CORS跨域
-    CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:3000", "http://localhost:8080", "*"]
+    CORS_ORIGINS: List[str] = json.loads(os.getenv("CORS_ORIGINS", '["http://localhost", "http://localhost:3000", "http://localhost:8080", "*"]'))
     
-    # 认证与安全配置
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "23f0767704249cd7be7181a0dad23c74e0739c98ce54d7140fc2e94dfa584fb0")
+    # 认证与安全配置 - 修复安全漏洞
+    JWT_SECRET_KEY: str = get_jwt_secret_key()
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+    
+    # 加密密钥
+    ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", generate_secure_key())
     
     # LLM配置
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
@@ -112,12 +205,12 @@ class Settings:
     BAICHUAN_API_BASE: str = os.getenv("BAICHUAN_API_BASE", "https://api.baichuan-ai.com/v1")
     
     # 向量存储 - Milvus配置
-    MILVUS_HOST: str = os.getenv("MILVUS_HOST", "localhost")
+    MILVUS_HOST: str = os.getenv("MILVUS_HOST", config_manager.get("milvus_host", "localhost"))
     MILVUS_PORT: str = os.getenv("MILVUS_PORT", "19530")
     MILVUS_COLLECTION: str = os.getenv("MILVUS_COLLECTION", "document_vectors")
     
     # 向量存储 - Elasticsearch配置
-    ELASTICSEARCH_URL: str = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
+    ELASTICSEARCH_URL: str = os.getenv("ELASTICSEARCH_URL", config_manager.get("elasticsearch_url", "http://localhost:9200"))
     ELASTICSEARCH_USERNAME: str = os.getenv("ELASTICSEARCH_USERNAME", "")
     ELASTICSEARCH_PASSWORD: str = os.getenv("ELASTICSEARCH_PASSWORD", "")
     ELASTICSEARCH_CLOUD_ID: str = os.getenv("ELASTICSEARCH_CLOUD_ID", "")
@@ -140,13 +233,13 @@ class Settings:
     DOCUMENT_USE_METADATA_EXTRACTION: bool = os.getenv("DOCUMENT_USE_METADATA_EXTRACTION", "true").lower() == "true"
     
     # Redis配置
-    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_HOST: str = os.getenv("REDIS_HOST", config_manager.get("redis_host", "localhost"))
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
     REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD", "")
     
     # MinIO配置
-    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", config_manager.get("minio_endpoint", "localhost:9000"))
     MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
     MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
     MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
@@ -164,8 +257,8 @@ class Settings:
     NACOS_GROUP: str = os.getenv("NACOS_GROUP", "DEFAULT_GROUP")
     
     # Celery配置
-    CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672//")
-    CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+    CELERY_BROKER_URL: str = get_celery_broker_url()
+    CELERY_RESULT_BACKEND: str = get_celery_result_backend()
     
     # 框架配置
     # LlamaIndex配置（替代LangChain）
@@ -268,3 +361,5 @@ class Settings:
 
 # 创建设置实例
 settings = Settings()
+
+

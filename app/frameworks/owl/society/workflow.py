@@ -1,8 +1,9 @@
 from typing import Any, Dict, List, Optional, Tuple, Callable, Union
 import asyncio
+from abc import ABC, abstractmethod
 
 from app.frameworks.owl.agents.base import BaseAgent
-from app.utils.logger import get_logger
+from app.utils.common.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -1,0 +1,260 @@
+# ==============================================================================
+# 最小配置集合 - 系统快速启动验证配置
+# 包含23项核心配置，用于快速启动和系统验证
+# ==============================================================================
+
+# 应用基础配置 (系统核心配置 5项)
+app:
+  name: "知识QA系统-最小化版本"
+  environment: "minimal"
+  debug: false
+  version: "1.0.0"
+
+# 服务配置
+service:
+  name: "knowledge-qa-backend"
+  ip: "127.0.0.1"
+  port: 8000
+  workers: 1
+  
+# 日志配置
+logging:
+  level: "INFO"
+  format: "simple"
+  file_enabled: false
+  console_enabled: true
+  
+# 安全配置 (4项核心安全配置)
+security:
+  jwt:
+    algorithm: "HS256"
+    access_token_expire_minutes: 30
+    refresh_token_expire_days: 1
+  cors:
+    enabled: true
+    origins: 
+      - "http://localhost"
+      - "http://localhost:3000"
+      - "http://localhost:8080"
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    headers: ["*"]
+
+# 数据库配置 (1项核心配置 - 增强版)
+database:
+  # 核心配置：使用SQLite实现零依赖启动
+  url: "sqlite:///./data/minimal.db"
+  echo: false
+  pool_size: 1
+  max_overflow: 0
+  pool_timeout: 10
+  pool_recycle: 3600
+  # 数据库管理配置
+  auto_create_tables: true
+  auto_migrate: true
+  seed_minimal_data: true
+  backup_enabled: false
+  
+# Redis配置 (3项服务集成配置)
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: null
+  max_connections: 5
+  timeout: 5
+  
+# MinIO存储配置 (4项服务集成配置)
+storage:
+  minio:
+    endpoint: "localhost:9000"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    bucket: "knowledge-docs-minimal"
+    secure: false
+    region: "us-east-1"
+    
+# 向量存储配置 (3项服务集成配置)
+vector_store:
+  milvus:
+    host: "localhost"
+    port: 19530
+    collection: "knowledge_base_minimal"
+    dimension: 1536
+    metric_type: "IP"
+    
+# 搜索服务配置 (2项服务集成配置)
+search:
+  elasticsearch:
+    url: "http://localhost:9200"
+    index: "knowledge_docs_minimal"
+    timeout: 10
+    
+# AI模型配置 (1项服务集成配置)
+ai:
+  openai:
+    api_key: "sk-test-key-for-minimal"
+    model: "gpt-3.5-turbo"
+    temperature: 0.5
+    max_tokens: 1000
+    timeout: 30
+
+# 文档处理配置 (最小化配置)
+document:
+  max_file_size: "10MB"
+  allowed_extensions: [".txt", ".md", ".pdf"]
+  chunk_size: 500
+  chunk_overlap: 50
+  
+# 缓存配置
+cache:
+  default_ttl: 300  # 5分钟
+  max_size: 100
+  cleanup_interval: 60
+  
+# 功能开关（最小化配置）
+features:
+  voice_enabled: false
+  metrics_enabled: false
+  admin_panel_enabled: false
+  api_docs_enabled: true
+  cors_enabled: true
+  debug_tools: false
+  hot_reload: false
+  mock_services: false
+  
+# 监控配置（最小化）
+monitoring:
+  health_check_enabled: true
+  metrics_enabled: false
+  prometheus_enabled: false
+  
+# API配置
+api:
+  version: "v1"
+  title: "知识QA系统API - 最小版"
+  description: "最小配置模式的知识问答系统API"
+  rate_limit_enabled: false
+  pagination_default_size: 10
+  pagination_max_size: 50
+
+# 任务队列配置（简化）
+task_queue:
+  broker_url: "memory://"
+  result_backend: "cache+memory://"
+  max_retries: 1
+  retry_delay: 10
+
+# ==============================================================================
+# 环境变量映射（23项核心配置）
+# ==============================================================================
+#
+# 以下环境变量会覆盖配置文件中的值：
+#
+# 系统核心配置 (5项):
+# - SERVICE_NAME=knowledge-qa-backend
+# - SERVICE_IP=127.0.0.1  
+# - SERVICE_PORT=8000
+# - APP_ENV=minimal
+# - LOG_LEVEL=INFO
+#
+# 安全配置 (4项):
+# - JWT_SECRET_KEY=(自动生成)
+# - JWT_ALGORITHM=HS256
+# - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+# - ENCRYPTION_KEY=(自动生成)
+#
+# 数据库配置 (1项):
+# - DATABASE_URL=sqlite:///./data/minimal.db
+#
+# 服务集成配置 (13项):
+# - REDIS_HOST=localhost
+# - REDIS_PORT=6379
+# - REDIS_DB=0
+# - MINIO_ENDPOINT=localhost:9000
+# - MINIO_ACCESS_KEY=minioadmin
+# - MINIO_SECRET_KEY=minioadmin
+# - MINIO_BUCKET=knowledge-docs-minimal
+# - MILVUS_HOST=localhost
+# - MILVUS_PORT=19530
+# - MILVUS_COLLECTION=knowledge_base_minimal
+# - ELASTICSEARCH_URL=http://localhost:9200
+# - ELASTICSEARCH_INDEX=knowledge_docs_minimal
+# - OPENAI_API_KEY=sk-test-key-for-minimal
+#
+# ==============================================================================
+
+# ==============================================================================
+# 数据库配置说明
+# ==============================================================================
+#
+# SQLite 配置特点：
+# 1. 零依赖：无需安装外部数据库服务
+# 2. 文件存储：数据保存在 ./data/minimal.db
+# 3. 自动创建：首次启动自动创建表和目录
+# 4. 轻量级：适合开发、测试和演示环境
+#
+# 数据目录结构：
+# ./data/
+# ├── minimal.db          # SQLite数据库文件
+# ├── uploads/            # 上传文件存储 
+# ├── logs/               # 日志文件
+# └── backups/            # 备份文件
+#
+# 扩展配置（如需要）：
+# 
+# PostgreSQL 配置示例：
+# database:
+#   url: "postgresql://user:pass@localhost:5432/minimal_db"
+#   echo: false
+#   pool_size: 5
+#
+# MySQL 配置示例：
+# database:
+#   url: "mysql+pymysql://user:pass@localhost:3306/minimal_db"
+#   echo: false
+#   pool_size: 5
+#
+# ==============================================================================
+
+# ==============================================================================
+# 配置验证
+# ==============================================================================
+#
+# 可以使用以下命令验证最小配置：
+# 
+# 1. 验证配置完整性：
+#    python scripts/env_manager.py validate --environment minimal
+#
+# 2. 查看配置摘要：
+#    python scripts/env_manager.py summary --environment minimal
+#
+# 3. 测试配置加载：
+#    python scripts/test_config_loading.py
+#
+# 4. 启动应用（最小模式）：
+#    export APP_ENV=minimal
+#    export CONFIG_MODE=minimal
+#    python main.py
+#
+# ==============================================================================
+
+# ==============================================================================
+# 使用场景
+# ==============================================================================
+# 
+# 此最小配置适用于：
+# 1. 系统快速试车验证 - 30秒内完成启动
+# 2. 开发环境快速搭建 - 无需配置外部服务
+# 3. CI/CD 自动化测试 - 最小依赖环境
+# 4. 容器化部署验证 - 单容器运行
+# 5. 演示和培训环境 - 简化部署流程
+# 6. 功能预览和体验 - 零配置启动
+#
+# 性能特点：
+# - 启动时间：< 30秒
+# - 内存占用：< 200MB  
+# - 磁盘空间：< 50MB
+# - CPU使用：单核心
+# - 并发处理：< 10用户
+#
+# ============================================================================== 

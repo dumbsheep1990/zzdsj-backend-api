@@ -1,0 +1,222 @@
+{
+  "app": {
+    "name": "知识QA系统-开发版",
+    "environment": "development",
+    "debug": true,
+    "version": "1.0.0",
+    "timezone": "Asia/Shanghai"
+  },
+  "service": {
+    "name": "knowledge-qa-backend",
+    "ip": "127.0.0.1",
+    "port": 8000,
+    "host": "localhost",
+    "workers": 1
+  },
+  "logging": {
+    "level": "DEBUG",
+    "format": "detailed",
+    "file_enabled": true,
+    "console_enabled": true,
+    "max_file_size": "10MB",
+    "backup_count": 5
+  },
+  "security": {
+    "jwt": {
+      "algorithm": "HS256",
+      "access_token_expire_minutes": 30,
+      "refresh_token_expire_days": 7
+    },
+    "cors": {
+      "enabled": true,
+      "origins": [
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8080"
+      ],
+      "methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "headers": [
+        "*"
+      ]
+    },
+    "rate_limiting": {
+      "enabled": false,
+      "requests_per_minute": 60
+    }
+  },
+  "database": {
+    "url": "postgresql://dev_user:dev_pass@localhost:5432/qa_dev",
+    "echo": true,
+    "pool_size": 5,
+    "max_overflow": 10,
+    "pool_timeout": 30,
+    "pool_recycle": 3600
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "db": 0,
+    "password": null,
+    "max_connections": 10,
+    "timeout": 5
+  },
+  "storage": {
+    "minio": {
+      "endpoint": "localhost:9000",
+      "access_key": "dev_access_key",
+      "secret_key": "dev_secret_key",
+      "bucket": "knowledge-docs-dev",
+      "secure": false,
+      "region": "us-east-1"
+    }
+  },
+  "vector_store": {
+    "milvus": {
+      "host": "localhost",
+      "port": 19530,
+      "collection": "knowledge_base_dev",
+      "dimension": 1536,
+      "metric_type": "IP",
+      "index_type": "IVF_FLAT",
+      "nlist": 1024
+    }
+  },
+  "search": {
+    "elasticsearch": {
+      "url": "http://localhost:9200",
+      "index": "knowledge_docs_dev",
+      "timeout": 30,
+      "max_retries": 3
+    }
+  },
+  "ai": {
+    "openai": {
+      "api_key": "${OPENAI_API_KEY}",
+      "model": "gpt-3.5-turbo",
+      "temperature": 0.3,
+      "max_tokens": 2000,
+      "timeout": 30
+    },
+    "embedding": {
+      "model": "text-embedding-ada-002",
+      "batch_size": 100
+    }
+  },
+  "document": {
+    "max_file_size": "100MB",
+    "allowed_extensions": [
+      ".pdf",
+      ".docx",
+      ".txt",
+      ".md"
+    ],
+    "chunk_size": 800,
+    "chunk_overlap": 100
+  },
+  "cache": {
+    "default_ttl": 600,
+    "max_size": 500,
+    "cleanup_interval": 300
+  },
+  "features": {
+    "voice_enabled": true,
+    "metrics_enabled": true,
+    "admin_panel_enabled": true,
+    "api_docs_enabled": true,
+    "cors_enabled": true,
+    "debug_tools": true,
+    "hot_reload": true,
+    "mock_services": true
+  },
+  "monitoring": {
+    "health_check_enabled": true,
+    "metrics_enabled": true,
+    "prometheus_enabled": true,
+    "jaeger_enabled": false
+  },
+  "task_queue": {
+    "broker_url": "redis://localhost:6379/1",
+    "result_backend": "redis://localhost:6379/2",
+    "max_retries": 1,
+    "retry_delay": 60
+  },
+  "email": {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "username": "",
+    "password": "",
+    "use_tls": true
+  },
+  "websocket": {
+    "enabled": true,
+    "max_connections": 50,
+    "heartbeat_interval": 30
+  },
+  "api": {
+    "version": "v1",
+    "title": "知识QA系统API - 开发版",
+    "description": "开发环境API，包含调试和测试功能",
+    "rate_limit_enabled": false,
+    "pagination_default_size": 20,
+    "pagination_max_size": 100
+  },
+  "development": {
+    "auto_reload": true,
+    "profiler_enabled": true,
+    "sql_debug": true,
+    "template_debug": true,
+    "static_debug": true
+  },
+  "MallocNanoZone": 0,
+  "USER": "wxn",
+  "COMMAND_MODE": "unix2003",
+  "__CFBundleIdentifier": "com.todesktop.230313mzl4w4u92",
+  "PATH": "/Library/Frameworks/Python.framework/Versions/3.11/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/go/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/anaconda3/bin:/opt/anaconda3/condabin:/Library/Frameworks/Python.framework/Versions/3.11/bin:/Users/wxn/.orbstack/bin:/Users/wxn/.orbstack/bin",
+  "LOGNAME": "wxn",
+  "SSH_AUTH_SOCK": "/private/tmp/com.apple.launchd.RqQ7EDfCru/Listeners",
+  "HOME": "/Users/wxn",
+  "SHELL": "/bin/zsh",
+  "TMPDIR": "/var/folders/17/6nnt9q5x3j3fk196j5wbrsmr0000gn/T/",
+  "__CF_USER_TEXT_ENCODING": "0x1F5:0x19:0x34",
+  "XPC_SERVICE_NAME": 0,
+  "XPC_FLAGS": "0x0",
+  "ORIGINAL_XDG_CURRENT_DESKTOP": "undefined",
+  "CURSOR_TRACE_ID": "4fc108f1de344d0d996c2d598f264f1d",
+  "SHLVL": 1,
+  "PWD": "/Users/wxn/Desktop/ZZDSJ/zzdsj-backend-api",
+  "OLDPWD": "/Users/wxn/Desktop/ZZDSJ/zzdsj-backend-api",
+  "CONDA_EXE": "/opt/anaconda3/bin/conda",
+  "_CE_M": "",
+  "_CE_CONDA": "",
+  "CONDA_PYTHON_EXE": "/opt/anaconda3/bin/python",
+  "CONDA_SHLVL": 1,
+  "CONDA_PREFIX": "/opt/anaconda3",
+  "CONDA_DEFAULT_ENV": "base",
+  "CONDA_PROMPT_MODIFIER": "(base) ",
+  "PAGER": "head -n 10000 | cat",
+  "DISABLE_AUTO_UPDATE": true,
+  "TERM_PROGRAM": "vscode",
+  "TERM_PROGRAM_VERSION": "0.50.7",
+  "LANG": "en_US.UTF-8",
+  "COLORTERM": "truecolor",
+  "GIT_ASKPASS": "/Applications/Cursor.app/Contents/Resources/app/extensions/git/dist/askpass.sh",
+  "VSCODE_GIT_ASKPASS_NODE": "/Applications/Cursor.app/Contents/Frameworks/Cursor Helper (Plugin).app/Contents/MacOS/Cursor Helper (Plugin)",
+  "VSCODE_GIT_ASKPASS_EXTRA_ARGS": "",
+  "VSCODE_GIT_ASKPASS_MAIN": "/Applications/Cursor.app/Contents/Resources/app/extensions/git/dist/askpass-main.js",
+  "VSCODE_GIT_IPC_HANDLE": "/var/folders/17/6nnt9q5x3j3fk196j5wbrsmr0000gn/T/vscode-git-dc689b644b.sock",
+  "VSCODE_INJECTION": 1,
+  "ZDOTDIR": "/Users/wxn",
+  "USER_ZDOTDIR": "/Users/wxn",
+  "TERM": "xterm-256color",
+  "GSETTINGS_SCHEMA_DIR_CONDA_BACKUP": "",
+  "GSETTINGS_SCHEMA_DIR": "/opt/anaconda3/share/glib-2.0/schemas",
+  "_": "/opt/anaconda3/bin/python",
+  "APP_ENV": "development"
+}

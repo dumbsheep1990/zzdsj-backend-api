@@ -108,6 +108,104 @@ services:
       - mysql_data:/var/lib/mysql
     restart: always
 
+  # Celery Worker - 处理异步任务
+  celery-worker:
+    build: .
+    command: celery -A app.worker worker --loglevel=info --concurrency=4
+    volumes:
+      - .:/app
+      - celery_logs:/app/logs
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_qa
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+      - MILVUS_HOST=milvus
+      - MINIO_ENDPOINT=minio:9000
+    restart: always
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.worker", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Beat - 定时任务调度器
+  celery-beat:
+    build: .
+    command: celery -A app.worker beat --loglevel=info
+    volumes:
+      - .:/app
+      - celery_logs:/app/logs
+      - celery_beat_data:/app/celerybeat
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_qa
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BEAT_SCHEDULE_FILENAME=/app/celerybeat/celerybeat-schedule
+    restart: always
+
+  # Flower - Celery监控界面
+  flower:
+    build: .
+    command: celery -A app.worker flower --port=5555 --basic_auth=admin:password
+    ports:
+      - "5555:5555"
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - rabbitmq
+      - celery-worker
+    environment:
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    restart: always
+
+  # Celery Worker - 专用维护队列
+  celery-worker-maintenance:
+    build: .
+    command: celery -A app.worker worker --loglevel=info --queues=maintenance,monitoring --concurrency=2
+    volumes:
+      - .:/app
+      - celery_logs:/app/logs
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_qa
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+    restart: always
+
+  # Celery Worker - 专用报表队列
+  celery-worker-reports:
+    build: .
+    command: celery -A app.worker worker --loglevel=info --queues=reports,analytics --concurrency=1
+    volumes:
+      - .:/app
+      - celery_logs:/app/logs
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_qa
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+    restart: always
+
 volumes:
   postgres_data:
   etcd_data:
@@ -116,3 +214,5 @@ volumes:
   rabbitmq_data:
   minio_data:
   mysql_data:
+  celery_logs:
+  celery_beat_data:

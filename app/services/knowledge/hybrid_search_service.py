@@ -19,8 +19,8 @@ from core.knowledge import RetrievalManager, VectorManager
 # 导入原有工具（保留兼容性）
 from app.utils.elasticsearch_manager import get_elasticsearch_manager
 from app.utils.milvus_manager import get_milvus_manager
-from app.utils.storage_detector import StorageDetector
-from app.utils.embedding_utils import get_embedding
+from app.utils.storage.detection import StorageDetector
+from app.utils.text.embedding_utils import get_embedding
 from app.config import settings
 
 logger = logging.getLogger(__name__)

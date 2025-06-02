@@ -38,7 +38,8 @@ from core.knowledge import (
 
 # 导入工具和框架
 from app.utils.object_storage import upload_file, get_file_url
-from app.utils.vector_store import get_vector_store
+# 使用新的标准化向量存储组件
+from app.utils.storage.vector_storage import get_vector_store
 from app.frameworks.agno import KnowledgeBaseProcessor
 
 # 导入统一的知识库管理工具

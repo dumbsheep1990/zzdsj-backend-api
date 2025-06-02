@@ -1,15 +1,16 @@
 """
-LightRAG API路由
-提供与LightRAG知识图谱交互的API接口
-支持所有查询模式和前缀
+LightRAG API v1路由模块
+提供LightRAG知识图谱服务的API接口
 """
 
+import asyncio
+import logging
 from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from enum import Enum
 
-from app.utils.logger import setup_logger
+from app.utils.common.logger import setup_logger
 from app.utils.core.database import get_db
 from app.messaging.core.models import MessageRole, TextMessage
 from app.messaging.services.message_service import MessageService

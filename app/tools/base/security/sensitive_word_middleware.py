@@ -1,15 +1,20 @@
 """
-敏感词过滤中间件
-用于拦截包含敏感词的请求，适用于FastAPI框架
+敏感词检测中间件
+
+提供对话后置处理功能，检测并过滤敏感内容。
+此中间件不影响主要流程，即使出现异常也不会阻断对话流程。
 """
 
 import logging
-from typing import Dict, Any, Optional, Callable
+import asyncio
+from typing import Dict, List, Any, Optional, Callable, Union
+from functools import wraps
 from fastapi import Request, Response, HTTPException
 from fastapi.responses import JSONResponse
 import json
 
-from app.utils.sensitive_word_filter import get_sensitive_word_filter, SensitiveWordFilter
+from app.config import settings
+from app.utils.security.content_filtering import get_sensitive_word_filter, SensitiveWordFilter
 
 logger = logging.getLogger(__name__)
 

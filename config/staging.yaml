@@ -1,0 +1,209 @@
+# ==============================================================================
+# 预发布环境配置文件
+# 接近生产环境配置，但保留必要的调试和监控功能
+# ==============================================================================
+
+# 应用基础配置
+app:
+  name: "知识QA系统-预发布版"
+  environment: "staging"
+  debug: false
+  
+# 服务配置
+service:
+  ip: "0.0.0.0"
+  port: 8000
+  workers: 2
+  
+# 日志配置
+logging:
+  level: "INFO"
+  format: "json"  # 结构化日志便于分析
+  file_enabled: true
+  console_enabled: true
+  max_file_size: "50MB"
+  backup_count: 10
+  
+# 安全配置
+security:
+  jwt:
+    algorithm: "HS256"
+    access_token_expire_minutes: 30
+    refresh_token_expire_days: 7
+  cors:
+    enabled: true
+    origins: 
+      - "${FRONTEND_URL}"
+      - "https://staging.example.com"
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 120
+    
+# 数据库配置（预发布环境使用PostgreSQL）
+database:
+  url: "${DATABASE_URL}"
+  echo: false
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+  pool_recycle: 3600
+  
+# Redis配置
+redis:
+  host: "${REDIS_HOST}"
+  port: 6379
+  db: 0
+  password: "${REDIS_PASSWORD}"
+  max_connections: 20
+  timeout: 5
+  
+# MinIO存储配置
+storage:
+  minio:
+    endpoint: "${MINIO_ENDPOINT}"
+    access_key: "${MINIO_ACCESS_KEY}"
+    secret_key: "${MINIO_SECRET_KEY}"
+    bucket: "knowledge-docs-staging"
+    secure: true
+    region: "us-east-1"
+    
+# 向量存储配置
+vector_store:
+  milvus:
+    host: "${MILVUS_HOST}"
+    port: 19530
+    collection: "knowledge_base_staging"
+    dimension: 1536
+    metric_type: "IP"
+    index_type: "IVF_FLAT"
+    nlist: 1024
+    
+# 搜索服务配置
+search:
+  elasticsearch:
+    url: "${ELASTICSEARCH_URL}"
+    index: "knowledge_docs_staging"
+    timeout: 30
+    max_retries: 3
+    
+# AI模型配置
+ai:
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    model: "gpt-3.5-turbo"
+    temperature: 0.7
+    max_tokens: 1500
+    timeout: 30
+  embedding:
+    model: "text-embedding-ada-002"
+    batch_size: 100
+    
+# 文档处理配置
+document:
+  max_file_size: "50MB"
+  allowed_extensions: [".pdf", ".docx", ".txt", ".md"]
+  chunk_size: 1000
+  chunk_overlap: 200
+  
+# 缓存配置
+cache:
+  default_ttl: 3600
+  max_size: 2000
+  cleanup_interval: 300
+  
+# 功能开关
+features:
+  voice_enabled: true
+  metrics_enabled: true
+  admin_panel_enabled: true
+  api_docs_enabled: true  # 预发布环境保留文档
+  cors_enabled: true
+  debug_tools: false
+  hot_reload: false
+  
+# 监控配置（预发布环境启用完整监控）
+monitoring:
+  health_check_enabled: true
+  metrics_enabled: true
+  prometheus_enabled: true
+  jaeger_enabled: true
+  
+# 任务队列配置
+task_queue:
+  broker_url: "${CELERY_BROKER_URL}"
+  result_backend: "${CELERY_RESULT_BACKEND}"
+  max_retries: 3
+  retry_delay: 60
+  
+# 邮件配置
+email:
+  smtp_server: "${SMTP_SERVER}"
+  smtp_port: 587
+  username: "${SMTP_USERNAME}"
+  password: "${SMTP_PASSWORD}"
+  use_tls: true
+  
+# WebSocket配置
+websocket:
+  enabled: true
+  max_connections: 200
+  heartbeat_interval: 30
+  
+# API配置
+api:
+  version: "v1"
+  title: "知识QA系统API - 预发布版"
+  description: "预发布环境API，用于最终验证"
+  rate_limit_enabled: true
+  pagination_default_size: 20
+  pagination_max_size: 100
+
+# 预发布专用配置
+staging:
+  performance_testing: true
+  load_testing_enabled: true
+  error_tracking_enabled: true
+  user_feedback_enabled: true
+  
+# 性能配置
+performance:
+  connection_pool_size: 20
+  worker_timeout: 120
+  max_request_size: "100MB"
+  keepalive_timeout: 5
+  
+# 安全增强配置
+security_enhanced:
+  ssl_redirect: true
+  secure_headers: true
+  content_security_policy: true
+  sql_injection_protection: true
+  xss_protection: true
+  
+# 备份配置
+backup:
+  enabled: true
+  database_backup_interval: "0 2 * * *"  # 每天凌晨2点
+  file_backup_interval: "0 3 * * 0"      # 每周日凌晨3点
+  retention_days: 30
+  
+# 告警配置
+alerting:
+  enabled: true
+  error_threshold: 10
+  response_time_threshold: 2000
+  disk_usage_threshold: 80
+  memory_usage_threshold: 85
+  
+# ==============================================================================
+# 预发布环境特性
+# ==============================================================================
+# 
+# 1. 接近生产环境的配置和性能设置
+# 2. 启用完整的监控和告警系统
+# 3. 使用环境变量管理敏感配置
+# 4. 启用性能和负载测试功能
+# 5. 配置备份和灾难恢复策略
+# 6. 保留必要的调试功能便于问题排查
+# 7. 安全配置接近生产环境标准
+# ============================================================================== 

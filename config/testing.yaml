@@ -1,0 +1,170 @@
+# ==============================================================================
+# 测试环境配置文件
+# 针对自动化测试和集成测试优化，使用内存数据库和模拟服务
+# ==============================================================================
+
+# 应用基础配置
+app:
+  name: "知识QA系统-测试版"
+  environment: "testing"
+  debug: false
+  
+# 服务配置
+service:
+  ip: "127.0.0.1"
+  port: 8001  # 使用不同端口避免冲突
+  workers: 1
+  
+# 日志配置
+logging:
+  level: "WARNING"  # 测试环境减少日志输出
+  format: "simple"
+  file_enabled: false
+  console_enabled: true
+  
+# 安全配置
+security:
+  jwt:
+    access_token_expire_minutes: 5  # 测试环境较短过期时间
+  cors:
+    enabled: true
+    origins: ["*"]
+  rate_limiting:
+    enabled: false  # 测试时禁用限流
+    
+# 数据库配置（测试环境使用内存SQLite）
+database:
+  url: "sqlite:///:memory:"
+  echo: false  # 测试时不显示SQL
+  pool_size: 1
+  
+# Redis配置（测试环境使用专用DB）
+redis:
+  host: "localhost"
+  port: 6379
+  db: 15  # 使用专用测试数据库
+  password: null
+  
+# MinIO存储配置（测试环境）
+storage:
+  minio:
+    endpoint: "localhost:9001"  # 测试专用端口
+    access_key: "test_access_key"
+    secret_key: "test_secret_key"
+    bucket: "knowledge-docs-test"
+    secure: false
+    
+# 向量存储配置（测试环境）
+vector_store:
+  milvus:
+    host: "localhost"
+    port: 19531  # 测试专用端口
+    collection: "knowledge_base_test"
+    
+# 搜索服务配置（测试环境）
+search:
+  elasticsearch:
+    url: "http://localhost:9201"  # 测试专用端口
+    index: "knowledge_docs_test"
+    timeout: 10
+    
+# AI模型配置（测试环境使用模拟）
+ai:
+  openai:
+    api_key: "test-api-key"
+    model: "gpt-3.5-turbo"
+    temperature: 0.0  # 确定性输出便于测试
+    max_tokens: 100
+    timeout: 5
+    
+# 文档处理配置
+document:
+  max_file_size: "10MB"  # 测试环境限制文件大小
+  chunk_size: 500
+  chunk_overlap: 50
+  
+# 缓存配置
+cache:
+  default_ttl: 60  # 测试环境短缓存时间
+  max_size: 100
+  
+# 功能开关（测试环境配置）
+features:
+  voice_enabled: false
+  metrics_enabled: false  # 测试时禁用指标收集
+  admin_panel_enabled: false
+  api_docs_enabled: false
+  cors_enabled: true
+  debug_tools: false
+  hot_reload: false
+  mock_services: true  # 启用模拟服务
+  
+# 监控配置
+monitoring:
+  health_check_enabled: false
+  metrics_enabled: false
+  prometheus_enabled: false
+  
+# 任务队列配置
+task_queue:
+  broker_url: "redis://localhost:6379/14"  # 测试专用队列
+  result_backend: "redis://localhost:6379/13"
+  max_retries: 0  # 测试时不重试
+  retry_delay: 1
+  
+# WebSocket配置
+websocket:
+  enabled: false  # 测试时通常不需要WebSocket
+  
+# API配置
+api:
+  title: "知识QA系统API - 测试版"
+  description: "测试环境API"
+  rate_limit_enabled: false
+
+# 测试专用配置
+testing:
+  mock_external_apis: true
+  use_in_memory_db: true
+  disable_auth: false
+  fast_mode: true
+  cleanup_after_test: true
+  fixtures_enabled: true
+  seed_data_enabled: true
+  
+# 模拟服务配置
+mock_services:
+  openai_api: 
+    enabled: true
+    response_delay: 0.1
+  minio:
+    enabled: true
+    use_local_storage: true
+  elasticsearch:
+    enabled: true
+    use_mock_data: true
+  milvus:
+    enabled: true
+    use_mock_vectors: true
+    
+# 测试数据配置
+test_data:
+  auto_load_fixtures: true
+  fixture_files:
+    - "users.json"
+    - "documents.json"
+    - "knowledge_base.json"
+  cleanup_strategy: "after_each"
+  
+# ==============================================================================
+# 测试环境特性
+# ==============================================================================
+# 
+# 1. 使用内存数据库，测试结束自动清理
+# 2. 启用模拟服务，减少外部依赖
+# 3. 较短的过期时间便于测试时间相关功能
+# 4. 禁用不必要的功能如监控、指标收集
+# 5. 使用专用端口和数据库避免冲突
+# 6. 确定性配置确保测试结果可重复
+# 7. 自动加载测试数据和夹具
+# ============================================================================== 

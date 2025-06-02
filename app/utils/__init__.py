@@ -78,34 +78,8 @@ try:
 except ImportError as e:
     logging.warning(f"Common模块导入失败: {e}")
 
-# 向后兼容的导入 - 为了保持旧代码正常工作
-backward_compatible_functions = []
-
-try:
-    # Logger向后兼容
-    from .common.logger import setup_logger, get_logger
-    backward_compatible_functions.extend(["setup_logger", "get_logger"])
-except ImportError as e:
-    logging.warning(f"Logger向后兼容导入失败: {e}")
-
-try:
-    # Embedding utils向后兼容
-    from .text.embedding_utils import get_embedding, batch_get_embeddings
-    backward_compatible_functions.extend(["get_embedding", "batch_get_embeddings"])
-except ImportError as e:
-    logging.warning(f"Embedding utils向后兼容导入失败: {e}")
-
-try:
-    # Template renderer向后兼容
-    from .text.template_renderer import render_assistant_page
-    backward_compatible_functions.append("render_assistant_page")
-except ImportError as e:
-    logging.warning(f"Template renderer向后兼容导入失败: {e}")
-
 # 动态构建__all__列表
-__all__ = available_modules + backward_compatible_functions
+__all__ = available_modules
 
 # 记录成功加载的模块
-logging.info(f"Utils模块加载完成，可用模块: {available_modules}")
-if backward_compatible_functions:
-    logging.info(f"向后兼容功能: {backward_compatible_functions}") 
+logging.info(f"Utils模块加载完成，可用模块: {available_modules}") 

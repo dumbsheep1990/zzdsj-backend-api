@@ -1,12 +1,18 @@
+"""
+Society framework for OWL
+"""
+
 from typing import Any, Dict, List, Optional, Tuple, Union, Callable
 import json
 import asyncio
 import uuid
+from abc import ABC, abstractmethod
 
 from app.frameworks.owl.agents.base import BaseAgent
 from app.frameworks.owl.agents.planner import PlannerAgent
 from app.frameworks.owl.agents.executor import ExecutorAgent
-from app.utils.logger import get_logger
+from app.utils.common.logger import get_logger
+from .expert_team import ExpertTeam
 
 logger = get_logger(__name__)
 

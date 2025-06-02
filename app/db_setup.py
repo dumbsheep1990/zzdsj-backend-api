@@ -24,8 +24,9 @@ current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.append(str(parent_dir))
 
-from app.utils.db_init import init_database, check_database_connection, print_schema_info
-from app.utils.swagger_helper import save_db_schema_doc
+from app.utils.core.database import SessionLocal, init_database, check_database_connection, print_schema_info
+from app.models import *  # 导入所有模型
+from app.utils.web.docs import save_db_schema_doc
 
 def setup_database(drop_existing=False, create_initial_data=True):
     """

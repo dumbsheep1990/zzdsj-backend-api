@@ -1,21 +1,28 @@
 """
-LightRAG API模块: 提供LightRAG知识图谱增强检索服务的接口
+LightRAG知识库API模块
+提供基于LightRAG的知识库管理端点
 """
-from typing import Dict, List, Optional, Any, Union
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Body, status
-from fastapi.responses import StreamingResponse
-import logging
+
+import os
 import json
-import time
+import asyncio
+import logging
+from typing import Optional, Dict, Any, List
 from datetime import datetime
-from werkzeug.utils import secure_filename
-from pydantic import BaseModel, Field
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, UploadFile, File, Form
+from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy.orm import Session
+
+from app.utils.common.logger import setup_logger
+from app.utils.storage.object_storage import upload_file, get_file_url
+from app.utils.core.database import get_db
 
 from app.frameworks.lightrag.client import get_lightrag_client
 from app.frameworks.lightrag.workdir_manager import get_workdir_manager
 from app.frameworks.lightrag.api_client import get_lightrag_api_client
-from app.utils.service_manager import get_service_manager
-from app.utils.logger import setup_logger
+from app.utils.services.management import get_service_manager
 from app.dependencies import get_lightrag_manager_dependency, get_lightrag_api_client_dependency
 from app.api.frontend.dependencies import ResponseFormatter
 

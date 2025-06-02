@@ -246,14 +246,14 @@ async def reindex_knowledge_base(
             try:
                 # 如果需要重建向量
                 if rebuild_vectors:
-                    from app.utils.embedding_utils import get_embedding
+                    from app.utils.text.embedding_utils import get_embedding
                     vector = await get_embedding(doc.content, model_name=kb.get("embedding_model", "text-embedding-ada-002"))
                 else:
                     # 使用现有向量（如果有的话）
                     vector = getattr(doc, 'vector', None)
                     if not vector:
                         # 如果没有向量，则生成一个
-                        from app.utils.embedding_utils import get_embedding
+                        from app.utils.text.embedding_utils import get_embedding
                         vector = await get_embedding(doc.content, model_name=kb.get("embedding_model", "text-embedding-ada-002"))
                     
                 # 索引文档
