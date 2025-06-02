@@ -1,0 +1,7 @@
+2025-06-03 01:47:15,310 - vector_db_migrator - ERROR - 创建迁移历史表失败: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-06-03 01:47:15,311 - vector_db_migrator - INFO - 迁移文件已保存: /Users/wxn/Desktop/ZZDSJ/zzdsj-backend-api/migrations/vector_migrations/20250602_174715_milvus.json

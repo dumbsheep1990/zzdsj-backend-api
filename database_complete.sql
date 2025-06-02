@@ -949,28 +949,316 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 -- 完成数据库初始化
 -- =====================================================
 
--- 输出完成信息
+-- =====================================================
+-- 第二部分补充: OWL Agent 系统表 (新增于 2025-05-22)
+-- =====================================================
+
+-- OWL Agent定义表
+CREATE TABLE IF NOT EXISTS owl_agent_definitions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    model_name VARCHAR(255) NOT NULL,
+    model_provider VARCHAR(255),
+    system_prompt TEXT,
+    temperature FLOAT DEFAULT 0.7,
+    max_tokens INTEGER DEFAULT 1500,
+    top_p FLOAT,
+    top_k INTEGER,
+    metadata JSONB DEFAULT '{}',
+    prompt_templates JSONB DEFAULT '{}',
+    behaviors JSONB DEFAULT '{}',
+    knowledge JSONB DEFAULT '[]',
+    version VARCHAR(50) DEFAULT '1.0',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by INTEGER,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- OWL Agent能力表
+CREATE TABLE IF NOT EXISTS owl_agent_capabilities (
+    id SERIAL PRIMARY KEY,
+    agent_id INTEGER REFERENCES owl_agent_definitions(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    parameters JSONB DEFAULT '{}',
+    required BOOLEAN DEFAULT FALSE,
+    category VARCHAR(100) DEFAULT 'general',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- OWL Agent工具表  
+CREATE TABLE IF NOT EXISTS owl_agent_tools (
+    id SERIAL PRIMARY KEY,
+    agent_id INTEGER REFERENCES owl_agent_definitions(id) ON DELETE CASCADE,
+    tool_name VARCHAR(255) NOT NULL,
+    tool_description TEXT,
+    parameters JSONB DEFAULT '{}',
+    is_required BOOLEAN DEFAULT FALSE,
+    compression_config_id INTEGER, -- 后续会添加外键约束
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- OWL Agent链定义表
+CREATE TABLE IF NOT EXISTS owl_agent_chain_definitions (
+    id SERIAL PRIMARY KEY,
+    chain_id VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    execution_mode VARCHAR(50) DEFAULT 'sequential' CHECK (execution_mode IN ('sequential', 'parallel', 'conditional')),
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by INTEGER,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- OWL Agent链步骤表
+CREATE TABLE IF NOT EXISTS owl_agent_chain_steps (
+    id SERIAL PRIMARY KEY,
+    chain_id INTEGER REFERENCES owl_agent_chain_definitions(id) ON DELETE CASCADE,
+    agent_id INTEGER REFERENCES owl_agent_definitions(id) ON DELETE CASCADE,
+    agent_name VARCHAR(255) NOT NULL,
+    position INTEGER NOT NULL,
+    role VARCHAR(100) DEFAULT 'processor',
+    input_mapping JSONB DEFAULT '{}',
+    output_mapping JSONB DEFAULT '{}',
+    condition TEXT,
+    fallback JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- OWL Agent链执行记录表
+CREATE TABLE IF NOT EXISTS owl_agent_chain_executions (
+    id SERIAL PRIMARY KEY,
+    execution_id VARCHAR(255) UNIQUE NOT NULL,
+    chain_id INTEGER REFERENCES owl_agent_chain_definitions(id) ON DELETE SET NULL,
+    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+    input_message TEXT,
+    result_content TEXT,
+    metadata JSONB DEFAULT '{}',
+    context JSONB DEFAULT '{}',
+    error TEXT,
+    start_time TIMESTAMP WITH TIME ZONE,
+    end_time TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    user_id INTEGER
+);
+
+-- OWL Agent链执行步骤记录表
+CREATE TABLE IF NOT EXISTS owl_agent_chain_execution_steps (
+    id SERIAL PRIMARY KEY,
+    execution_id INTEGER REFERENCES owl_agent_chain_executions(id) ON DELETE CASCADE,
+    chain_step_id INTEGER REFERENCES owl_agent_chain_steps(id) ON DELETE SET NULL,
+    agent_id INTEGER REFERENCES owl_agent_definitions(id) ON DELETE SET NULL,
+    agent_name VARCHAR(255) NOT NULL,
+    position INTEGER NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'skipped', 'fallback')),
+    input JSONB DEFAULT '{}',
+    output JSONB DEFAULT '{}',
+    error TEXT,
+    start_time TIMESTAMP WITH TIME ZONE,
+    end_time TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- OWL Agent消息表
+CREATE TABLE IF NOT EXISTS owl_agent_messages (
+    id SERIAL PRIMARY KEY,
+    message_id VARCHAR(255) UNIQUE NOT NULL,
+    agent_id INTEGER REFERENCES owl_agent_definitions(id) ON DELETE SET NULL,
+    agent_execution_id VARCHAR(255),
+    message_type VARCHAR(50) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    content TEXT,
+    content_format VARCHAR(50) DEFAULT 'text',
+    raw_content JSONB DEFAULT '{}',
+    metadata JSONB DEFAULT '{}',
+    parent_message_id VARCHAR(255),
+    conversation_id VARCHAR(255),
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    user_id INTEGER
+);
+
+-- =====================================================
+-- 第三部分补充: 上下文压缩系统表 (新增于 2025-05-22)
+-- =====================================================
+
+-- 上下文压缩工具表
+CREATE TABLE IF NOT EXISTS context_compression_tools (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    compression_method VARCHAR(50) NOT NULL DEFAULT 'tree_summarize',
+    is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    config JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Agent上下文压缩配置表
+CREATE TABLE IF NOT EXISTS agent_context_compression_config (
+    id SERIAL PRIMARY KEY,
+    agent_id INTEGER NOT NULL REFERENCES owl_agent_definitions(id) ON DELETE CASCADE,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    method VARCHAR(50) NOT NULL DEFAULT 'tree_summarize' CHECK (method IN ('tree_summarize', 'compact_and_refine')),
+    top_n INTEGER NOT NULL DEFAULT 5,
+    num_children INTEGER NOT NULL DEFAULT 2,
+    streaming BOOLEAN NOT NULL DEFAULT FALSE,
+    rerank_model VARCHAR(255) DEFAULT 'BAAI/bge-reranker-base',
+    max_tokens INTEGER,
+    temperature FLOAT NOT NULL DEFAULT 0.1,
+    store_original BOOLEAN NOT NULL DEFAULT FALSE,
+    use_message_format BOOLEAN NOT NULL DEFAULT TRUE,
+    phase VARCHAR(50) NOT NULL DEFAULT 'final' CHECK (phase IN ('retrieval', 'final')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 上下文压缩执行记录表
+CREATE TABLE IF NOT EXISTS context_compression_executions (
+    id SERIAL PRIMARY KEY,
+    execution_id VARCHAR(36) UNIQUE NOT NULL,
+    agent_id INTEGER REFERENCES owl_agent_definitions(id) ON DELETE SET NULL,
+    compression_config_id INTEGER REFERENCES agent_context_compression_config(id) ON DELETE SET NULL,
+    query TEXT,
+    original_content_length INTEGER NOT NULL DEFAULT 0,
+    compressed_content_length INTEGER NOT NULL DEFAULT 0,
+    compression_ratio FLOAT,
+    source_count INTEGER DEFAULT 0,
+    execution_time_ms INTEGER DEFAULT 0,
+    status VARCHAR(50) NOT NULL DEFAULT 'success' CHECK (status IN ('success', 'failed', 'partial')),
+    error TEXT,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 添加owl_agent_tools表的外键约束
+ALTER TABLE owl_agent_tools ADD CONSTRAINT fk_agent_tools_compression_config 
+    FOREIGN KEY (compression_config_id) REFERENCES agent_context_compression_config(id) ON DELETE SET NULL;
+
+-- =====================================================
+-- OWL Agent 系统相关索引
+-- =====================================================
+
+-- owl_agent_definitions 索引
+CREATE INDEX IF NOT EXISTS idx_owl_agent_definitions_name ON owl_agent_definitions(name);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_definitions_active ON owl_agent_definitions(is_active);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_definitions_created_by ON owl_agent_definitions(created_by);
+
+-- owl_agent_capabilities 索引
+CREATE INDEX IF NOT EXISTS idx_owl_agent_capabilities_agent_id ON owl_agent_capabilities(agent_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_capabilities_category ON owl_agent_capabilities(category);
+
+-- owl_agent_tools 索引
+CREATE INDEX IF NOT EXISTS idx_owl_agent_tools_agent_id ON owl_agent_tools(agent_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_tools_compression_config ON owl_agent_tools(compression_config_id);
+
+-- owl_agent_chain_definitions 索引
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_definitions_chain_id ON owl_agent_chain_definitions(chain_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_definitions_active ON owl_agent_chain_definitions(is_active);
+
+-- owl_agent_chain_steps 索引
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_steps_chain_id ON owl_agent_chain_steps(chain_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_steps_agent_id ON owl_agent_chain_steps(agent_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_steps_position ON owl_agent_chain_steps(position);
+
+-- owl_agent_chain_executions 索引
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_executions_execution_id ON owl_agent_chain_executions(execution_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_executions_chain_id ON owl_agent_chain_executions(chain_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_executions_status ON owl_agent_chain_executions(status);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_executions_user_id ON owl_agent_chain_executions(user_id);
+
+-- owl_agent_chain_execution_steps 索引
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_execution_steps_execution_id ON owl_agent_chain_execution_steps(execution_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_execution_steps_chain_step_id ON owl_agent_chain_execution_steps(chain_step_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_chain_execution_steps_agent_id ON owl_agent_chain_execution_steps(agent_id);
+
+-- owl_agent_messages 索引
+CREATE INDEX IF NOT EXISTS idx_owl_agent_messages_message_id ON owl_agent_messages(message_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_messages_agent_id ON owl_agent_messages(agent_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_messages_agent_execution_id ON owl_agent_messages(agent_execution_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_messages_conversation_id ON owl_agent_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_owl_agent_messages_timestamp ON owl_agent_messages(timestamp);
+
+-- =====================================================
+-- 上下文压缩系统相关索引
+-- =====================================================
+
+-- context_compression_tools 索引
+CREATE INDEX IF NOT EXISTS idx_context_compression_tools_name ON context_compression_tools(name);
+CREATE INDEX IF NOT EXISTS idx_context_compression_tools_enabled ON context_compression_tools(is_enabled);
+
+-- agent_context_compression_config 索引
+CREATE INDEX IF NOT EXISTS idx_agent_context_compression_config_agent_id ON agent_context_compression_config(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_context_compression_config_enabled ON agent_context_compression_config(enabled);
+
+-- context_compression_executions 索引
+CREATE INDEX IF NOT EXISTS idx_context_compression_executions_execution_id ON context_compression_executions(execution_id);
+CREATE INDEX IF NOT EXISTS idx_context_compression_executions_agent_id ON context_compression_executions(agent_id);
+CREATE INDEX IF NOT EXISTS idx_context_compression_executions_config_id ON context_compression_executions(compression_config_id);
+CREATE INDEX IF NOT EXISTS idx_context_compression_executions_status ON context_compression_executions(status);
+CREATE INDEX IF NOT EXISTS idx_context_compression_executions_created_at ON context_compression_executions(created_at); 
+
+
 DO $$
 BEGIN
     RAISE NOTICE '==============================================';
     RAISE NOTICE 'ZZ-Backend-Lite 数据库初始化完成！';
     RAISE NOTICE '==============================================';
-    RAISE NOTICE '基础表数量: 35+ 个';
-    RAISE NOTICE '新增表数量: 20+ 个';
-    RAISE NOTICE '核心表补充: 6 个 (agent_definitions, tools, questions等)';
-    RAISE NOTICE '修复字段不匹配: 8 处';
+    RAISE NOTICE '基础表数量: 42 个 (核心业务表)';
+    RAISE NOTICE 'OWL Agent系统表: 8 个 (owl_agent_*)';
+    RAISE NOTICE '上下文压缩系统表: 3 个 (context_compression_*)';
+    RAISE NOTICE '总表数量: 53 个';
     RAISE NOTICE '新增权限: 14 个';
     RAISE NOTICE '新增视图: 3 个';
-    RAISE NOTICE '新增索引: 50+ 个';
+    RAISE NOTICE '新增索引: 80+ 个';
     RAISE NOTICE '==============================================';
-    RAISE NOTICE '核心补充表说明:';
-    RAISE NOTICE '- agent_definitions: 智能体定义表';
-    RAISE NOTICE '- tools: 工具定义表';
-    RAISE NOTICE '- agent_tool_association: 智能体工具关联表';
-    RAISE NOTICE '- lightrag_integrations: LightRAG集成表';
-    RAISE NOTICE '- questions: 问题表';
-    RAISE NOTICE '- question_document_segments: 问题文档分段关联表';
+    RAISE NOTICE '核心表分类说明:';
+    RAISE NOTICE '【用户认证】roles, permissions, users, user_role, role_permissions, user_settings, api_keys';
+    RAISE NOTICE '【知识库】knowledge_bases, documents, document_chunks';
+    RAISE NOTICE '【系统配置】config_categories, system_configs, config_history, service_health_records, model_providers';
+    RAISE NOTICE '【智能体定义】agent_definitions, tools, agent_tool_association, lightrag_integrations';
+    RAISE NOTICE '【对话助手】assistants, questions, question_document_segments, conversations, messages, message_references';
+    RAISE NOTICE '【MCP服务】mcp_service_config, mcp_tool, mcp_tool_execution, agent_config, agent_tool';
+    RAISE NOTICE '【链式调用】agent_chains, agent_chain_executions, agent_chain_execution_steps';
+    RAISE NOTICE '【工具系统】unified_tools, tool_chains, tool_chain_executions, tool_usage_stats';
+    RAISE NOTICE '【搜索系统】search_sessions, search_result_cache';
+    RAISE NOTICE '【LightRAG】lightrag_graphs, lightrag_queries';
+    RAISE NOTICE '【压缩策略】compression_strategies';
+    RAISE NOTICE '【问题反馈】question_feedback, question_tags, question_tag_relations';
+    RAISE NOTICE '==============================================';
+    RAISE NOTICE 'OWL Agent系统表:';
+    RAISE NOTICE '- owl_agent_definitions: OWL智能体定义表';
+    RAISE NOTICE '- owl_agent_capabilities: OWL智能体能力表';
+    RAISE NOTICE '- owl_agent_tools: OWL智能体工具表';
+    RAISE NOTICE '- owl_agent_chain_definitions: OWL智能体链定义表';
+    RAISE NOTICE '- owl_agent_chain_steps: OWL智能体链步骤表';
+    RAISE NOTICE '- owl_agent_chain_executions: OWL智能体链执行记录表';
+    RAISE NOTICE '- owl_agent_chain_execution_steps: OWL智能体链执行步骤记录表';
+    RAISE NOTICE '- owl_agent_messages: OWL智能体消息表';
+    RAISE NOTICE '==============================================';
+    RAISE NOTICE '上下文压缩系统表:';
+    RAISE NOTICE '- context_compression_tools: 上下文压缩工具表';
+    RAISE NOTICE '- agent_context_compression_config: Agent上下文压缩配置表';
+    RAISE NOTICE '- context_compression_executions: 上下文压缩执行记录表';
+    RAISE NOTICE '==============================================';
+    RAISE NOTICE '数据库特性:';
+    RAISE NOTICE '✓ PostgreSQL 扩展: uuid-ossp';
+    RAISE NOTICE '✓ 支持向量数据库集成 (Milvus/PgVector)';
+    RAISE NOTICE '✓ 完整的权限管理系统';
+    RAISE NOTICE '✓ 智能体调用链系统';
+    RAISE NOTICE '✓ 上下文智能压缩系统';
+    RAISE NOTICE '✓ 统一工具管理框架';
+    RAISE NOTICE '✓ LightRAG图谱查询支持';
+    RAISE NOTICE '✓ 自动时间戳更新触发器';
+    RAISE NOTICE '✓ 完整的数据统计视图';
     RAISE NOTICE '==============================================';
     RAISE NOTICE '建议重启应用以加载新的数据库结构';
     RAISE NOTICE '==============================================';
-END $$; 
+END $$;

@@ -1,0 +1,43 @@
+{
+  "version": "20250108_001",
+  "description": "初始化标准向量集合",
+  "up_operations": [
+    {
+      "type": "create_collection",
+      "config": {
+        "name": "document_collection",
+        "template": "standard_document_collection",
+        "dimension": 768,
+        "metric_type": "COSINE",
+        "index_config": {
+          "index_type": "IVF_FLAT",
+          "nlist": 1024
+        }
+      }
+    },
+    {
+      "type": "create_collection", 
+      "config": {
+        "name": "knowledge_base_collection",
+        "template": "knowledge_base_collection",
+        "dimension": 1536,
+        "metric_type": "COSINE",
+        "index_config": {
+          "index_type": "IVF_FLAT",
+          "nlist": 1024
+        }
+      }
+    }
+  ],
+  "down_operations": [
+    {
+      "type": "drop_collection",
+      "collection_name": "knowledge_base_collection"
+    },
+    {
+      "type": "drop_collection",
+      "collection_name": "document_collection"
+    }
+  ],
+  "created_at": "2025-01-08T12:00:00.000000"
+} 
