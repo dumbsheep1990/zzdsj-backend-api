@@ -1,6 +1,6 @@
 """
-LightRAG 工作目录管理器 - 用于管理 LightRAG 的工作目录和实例
-该模块提供工作目录的创建、查询和管理功能
+LightRAG工作目录管理器模块
+用于管理LightRAG工作目录的创建、配置和维护
 """
 
 import os
@@ -11,7 +11,7 @@ import psycopg2
 from psycopg2.extras import DictCursor
 
 from app.config import settings
-from app.utils.logger import setup_logger
+from app.utils.common.logger import setup_logger
 from app.frameworks.lightrag.config import lightrag_config
 
 # 尝试导入 LightRAG

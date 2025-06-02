@@ -1,12 +1,14 @@
 """
-LightRAG Docker服务集成模块
-用于连接主应用与Docker部署的LightRAG服务
+Docker集成模块 - LightRAG框架Docker容器管理
 """
 import os
+import docker
+import logging
+import time
 from typing import Dict, List, Optional, Any, Union
 
 from app.config import settings
-from app.utils.logger import setup_logger
+from app.utils.common.logger import setup_logger
 from app.frameworks.lightrag.api_client import get_lightrag_api_client
 
 logger = setup_logger("lightrag_docker")

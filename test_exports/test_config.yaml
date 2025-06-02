@@ -1,0 +1,190 @@
+APP_ENV: development
+COLORTERM: truecolor
+COMMAND_MODE: unix2003
+CONDA_DEFAULT_ENV: base
+CONDA_EXE: /opt/anaconda3/bin/conda
+CONDA_PREFIX: /opt/anaconda3
+CONDA_PROMPT_MODIFIER: '(base) '
+CONDA_PYTHON_EXE: /opt/anaconda3/bin/python
+CONDA_SHLVL: 1
+CURSOR_TRACE_ID: 4fc108f1de344d0d996c2d598f264f1d
+DISABLE_AUTO_UPDATE: true
+GIT_ASKPASS: /Applications/Cursor.app/Contents/Resources/app/extensions/git/dist/askpass.sh
+GSETTINGS_SCHEMA_DIR: /opt/anaconda3/share/glib-2.0/schemas
+GSETTINGS_SCHEMA_DIR_CONDA_BACKUP: ''
+HOME: /Users/wxn
+LANG: en_US.UTF-8
+LOGNAME: wxn
+MallocNanoZone: 0
+OLDPWD: /Users/wxn/Desktop/ZZDSJ/zzdsj-backend-api
+ORIGINAL_XDG_CURRENT_DESKTOP: undefined
+PAGER: head -n 10000 | cat
+PATH: /Library/Frameworks/Python.framework/Versions/3.11/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/go/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/anaconda3/bin:/opt/anaconda3/condabin:/Library/Frameworks/Python.framework/Versions/3.11/bin:/Users/wxn/.orbstack/bin:/Users/wxn/.orbstack/bin
+PWD: /Users/wxn/Desktop/ZZDSJ/zzdsj-backend-api
+SHELL: /bin/zsh
+SHLVL: 1
+SSH_AUTH_SOCK: /private/tmp/com.apple.launchd.RqQ7EDfCru/Listeners
+TERM: xterm-256color
+TERM_PROGRAM: vscode
+TERM_PROGRAM_VERSION: 0.50.7
+TMPDIR: /var/folders/17/6nnt9q5x3j3fk196j5wbrsmr0000gn/T/
+USER: wxn
+USER_ZDOTDIR: /Users/wxn
+VSCODE_GIT_ASKPASS_EXTRA_ARGS: ''
+VSCODE_GIT_ASKPASS_MAIN: /Applications/Cursor.app/Contents/Resources/app/extensions/git/dist/askpass-main.js
+VSCODE_GIT_ASKPASS_NODE: /Applications/Cursor.app/Contents/Frameworks/Cursor Helper
+  (Plugin).app/Contents/MacOS/Cursor Helper (Plugin)
+VSCODE_GIT_IPC_HANDLE: /var/folders/17/6nnt9q5x3j3fk196j5wbrsmr0000gn/T/vscode-git-dc689b644b.sock
+VSCODE_INJECTION: 1
+XPC_FLAGS: '0x0'
+XPC_SERVICE_NAME: 0
+ZDOTDIR: /Users/wxn
+_: /opt/anaconda3/bin/python
+_CE_CONDA: ''
+_CE_M: ''
+__CFBundleIdentifier: com.todesktop.230313mzl4w4u92
+__CF_USER_TEXT_ENCODING: 0x1F5:0x19:0x34
+ai:
+  embedding:
+    batch_size: 100
+    model: text-embedding-ada-002
+  openai:
+    api_key: ${OPENAI_API_KEY}
+    max_tokens: 2000
+    model: gpt-3.5-turbo
+    temperature: 0.3
+    timeout: 30
+api:
+  description: 开发环境API，包含调试和测试功能
+  pagination_default_size: 20
+  pagination_max_size: 100
+  rate_limit_enabled: false
+  title: 知识QA系统API - 开发版
+  version: v1
+app:
+  debug: true
+  environment: development
+  name: 知识QA系统-开发版
+  timezone: Asia/Shanghai
+  version: 1.0.0
+cache:
+  cleanup_interval: 300
+  default_ttl: 600
+  max_size: 500
+database:
+  echo: true
+  max_overflow: 10
+  pool_recycle: 3600
+  pool_size: 5
+  pool_timeout: 30
+  url: postgresql://dev_user:dev_pass@localhost:5432/qa_dev
+development:
+  auto_reload: true
+  profiler_enabled: true
+  sql_debug: true
+  static_debug: true
+  template_debug: true
+document:
+  allowed_extensions:
+  - .pdf
+  - .docx
+  - .txt
+  - .md
+  chunk_overlap: 100
+  chunk_size: 800
+  max_file_size: 100MB
+email:
+  password: ''
+  smtp_port: 587
+  smtp_server: smtp.gmail.com
+  use_tls: true
+  username: ''
+features:
+  admin_panel_enabled: true
+  api_docs_enabled: true
+  cors_enabled: true
+  debug_tools: true
+  hot_reload: true
+  metrics_enabled: true
+  mock_services: true
+  voice_enabled: true
+logging:
+  backup_count: 5
+  console_enabled: true
+  file_enabled: true
+  format: detailed
+  level: DEBUG
+  max_file_size: 10MB
+monitoring:
+  health_check_enabled: true
+  jaeger_enabled: false
+  metrics_enabled: true
+  prometheus_enabled: true
+redis:
+  db: 0
+  host: localhost
+  max_connections: 10
+  password: null
+  port: 6379
+  timeout: 5
+search:
+  elasticsearch:
+    index: knowledge_docs_dev
+    max_retries: 3
+    timeout: 30
+    url: http://localhost:9200
+security:
+  cors:
+    enabled: true
+    headers:
+    - '*'
+    methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+    origins:
+    - http://localhost:3000
+    - http://localhost:8080
+    - http://127.0.0.1:3000
+    - http://127.0.0.1:8080
+  jwt:
+    access_token_expire_minutes: 30
+    algorithm: HS256
+    refresh_token_expire_days: 7
+  rate_limiting:
+    enabled: false
+    requests_per_minute: 60
+service:
+  host: localhost
+  ip: 127.0.0.1
+  name: knowledge-qa-backend
+  port: 8000
+  workers: 1
+storage:
+  minio:
+    access_key: dev_access_key
+    bucket: knowledge-docs-dev
+    endpoint: localhost:9000
+    region: us-east-1
+    secret_key: dev_secret_key
+    secure: false
+task_queue:
+  broker_url: redis://localhost:6379/1
+  max_retries: 1
+  result_backend: redis://localhost:6379/2
+  retry_delay: 60
+vector_store:
+  milvus:
+    collection: knowledge_base_dev
+    dimension: 1536
+    host: localhost
+    index_type: IVF_FLAT
+    metric_type: IP
+    nlist: 1024
+    port: 19530
+websocket:
+  enabled: true
+  heartbeat_interval: 30
+  max_connections: 50

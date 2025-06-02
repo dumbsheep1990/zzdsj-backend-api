@@ -1,3 +1,7 @@
+"""
+Tool Factory for OWL Framework
+"""
+
 from typing import Any, Dict, List, Optional, Union, Callable
 import asyncio
 import json
@@ -5,7 +9,7 @@ import inspect
 import aiohttp
 from functools import wraps
 
-from app.utils.logger import get_logger
+from app.utils.common.logger import get_logger
 
 logger = get_logger(__name__)
 

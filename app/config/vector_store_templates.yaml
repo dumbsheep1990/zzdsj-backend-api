@@ -1,0 +1,420 @@
+# 向量数据库标准模板配置
+# 定义不同用途的集合模板和初始化参数
+# 支持多种向量数据库后端：Milvus、PostgreSQL+pgvector、Elasticsearch等
+
+# 基础配置模板
+base_configs:
+  # Milvus配置
+  milvus_default:
+    backend_type: "milvus"
+    host: "localhost"
+    port: 19530
+    connection_alias: "default"
+    secure: false
+    timeout: 10
+    
+  milvus_production:
+    backend_type: "milvus"
+    host: "${MILVUS_HOST}"
+    port: "${MILVUS_PORT}"
+    connection_alias: "production"
+    secure: true
+    user: "${MILVUS_USER}"
+    password: "${MILVUS_PASSWORD}"
+    timeout: 30
+
+  # PostgreSQL+pgvector配置
+  pgvector_default:
+    backend_type: "pgvector"
+    database_url: "postgresql://postgres:password@localhost:5432/postgres"
+    schema_name: "public"
+    connection_alias: "pgvector_default"
+    timeout: 10
+    
+  pgvector_production:
+    backend_type: "pgvector"
+    database_url: "${PGVECTOR_DATABASE_URL}"
+    schema_name: "${PGVECTOR_SCHEMA:-public}"
+    connection_alias: "pgvector_production"
+    timeout: 30
+
+  # Elasticsearch配置
+  elasticsearch_default:
+    backend_type: "elasticsearch"
+    es_url: "http://localhost:9200"
+    connection_alias: "elasticsearch_default"
+    timeout: 30
+    
+  elasticsearch_production:
+    backend_type: "elasticsearch"
+    es_url: "${ELASTICSEARCH_URL}"
+    username: "${ELASTICSEARCH_USERNAME}"
+    password: "${ELASTICSEARCH_PASSWORD}"
+    api_key: "${ELASTICSEARCH_API_KEY}"
+    connection_alias: "elasticsearch_production"
+    timeout: 60
+
+# 索引配置模板
+index_templates:
+  # Milvus索引模板
+  milvus_high_performance:
+    index_type: "HNSW"
+    metric_type: "COSINE"
+    params:
+      M: 32
+      efConstruction: 400
+      
+  milvus_balanced:
+    index_type: "HNSW"
+    metric_type: "COSINE"
+    params:
+      M: 16
+      efConstruction: 200
+      
+  milvus_memory_efficient:
+    index_type: "IVF_FLAT"
+    metric_type: "L2"
+    params:
+      nlist: 1024
+
+  # PostgreSQL+pgvector索引模板
+  pgvector_ivfflat:
+    index_type: "IVFFLAT"
+    metric_type: "vector_cosine_ops"
+    params:
+      lists: 100
+      
+  pgvector_hnsw:
+    index_type: "HNSW_PG"
+    metric_type: "vector_cosine_ops"
+    params:
+      m: 16
+      ef_construction: 64
+      
+  pgvector_balanced:
+    index_type: "IVFFLAT"
+    metric_type: "vector_cosine_ops"
+    params:
+      lists: 200
+
+  # Elasticsearch索引模板
+  elasticsearch_default:
+    index_type: "DENSE_VECTOR"
+    metric_type: "cosine"
+    params:
+      similarity: "cosine"
+      
+  elasticsearch_high_performance:
+    index_type: "DENSE_VECTOR"
+    metric_type: "cosine"
+    params:
+      similarity: "cosine"
+      shards: 3
+      replicas: 1
+      
+  elasticsearch_memory_efficient:
+    index_type: "DENSE_VECTOR"
+    metric_type: "dot_product"
+    params:
+      similarity: "dot_product"
+      shards: 1
+      replicas: 0
+
+# 字段模板定义
+field_templates:
+  # Milvus字段模板
+  milvus_basic_fields:
+    - name: "id"
+      data_type: "VARCHAR"
+      is_primary: true
+      max_length: 100
+      description: "主键ID"
+    - name: "vector"
+      data_type: "FLOAT_VECTOR"
+      dimension: 1536
+      description: "向量字段"
+    - name: "text"
+      data_type: "VARCHAR"
+      max_length: 65535
+      description: "文本内容"
+    - name: "metadata"
+      data_type: "JSON"
+      description: "元数据"
+
+  # PostgreSQL+pgvector字段模板
+  pgvector_basic_fields:
+    - name: "id"
+      data_type: "UUID"
+      is_primary: true
+      default_value: "gen_random_uuid()"
+      description: "主键ID"
+    - name: "embedding"
+      data_type: "VECTOR"
+      dimension: 1536
+      description: "向量字段"
+    - name: "content"
+      data_type: "TEXT"
+      description: "文本内容"
+    - name: "metadata"
+      data_type: "JSONB"
+      description: "元数据"
+    - name: "created_at"
+      data_type: "TIMESTAMP"
+      default_value: "CURRENT_TIMESTAMP"
+      description: "创建时间"
+    - name: "updated_at"
+      data_type: "TIMESTAMP"
+      default_value: "CURRENT_TIMESTAMP"
+      description: "更新时间"
+
+  # 文档相关字段
+  document_fields:
+    - name: "document_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "文档ID"
+    - name: "knowledge_base_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "知识库ID"
+    - name: "chunk_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "文档块ID"
+
+  # Elasticsearch字段模板
+  elasticsearch_basic_fields:
+    - name: "id"
+      data_type: "KEYWORD"
+      is_primary: true
+      description: "主键ID"
+    - name: "embedding"
+      data_type: "DENSE_VECTOR"
+      dimension: 1536
+      description: "向量字段"
+    - name: "content"
+      data_type: "TEXT"
+      description: "文本内容"
+    - name: "metadata"
+      data_type: "OBJECT"
+      description: "元数据"
+    - name: "created_at"
+      data_type: "DATE"
+      description: "创建时间"
+    - name: "updated_at"
+      data_type: "DATE"
+      description: "更新时间"
+
+# 集合模板定义
+collection_templates:
+  # Milvus文档集合
+  milvus_document_collection:
+    base_config: "milvus_default"
+    name: "document_vectors"
+    description: "Milvus文档向量集合"
+    fields: 
+      - "milvus_basic_fields"
+      - "document_fields"
+    index_config: "milvus_balanced"
+    enable_dynamic_field: true
+    partition_config:
+      enabled: true
+      partition_key: "knowledge_base_id"
+      default_partitions: ["_default"]
+
+  # PostgreSQL+pgvector文档集合
+  pgvector_document_collection:
+    base_config: "pgvector_default"
+    name: "document_vectors"
+    description: "PostgreSQL+pgvector文档向量表"
+    fields:
+      - "pgvector_basic_fields"
+      - "document_fields"
+    index_config: "pgvector_balanced"
+    enable_dynamic_field: false
+    partition_config:
+      enabled: false
+
+  # 知识库集合（Milvus）
+  milvus_knowledge_base_collection:
+    base_config: "milvus_default"
+    name: "knowledge_base_vectors"
+    description: "Milvus知识库向量集合"
+    fields:
+      - "milvus_basic_fields"
+      - "document_fields"
+    index_config: "milvus_high_performance"
+    enable_dynamic_field: true
+    partition_config:
+      enabled: true
+      partition_key: "knowledge_base_id"
+      default_partitions: ["_default", "system", "user"]
+
+  # 知识库集合（PostgreSQL+pgvector）
+  pgvector_knowledge_base_collection:
+    base_config: "pgvector_default"
+    name: "knowledge_base_vectors"
+    description: "PostgreSQL+pgvector知识库向量表"
+    fields:
+      - "pgvector_basic_fields"
+      - "document_fields"
+    index_config: "pgvector_hnsw"
+    enable_dynamic_field: false
+    partition_config:
+      enabled: false
+
+  # 图像向量集合（Milvus）
+  milvus_image_collection:
+    base_config: "milvus_default"
+    name: "image_vectors"
+    description: "Milvus图像向量集合"
+    fields:
+      - name: "id"
+        data_type: "VARCHAR"
+        is_primary: true
+        max_length: 100
+      - name: "image_vector"
+        data_type: "FLOAT_VECTOR"
+        dimension: 512
+        description: "图像向量"
+      - name: "image_url"
+        data_type: "VARCHAR"
+        max_length: 500
+      - name: "metadata"
+        data_type: "JSON"
+    index_config: "milvus_balanced"
+
+  # 多模态集合（PostgreSQL+pgvector）
+  pgvector_multimodal_collection:
+    base_config: "pgvector_default"
+    name: "multimodal_vectors"
+    description: "PostgreSQL+pgvector多模态向量表"
+    fields:
+      - name: "id"
+        data_type: "UUID"
+        is_primary: true
+        default_value: "gen_random_uuid()"
+      - name: "text_embedding"
+        data_type: "VECTOR"
+        dimension: 1536
+        description: "文本向量"
+      - name: "image_embedding"
+        data_type: "VECTOR"
+        dimension: 512
+        description: "图像向量"
+      - name: "content"
+        data_type: "TEXT"
+      - name: "media_url"
+        data_type: "VARCHAR"
+        max_length: 500
+      - name: "media_type"
+        data_type: "VARCHAR"
+        max_length: 50
+      - name: "metadata"
+        data_type: "JSONB"
+      - name: "created_at"
+        data_type: "TIMESTAMP"
+        default_value: "CURRENT_TIMESTAMP"
+    index_config: "pgvector_hnsw"
+
+  # Elasticsearch文档集合
+  elasticsearch_document_collection:
+    base_config: "elasticsearch_default"
+    name: "document_vectors"
+    description: "Elasticsearch文档向量索引"
+    fields:
+      - "elasticsearch_basic_fields"
+      - "document_fields"
+    index_config: "elasticsearch_default"
+    enable_dynamic_field: false
+    partition_config:
+      enabled: false
+
+  # 知识库集合（Elasticsearch）
+  elasticsearch_knowledge_base_collection:
+    base_config: "elasticsearch_default"
+    name: "knowledge_base_vectors"
+    description: "Elasticsearch知识库向量索引"
+    fields:
+      - "elasticsearch_basic_fields"
+      - "document_fields"
+    index_config: "elasticsearch_high_performance"
+    enable_dynamic_field: false
+    partition_config:
+      enabled: false
+
+  # 多模态集合（Elasticsearch）
+  elasticsearch_multimodal_collection:
+    base_config: "elasticsearch_default"
+    name: "multimodal_vectors"
+    description: "Elasticsearch多模态向量索引"
+    fields:
+      - name: "id"
+        data_type: "KEYWORD"
+        is_primary: true
+      - name: "text_embedding"
+        data_type: "DENSE_VECTOR"
+        dimension: 1536
+        description: "文本向量"
+      - name: "image_embedding"
+        data_type: "DENSE_VECTOR"
+        dimension: 512
+        description: "图像向量"
+      - name: "content"
+        data_type: "TEXT"
+      - name: "media_url"
+        data_type: "KEYWORD"
+      - name: "media_type"
+        data_type: "KEYWORD"
+      - name: "metadata"
+        data_type: "OBJECT"
+      - name: "created_at"
+        data_type: "DATE"
+    index_config: "elasticsearch_default"
+
+# 性能优化配置
+performance_configs:
+  milvus_high_throughput:
+    insert_buffer_size: 268435456  # 256MB
+    index_building_memory_limit: 2147483648  # 2GB
+    segment_size_mb: 512
+    auto_flush_interval: 5
+
+  pgvector_optimized:
+    maintenance_work_mem: "1GB"
+    effective_cache_size: "4GB"
+    shared_preload_libraries: "vector"
+    vector.index_scan_threshold: 1000
+
+  elasticsearch_optimized:
+    index:
+      number_of_shards: 3
+      number_of_replicas: 1
+      refresh_interval: "5s"
+    mapping:
+      total_fields:
+        limit: 10000
+      depth:
+        limit: 20
+    search:
+      max_result_window: 50000
+
+# 维护任务配置
+maintenance_tasks:
+  milvus_maintenance:
+    compact_interval: "24h"
+    index_rebuild_interval: "7d"
+    statistics_update_interval: "1h"
+    
+  pgvector_maintenance:
+    vacuum_schedule: "0 2 * * *"  # 每天凌晨2点
+    analyze_schedule: "0 3 * * *"  # 每天凌晨3点
+    reindex_schedule: "0 4 * * 0"  # 每周日凌晨4点
+
+  elasticsearch_maintenance:
+    optimize_schedule: "0 1 * * *"  # 每天凌晨1点优化
+    snapshot_schedule: "0 2 * * *"  # 每天凌晨2点快照
+    delete_old_indices: "30d"       # 删除30天前的索引 

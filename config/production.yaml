@@ -1,0 +1,244 @@
+# ==============================================================================
+# 生产环境配置文件
+# 最高安全级别，性能优化，完整监控和备份策略
+# ==============================================================================
+
+# 应用基础配置
+app:
+  name: "知识QA系统"
+  environment: "production"
+  debug: false
+  
+# 服务配置
+service:
+  ip: "0.0.0.0"
+  port: 8000
+  workers: 4  # 生产环境多进程
+  
+# 日志配置
+logging:
+  level: "WARNING"  # 生产环境仅记录警告和错误
+  format: "json"
+  file_enabled: true
+  console_enabled: false  # 生产环境不输出到控制台
+  max_file_size: "100MB"
+  backup_count: 30
+  
+# 安全配置（严格模式）
+security:
+  jwt:
+    algorithm: "RS256"  # 生产环境使用更安全的算法
+    access_token_expire_minutes: 15  # 较短的过期时间
+    refresh_token_expire_days: 1
+  cors:
+    enabled: true
+    origins: 
+      - "${FRONTEND_URL}"
+      - "https://app.example.com"
+    methods: ["GET", "POST", "PUT", "DELETE"]
+    headers: ["Content-Type", "Authorization"]
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60  # 严格的速率限制
+    
+# 数据库配置（生产级PostgreSQL）
+database:
+  url: "${DATABASE_URL}"
+  echo: false
+  pool_size: 20
+  max_overflow: 40
+  pool_timeout: 30
+  pool_recycle: 1800  # 30分钟回收连接
+  
+# Redis配置（生产级配置）
+redis:
+  host: "${REDIS_HOST}"
+  port: 6379
+  db: 0
+  password: "${REDIS_PASSWORD}"
+  max_connections: 50
+  timeout: 10
+  
+# MinIO存储配置（生产环境）
+storage:
+  minio:
+    endpoint: "${MINIO_ENDPOINT}"
+    access_key: "${MINIO_ACCESS_KEY}"
+    secret_key: "${MINIO_SECRET_KEY}"
+    bucket: "knowledge-docs-prod"
+    secure: true
+    region: "${AWS_REGION}"
+    
+# 向量存储配置（生产环境）
+vector_store:
+  milvus:
+    host: "${MILVUS_HOST}"
+    port: 19530
+    collection: "knowledge_base_prod"
+    dimension: 1536
+    metric_type: "IP"
+    index_type: "HNSW"  # 生产环境使用高性能索引
+    m: 16
+    ef_construction: 200
+    
+# 搜索服务配置（生产环境）
+search:
+  elasticsearch:
+    url: "${ELASTICSEARCH_URL}"
+    index: "knowledge_docs_prod"
+    timeout: 60
+    max_retries: 5
+    
+# AI模型配置（生产环境）
+ai:
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    model: "gpt-4"  # 生产环境使用更好的模型
+    temperature: 0.3
+    max_tokens: 2000
+    timeout: 60
+  embedding:
+    model: "text-embedding-ada-002"
+    batch_size: 200
+    
+# 文档处理配置
+document:
+  max_file_size: "100MB"
+  allowed_extensions: [".pdf", ".docx", ".txt", ".md"]
+  chunk_size: 1000
+  chunk_overlap: 200
+  parallel_processing: true
+  
+# 缓存配置（生产级）
+cache:
+  default_ttl: 7200  # 2小时缓存
+  max_size: 10000
+  cleanup_interval: 300
+  
+# 功能开关（生产环境）
+features:
+  voice_enabled: true
+  metrics_enabled: true
+  admin_panel_enabled: false  # 生产环境禁用管理面板
+  api_docs_enabled: false     # 生产环境禁用API文档
+  cors_enabled: true
+  debug_tools: false
+  hot_reload: false
+  
+# 监控配置（完整监控）
+monitoring:
+  health_check_enabled: true
+  metrics_enabled: true
+  prometheus_enabled: true
+  jaeger_enabled: true
+  sentry_enabled: true
+  
+# 任务队列配置（生产级）
+task_queue:
+  broker_url: "${CELERY_BROKER_URL}"
+  result_backend: "${CELERY_RESULT_BACKEND}"
+  max_retries: 5
+  retry_delay: 120
+  
+# 邮件配置
+email:
+  smtp_server: "${SMTP_SERVER}"
+  smtp_port: 587
+  username: "${SMTP_USERNAME}"
+  password: "${SMTP_PASSWORD}"
+  use_tls: true
+  
+# WebSocket配置（生产级）
+websocket:
+  enabled: true
+  max_connections: 1000
+  heartbeat_interval: 60
+  
+# API配置
+api:
+  version: "v1"
+  title: "知识QA系统API"
+  description: "智能知识问答系统生产环境API"
+  rate_limit_enabled: true
+  pagination_default_size: 20
+  pagination_max_size: 50  # 生产环境限制更小
+
+# 生产专用配置
+production:
+  high_availability: true
+  load_balancing: true
+  auto_scaling: true
+  disaster_recovery: true
+  
+# 性能配置（生产优化）
+performance:
+  connection_pool_size: 50
+  worker_timeout: 300
+  max_request_size: "50MB"
+  keepalive_timeout: 10
+  request_timeout: 60
+  
+# 安全增强配置（最高级别）
+security_enhanced:
+  ssl_redirect: true
+  secure_headers: true
+  content_security_policy: true
+  sql_injection_protection: true
+  xss_protection: true
+  csrf_protection: true
+  session_security: true
+  ip_whitelist_enabled: false
+  
+# 备份配置（完整备份策略）
+backup:
+  enabled: true
+  database_backup_interval: "0 1 * * *"   # 每天凌晨1点
+  file_backup_interval: "0 2 * * 0"       # 每周日凌晨2点
+  full_backup_interval: "0 3 1 * *"       # 每月1号凌晨3点
+  retention_days: 90
+  offsite_backup: true
+  encryption_enabled: true
+  
+# 告警配置（严格告警）
+alerting:
+  enabled: true
+  error_threshold: 5
+  response_time_threshold: 1000
+  disk_usage_threshold: 70
+  memory_usage_threshold: 80
+  cpu_usage_threshold: 80
+  connection_pool_threshold: 80
+  
+# 合规性配置
+compliance:
+  gdpr_enabled: true
+  data_retention_days: 2555  # 7年
+  audit_logging: true
+  privacy_protection: true
+  
+# 扩展配置
+scaling:
+  auto_scaling_enabled: true
+  min_instances: 2
+  max_instances: 10
+  cpu_threshold: 70
+  memory_threshold: 80
+  
+# 灾难恢复配置
+disaster_recovery:
+  backup_region: "${BACKUP_REGION}"
+  rpo_minutes: 60  # 恢复点目标：1小时
+  rto_minutes: 240  # 恢复时间目标：4小时
+  
+# ==============================================================================
+# 生产环境特性
+# ==============================================================================
+# 
+# 1. 最高级别的安全配置和访问控制
+# 2. 性能优化的数据库连接池和缓存策略
+# 3. 完整的监控、告警和日志记录
+# 4. 自动备份和灾难恢复机制
+# 5. 严格的速率限制和资源使用控制
+# 6. 合规性和审计日志记录
+# 7. 高可用性和自动扩缩容配置
+# ============================================================================== 

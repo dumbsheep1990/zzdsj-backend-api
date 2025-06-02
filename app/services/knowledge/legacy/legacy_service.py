@@ -10,7 +10,7 @@ from datetime import datetime
 
 from app.repositories.knowledge import KnowledgeBaseRepository, DocumentRepository, DocumentChunkRepository
 from app.models.knowledge import KnowledgeBase, Document, DocumentChunk
-from app.utils.vector_store import get_vector_store
+from app.utils.storage.vector_storage import get_vector_store
 from app.config import settings
 
 logger = logging.getLogger(__name__)

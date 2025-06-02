@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel, Field
 
-from app.utils.sensitive_word_filter import get_sensitive_word_filter, SensitiveWordFilterType
+from app.utils.security.content_filtering import get_sensitive_word_filter, SensitiveWordFilterType
 from app.api.frontend.dependencies import ResponseFormatter, get_current_user, require_permission
 
 router = APIRouter(prefix="/api/frontend/system/sensitive-words", tags=["敏感词管理"])

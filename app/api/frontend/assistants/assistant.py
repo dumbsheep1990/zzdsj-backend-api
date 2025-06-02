@@ -30,9 +30,9 @@ from app.schemas.assistant import (
 )
 from app.schemas.chat import ChatRequest, ChatResponse, MultimodalChatRequest, VoiceChatRequest
 from app.frameworks.agno import AgnoAgent, create_knowledge_agent
-from app.utils.object_storage import upload_file, get_file_url
-from app.utils.rate_limiter import RateLimiter
-from app.utils.template_renderer import render_assistant_page
+from app.utils.storage.object_storage import upload_file, get_file_url
+from app.utils.security.rate_limiting import RateLimiter
+from app.utils.text.template_renderer import render_assistant_page
 from app.api.frontend.dependencies import ResponseFormatter
 from app.config import settings
 

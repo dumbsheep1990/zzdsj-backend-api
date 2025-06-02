@@ -1,15 +1,16 @@
 """
-LightRAG API 客户端 - 用于连接部署在Docker中的LightRAG服务
-该模块提供了与LightRAG API服务交互的接口，支持工作目录的动态创建和管理
+LightRAG API客户端模块
+用于与LightRAG服务进行API通信
 """
-import os
-import json
-import requests
-from typing import Dict, List, Optional, Union, Any
-from urllib.parse import urljoin
 
-from app.config import settings
-from app.utils.logger import setup_logger
+import json
+import asyncio
+import aiohttp
+import logging
+from typing import Dict, Any, Optional, List, AsyncGenerator
+from contextlib import asynccontextmanager
+
+from app.utils.common.logger import setup_logger
 
 logger = setup_logger("lightrag_api_client")
 

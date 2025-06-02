@@ -1,292 +1,278 @@
-aiohappyeyeballs==2.4.3
-aiohttp==3.10.10
-aiosignal==1.3.1
-annotated-types==0.6.0
-anyio==3.7.1
-appdirs==1.4.4
-appnope==0.1.4
-argon2-cffi==23.1.0
-argon2-cffi-bindings==21.2.0
-arrow==1.3.0
-arxiv==2.1.3
-asgiref==3.8.1
-asttokens==2.4.1
-async-lru==2.0.4
-attrs==24.2.0
-azure-cognitiveservices-speech==1.41.1
-babel==2.16.0
-backoff==2.2.1
-bcrypt==4.2.0
-beautifulsoup4==4.12.3
-bleach==6.1.0
-boilerpy3==1.0.7
-build==1.2.2.post1
-cachetools==5.5.0
-cattrs==24.1.2
-certifi==2023.7.22
-cffi==1.17.1
-chardet==5.2.0
-charset-normalizer==3.4.0
-chroma-hnswlib==0.7.6
-chromadb==0.5.16
-click==8.1.7
-coloredlogs==15.0.1
-comm==0.2.2
-cryptography==43.0.3
-dataclasses-json==0.6.7
-debugpy==1.8.7
-decorator==5.1.1
-defusedxml==0.7.1
-Deprecated==1.2.14
-dirtyjson==1.0.8
-diskcache==5.6.3
-distro==1.8.0
-docker==7.1.0
-docopt==0.6.2
-duckduckgo_search==6.3.3
-durationpy==0.9
-emoji==2.14.0
-eval_type_backport==0.2.0
-Events==0.5
-executing==2.1.0
-faiss-cpu==1.9.0
-farm-haystack==1.26.3
+# ===============================================================================
+# 知识库问答系统 - Python依赖管理
+# ===============================================================================
+# 本文件包含项目运行所需的所有Python包依赖
+# 按功能模块分类，便于管理和维护
+# ===============================================================================
+
+# ===============================================================================
+# Web框架和API
+# ===============================================================================
 fastapi==0.115.4
-fastjsonschema==2.20.0
-feedparser==6.0.11
-filelock==3.16.1
-filetype==1.2.0
-FLAML==2.3.2
-flatbuffers==24.3.25
-fqdn==1.5.1
-frozenlist==1.5.0
-fsspec==2024.10.0
-google-auth==2.35.0
-google-search-results==2.4.2
-googleapis-common-protos==1.65.0
-greenlet==3.1.1
-grpcio==1.67.1
-guidance==0.1.16
-h11==0.14.0
-html2text==2024.2.26
-html5lib==1.1
-httpcore==1.0.2
-httptools==0.6.4
-httpx==0.27.2
-httpx-sse==0.4.0
-huggingface-hub==0.26.1
-humanfriendly==10.0
-idna==3.4
-importlib_metadata==8.4.0
-importlib_resources==6.4.5
-inflect==7.4.0
-ipykernel==6.29.5
-ipynb-py-convert==0.4.6
-ipython==8.29.0
-ipywidgets==8.1.5
-isoduration==20.11.0
-jedi==0.19.1
-Jinja2==3.1.4
-jiter==0.6.1
-joblib==1.4.2
-json5==0.9.25
-jsonpatch==1.33
-jsonpath-python==1.0.6
-jsonpointer==3.0.0
-jsonschema==4.23.0
-jsonschema-specifications==2024.10.1
-jupyter==1.1.1
-jupyter-console==6.6.3
-jupyter-events==0.10.0
-jupyter-lsp==2.2.5
-jupyter_client==8.6.3
-jupyter_core==5.7.2
-jupyter_server==2.14.2
-jupyter_server_terminals==0.5.3
-jupyterlab==4.2.5
-jupyterlab_pygments==0.3.0
-jupyterlab_server==2.27.3
-jupyterlab_widgets==3.0.13
-kubernetes==31.0.0
+uvicorn[standard]==0.32.0
+starlette==0.41.2
+pydantic==2.8.2
+pydantic-core==2.20.1
+pydantic-settings==2.9.1
+
+# ===============================================================================
+# 异步任务处理
+# ===============================================================================
+celery==5.5.3
+flower==2.0.1
+kombu==5.5.4
+billiard==4.2.1
+amqp==5.3.1
+vine==5.1.0
+click-didyoumean==0.3.1
+click-repl==0.3.0
+click-plugins==1.1.1
+
+# ===============================================================================
+# 数据库和ORM
+# ===============================================================================
+SQLAlchemy==2.0.34
+psycopg2-binary==2.9.9
+alembic==1.13.2
+asyncpg==0.29.0
+
+# ===============================================================================
+# 缓存和消息队列
+# ===============================================================================
+redis==6.2.0
+aioredis==2.0.1
+pika==1.3.2
+
+# ===============================================================================
+# 向量数据库和搜索
+# ===============================================================================
+pymilvus==2.3.7
+elasticsearch==8.15.1
+elasticsearch-dsl==8.15.0
+
+# ===============================================================================
+# 对象存储
+# ===============================================================================
+minio==7.2.9
+boto3==1.35.39
+botocore==1.35.39
+
+# ===============================================================================
+# AI和机器学习框架
+# ===============================================================================
+
+# LlamaIndex生态系统
+llama-index==0.11.22
+llama-index-core==0.11.22
+llama-index-embeddings-openai==0.2.5
+llama-index-llms-openai==0.2.16
+llama-index-vector-stores-milvus==0.2.4
+llama-index-vector-stores-elasticsearch==0.3.0
+llama-index-readers-file==0.2.2
+llama-index-readers-database==0.2.0
+llama-index-multi-modal-llms-openai==0.2.3
+
+# LangChain生态系统 (保留兼容性)
 langchain==0.3.4
-langchain-community==0.3.3
 langchain-core==0.3.15
-langchain-experimental==0.3.2
+langchain-community==0.3.3
 langchain-openai==0.2.3
 langchain-text-splitters==0.3.0
-langchainhub==0.1.21
-langdetect==1.0.9
+langsmith==0.1.137
+
+# Haystack框架
+farm-haystack==1.26.3
+
+# LightRAG知识图谱框架
+lightrag==0.0.6
+lightrag-hku==0.1.10
+neo4j==5.25.0
+networkx==3.4.2
+
+# Agno智能代理框架
+# agno==0.8.17
+# 注意: Agno是商业框架，需要单独安装和配置
+# 可通过以下方式安装: pip install agno
+
+# FastMCP模型通信协议框架
+fastmcp==1.2.5
+mcp==1.0.0
+mcp-server==0.3.0
+
+# OWL工具集成框架
+owl-toolkit==0.2.8
+toolforge==1.4.3
+
+# Agent框架和工具
+autogen==0.2.17
 langgraph==0.2.44
 langgraph-checkpoint==2.0.2
-langgraph-sdk==0.1.35
-langsmith==0.1.137
-lark==1.2.2
-lazy-imports==0.3.1
-llama-cloud==0.1.4
-llama-hub==0.0.79.post1
-llama-index==0.11.22
-llama-index-agent-openai==0.3.4
-llama-index-cli==0.3.1
-llama-index-core==0.11.22
-llama-index-embeddings-huggingface==0.3.1
-llama-index-embeddings-openai==0.2.5
-llama-index-indices-managed-llama-cloud==0.4.0
-llama-index-legacy==0.9.48.post3
-llama-index-llms-openai==0.2.16
-llama-index-multi-modal-llms-openai==0.2.3
-llama-index-node-parser-topic==0.1.0
-llama-index-program-openai==0.2.0
-llama-index-question-gen-openai==0.2.0
-llama-index-readers-database==0.2.0
-llama-index-readers-file==0.2.2
-llama-index-readers-llama-parse==0.3.0
-llama-parse==0.5.13
-lxml==5.3.0
-markdown-it-py==3.0.0
-MarkupSafe==3.0.2
-marshmallow==3.23.0
-matplotlib-inline==0.1.7
-mdurl==0.1.2
-mistune==3.0.2
-mmh3==5.0.1
-monotonic==1.6
-more-itertools==10.5.0
-mpmath==1.3.0
-msgpack==1.1.0
-multidict==6.1.0
-mypy-extensions==1.0.0
-nbclient==0.10.0
-nbconvert==7.16.4
-nbformat==5.10.4
-nest-asyncio==1.6.0
-networkx==3.4.2
-nltk==3.9.1
-notebook==7.2.2
-notebook_shim==0.2.4
-num2words==0.5.13
-numpy==1.26.4
-oauthlib==3.2.2
-olefile==0.47
-onnxruntime==1.19.2
+
+# 知识图谱相关
+rdflib==7.1.0
+py2neo==2021.2.4
+graphviz==0.20.3
+
+# ===============================================================================
+# AI模型API客户端
+# ===============================================================================
 openai==1.52.2
-opentelemetry-api==1.27.0
-opentelemetry-exporter-otlp-proto-common==1.27.0
-opentelemetry-exporter-otlp-proto-grpc==1.27.0
-opentelemetry-instrumentation==0.48b0
-opentelemetry-instrumentation-asgi==0.48b0
-opentelemetry-instrumentation-fastapi==0.48b0
-opentelemetry-proto==1.27.0
-opentelemetry-sdk==1.27.0
-opentelemetry-semantic-conventions==0.48b0
-opentelemetry-util-http==0.48b0
-ordered-set==4.1.0
-orjson==3.10.10
-overrides==7.7.0
-packaging==24.1
+anthropic==0.34.2
+zhipuai==2.1.5.20241022
+dashscope==1.20.9
+
+# ===============================================================================
+# 数据处理和科学计算
+# ===============================================================================
+numpy==1.26.4
 pandas==2.2.3
-pandocfilters==1.5.1
-parso==0.8.4
-pexpect==4.9.0
-pillow==11.0.0
-platformdirs==4.3.6
-posthog==3.7.0
-primp==0.6.5
-prometheus_client==0.21.0
-prompt_toolkit==3.0.48
-prompthub-py==4.0.0
-propcache==0.2.0
-protobuf==4.25.5
-psutil==6.1.0
-ptyprocess==0.7.0
-pure_eval==0.2.3
-pyaml==23.12.0
-pyasn1==0.6.1
-pyasn1_modules==0.4.1
-pyautogen==0.3.1
-pycparser==2.22
-pydantic==1.10.19
-pydantic-settings==2.6.0
-pydantic_core==2.23.4
-Pygments==2.18.0
-PyMuPDF==1.24.13
-pypdf==4.3.1
-PyPika==0.48.9
-pyproject_hooks==1.2.0
-python-dateutil==2.8.2
-python-dotenv==1.0.1
-python-iso639==2024.10.22
-python-json-logger==2.0.7
-python-magic==0.4.27
-python-multipart==0.0.16
-python-oxmsg==0.0.1
-pytz==2024.2
-PyYAML==6.0.2
-pyzmq==26.2.0
-quantulum3==0.9.2
-rank-bm25==0.2.2
-RapidFuzz==3.10.1
-referencing==0.35.1
-regex==2024.9.11
-requests==2.32.3
-requests-cache==0.9.8
-requests-oauthlib==2.0.0
-requests-toolbelt==1.0.0
-retrying==1.3.4
-rfc3339-validator==0.1.4
-rfc3986-validator==0.1.1
-rich==13.9.3
-rpds-py==0.20.0
-rsa==4.9
-safetensors==0.4.5
 scikit-learn==1.5.2
 scipy==1.14.1
-Send2Trash==1.8.3
+matplotlib==3.9.2
+
+# ===============================================================================
+# 文本处理和NLP
+# ===============================================================================
+nltk==3.9.1
 sentence-transformers==3.2.1
-sgmllib3k==1.0.0
-shellingham==1.5.4
-six==1.16.0
-sniffio==1.3.0
-soundfile==0.12.1
-soupsieve==2.6
-SQLAlchemy==2.0.36
-sseclient-py==1.8.0
-stack-data==0.6.3
-starlette==0.41.2
-striprtf==0.0.26
-sympy==1.13.3
-tenacity==8.5.0
-termcolor==2.5.0
-terminado==0.18.1
-threadpoolctl==3.5.0
-tiktoken==0.8.0
-tinycss2==1.4.0
-tokenizers==0.15.2
-torch==2.2.2
-tornado==6.4.1
-tqdm==4.66.1
-traitlets==5.14.3
 transformers==4.39.3
-typeguard==4.4.1
-typer==0.12.5
-types-python-dateutil==2.9.0.20241003
-types-requests==2.32.0.20241016
-typing-inspect==0.9.0
-typing_extensions==4.12.2
-tzdata==2024.2
+tiktoken==0.8.0
+rank-bm25==0.2.2
+jieba==0.42.1
+
+# ===============================================================================
+# 文档处理
+# ===============================================================================
+PyMuPDF==1.24.13
+pypdf==4.3.1
+python-docx==1.1.2
+python-pptx==1.0.2
+openpyxl==3.1.5
+lxml==5.3.0
+beautifulsoup4==4.12.3
 unstructured==0.16.3
 unstructured-client==0.26.2
-uri-template==1.3.0
-url-normalize==1.4.3
+
+# ===============================================================================
+# 音频处理 (语音功能)
+# ===============================================================================
+soundfile==0.12.1
+speechrecognition==3.10.4
+pydub==0.25.1
+
+# ===============================================================================
+# 系统监控和健康检查
+# ===============================================================================
+psutil==6.1.0
+prometheus-client==0.21.0
+
+# ===============================================================================
+# 安全和认证
+# ===============================================================================
+cryptography==43.0.3
+bcrypt==4.2.0
+PyJWT==2.9.0
+passlib[bcrypt]==1.7.4
+
+# ===============================================================================
+# HTTP客户端和工具
+# ===============================================================================
+httpx==0.27.2
+aiohttp==3.10.10
+requests==2.32.3
 urllib3==2.2.3
-uvicorn==0.32.0
-uvloop==0.21.0
-watchfiles==0.24.0
-wcwidth==0.2.13
-webcolors==24.8.0
-webencodings==0.5.1
-websocket-client==1.8.0
-websockets==13.1
-widgetsnbextension==4.0.13
-wrapt==1.16.0
-yarl==1.16.0
-zipp==3.20.2
+
+# ===============================================================================
+# 配置管理
+# ===============================================================================
+python-dotenv==1.0.1
+PyYAML==6.0.2
+python-multipart==0.0.16
+
+# ===============================================================================
+# 工具和实用程序
+# ===============================================================================
+click==8.1.7
+rich==13.9.3
+tenacity==8.5.0
+retrying==1.3.4
+cachetools==5.5.0
+python-dateutil==2.8.2
+pytz==2024.2
+tzdata==2025.2
+
+# ===============================================================================
+# 开发和测试工具
+# ===============================================================================
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-cov==5.0.0
+httpx==0.27.2  # 用于测试API
+
+# ===============================================================================
+# JSON和数据序列化
+# ===============================================================================
+orjson==3.10.10
+msgpack==1.1.0
+jsonschema==4.23.0
+
+# ===============================================================================
+# 日志和监控
+# ===============================================================================
+structlog==24.4.0
+python-json-logger==2.0.7
+
+# ===============================================================================
+# 任务调度和后台作业
+# ===============================================================================
+APScheduler==3.10.4
+
+# ===============================================================================
+# 分布式和微服务
+# ===============================================================================
+nacos-sdk-python==0.1.5
+kubernetes==31.0.0
+
+# ===============================================================================
+# 性能优化
+# ===============================================================================
+aiodns==3.2.0
+cchardet==2.1.7
+
+# ===============================================================================
+# 可选依赖 (根据功能需求启用)
+# ===============================================================================
+
+# 高级智能代理框架
+# phidata==2.7.10
+
+# 图像处理
+Pillow==11.0.0
+
+# 语音合成 (讯飞、阿里云等)
+# azure-cognitiveservices-speech==1.41.1
+
+# 搜索引擎 (SearxNG集成)
+docker==7.1.0
+
+# 数据可视化
+plotly==5.24.1
+dash==2.18.2
+
+# 工作流编排
+prefect==3.1.4
+
+# 容器化支持
+docker-compose==1.29.2
+
+# ===============================================================================
+# 注意事项
+# ===============================================================================
+# 1. 某些依赖可能需要系统级安装 (如 ffmpeg for 音频处理)
+# 2. 部分AI模型可能需要额外的模型文件下载
+# 3. 生产环境建议固定版本号
+# 4. 定期更新依赖以获取安全补丁
+# 5. Agno框架需要商业许可，可选择开源替代方案
+# 6. LightRAG需要Neo4j数据库支持知识图谱功能
+# 7. FastMCP需要配置MCP服务器和客户端
+# ===============================================================================

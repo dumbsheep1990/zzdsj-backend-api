@@ -33,7 +33,8 @@ class SemanticMemory(BaseMemory[Dict[str, Any]]):
             return get_db_engine()
         else:
             # 默认使用内存向量存储
-            from app.utils.vector_store import InMemoryVectorStore
+            # 使用新的标准化向量存储组件
+            from app.utils.storage.vector_storage import InMemoryVectorStore
             return InMemoryVectorStore()
     
     async def _get_embedding(self, text: str) -> List[float]:

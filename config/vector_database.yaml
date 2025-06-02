@@ -1,0 +1,401 @@
+# ==============================================================================
+# 向量数据库配置 - 标准YAML配置文件
+# 集成到ZZDSJ配置管理系统
+# ==============================================================================
+
+# 向量数据库通用配置
+vector_database:
+  # 自动初始化配置
+  auto_init:
+    enabled: true
+    primary_backend: "milvus"
+    fallback_backends: ["pgvector", "elasticsearch"]
+    auto_create_collections: 
+      - "document_collection"
+      - "knowledge_base_collection"
+    retry_attempts: 3
+    retry_delay: 5
+    health_check_enabled: true
+    health_check_interval: 60
+    auto_failover: true
+    failover_threshold: 3
+  
+  # 通用参数
+  common:
+    default_dimension: 1536
+    batch_size: 1000
+    max_connections: 10
+    connection_timeout: 10
+    query_timeout: 30
+    index_building_timeout: 300
+  
+  # Milvus配置
+  milvus:
+    # 连接配置
+    connection:
+      host: "${MILVUS_HOST:localhost}"
+      port: "${MILVUS_PORT:19530}"
+      user: "${MILVUS_USER:}"
+      password: "${MILVUS_PASSWORD:}"
+      secure: "${MILVUS_SECURE:false}"
+      timeout: "${MILVUS_TIMEOUT:10}"
+      connection_alias: "default"
+    
+    # 集合配置
+    collections:
+      document_vectors:
+        description: "文档向量集合"
+        enable_dynamic_field: true
+        auto_id: false
+        fields:
+          id:
+            data_type: "VARCHAR"
+            is_primary: true
+            max_length: 100
+          document_id:
+            data_type: "VARCHAR"
+            max_length: 100
+          knowledge_base_id:
+            data_type: "VARCHAR"
+            max_length: 100
+          chunk_id:
+            data_type: "VARCHAR"
+            max_length: 100
+          vector:
+            data_type: "FLOAT_VECTOR"
+            dimension: "${VECTOR_DB_DEFAULT_DIMENSION:1536}"
+          text:
+            data_type: "VARCHAR"
+            max_length: 65535
+          metadata:
+            data_type: "JSON"
+      
+      knowledge_base_vectors:
+        description: "知识库向量集合"
+        enable_dynamic_field: true
+        auto_id: false
+        fields:
+          id:
+            data_type: "VARCHAR"
+            is_primary: true
+            max_length: 100
+          document_id:
+            data_type: "VARCHAR"
+            max_length: 100
+          knowledge_base_id:
+            data_type: "VARCHAR"
+            max_length: 100
+          chunk_id:
+            data_type: "VARCHAR"
+            max_length: 100
+          vector:
+            data_type: "FLOAT_VECTOR"
+            dimension: "${VECTOR_DB_DEFAULT_DIMENSION:1536}"
+          text:
+            data_type: "VARCHAR"
+            max_length: 65535
+          metadata:
+            data_type: "JSON"
+    
+    # 索引配置
+    index:
+      default_index_type: "HNSW"
+      default_metric_type: "COSINE"
+      index_params:
+        HNSW:
+          M: 16
+          efConstruction: 200
+        IVF_FLAT:
+          nlist: 1024
+        IVF_SQ8:
+          nlist: 1024
+        IVF_PQ:
+          nlist: 1024
+          m: 8
+          nbits: 8
+    
+    # 分区配置
+    partition:
+      enabled: true
+      partition_key: "knowledge_base_id"
+      default_partitions: ["_default"]
+      auto_create_partitions: true
+    
+    # 性能配置
+    performance:
+      insert_buffer_size: 268435456  # 256MB
+      index_building_memory_limit: 2147483648  # 2GB
+      segment_size_mb: 512
+      auto_flush_interval: 5
+      search_timeout: 30
+      insert_timeout: 60
+  
+  # PostgreSQL+pgvector配置
+  pgvector:
+    # 连接配置
+    connection:
+      database_url: "${PGVECTOR_DATABASE_URL:}"
+      host: "${PGVECTOR_HOST:localhost}"
+      port: "${PGVECTOR_PORT:5432}"
+      user: "${PGVECTOR_USER:postgres}"
+      password: "${PGVECTOR_PASSWORD:password}"
+      database: "${PGVECTOR_DATABASE:postgres}"
+      schema_name: "${PGVECTOR_SCHEMA:public}"
+      timeout: "${PGVECTOR_TIMEOUT:10}"
+      pool_size: 10
+      max_overflow: 20
+    
+    # 表配置
+    tables:
+      document_vectors:
+        table_name: "document_vectors"
+        description: "文档向量表"
+        fields:
+          id:
+            data_type: "UUID"
+            is_primary: true
+            default_value: "gen_random_uuid()"
+          document_id:
+            data_type: "VARCHAR"
+            max_length: 100
+            nullable: false
+          knowledge_base_id:
+            data_type: "VARCHAR"
+            max_length: 100
+            nullable: false
+          chunk_id:
+            data_type: "VARCHAR"
+            max_length: 100
+            nullable: false
+          embedding:
+            data_type: "VECTOR"
+            dimension: "${VECTOR_DB_DEFAULT_DIMENSION:1536}"
+          content:
+            data_type: "TEXT"
+          metadata:
+            data_type: "JSONB"
+          created_at:
+            data_type: "TIMESTAMP"
+            default_value: "CURRENT_TIMESTAMP"
+          updated_at:
+            data_type: "TIMESTAMP"
+      
+      knowledge_base_vectors:
+        table_name: "knowledge_base_vectors"
+        description: "知识库向量表"
+        fields:
+          id:
+            data_type: "UUID"
+            is_primary: true
+            default_value: "gen_random_uuid()"
+          document_id:
+            data_type: "VARCHAR"
+            max_length: 100
+            nullable: false
+          knowledge_base_id:
+            data_type: "VARCHAR"
+            max_length: 100
+            nullable: false
+          chunk_id:
+            data_type: "VARCHAR"
+            max_length: 100
+            nullable: false
+          embedding:
+            data_type: "VECTOR"
+            dimension: "${VECTOR_DB_DEFAULT_DIMENSION:1536}"
+          content:
+            data_type: "TEXT"
+          metadata:
+            data_type: "JSONB"
+          created_at:
+            data_type: "TIMESTAMP"
+            default_value: "CURRENT_TIMESTAMP"
+          updated_at:
+            data_type: "TIMESTAMP"
+            default_value: "CURRENT_TIMESTAMP"
+    
+    # 索引配置
+    index:
+      default_index_type: "IVFFLAT"
+      default_metric_type: "vector_cosine_ops"
+      index_params:
+        IVFFLAT:
+          lists: 100
+        HNSW_PG:
+          m: 16
+          ef_construction: 64
+      auto_create_indexes: true
+      parallel_index_creation: true
+    
+    # 性能配置
+    performance:
+      maintenance_work_mem: "1GB"
+      effective_cache_size: "4GB"
+      shared_preload_libraries: "vector"
+      vector_index_scan_threshold: 1000
+      vacuum_schedule: "0 2 * * *"  # 每天凌晨2点
+      analyze_schedule: "0 3 * * *"  # 每天凌晨3点
+      reindex_schedule: "0 4 * * 0"  # 每周日凌晨4点
+  
+  # Elasticsearch配置
+  elasticsearch:
+    # 连接配置
+    connection:
+      es_url: "${ELASTICSEARCH_URL:http://localhost:9200}"
+      username: "${ELASTICSEARCH_USERNAME:}"
+      password: "${ELASTICSEARCH_PASSWORD:}"
+      api_key: "${ELASTICSEARCH_API_KEY:}"
+      timeout: "${ELASTICSEARCH_TIMEOUT:30}"
+      max_retries: 3
+      retry_delay: 1
+      use_ssl: false
+      verify_certs: false
+    
+    # 索引配置
+    indices:
+      document_vectors:
+        index_name: "document_vectors"
+        description: "文档向量索引"
+        settings:
+          number_of_shards: 1
+          number_of_replicas: 0
+          refresh_interval: "5s"
+        mappings:
+          properties:
+            id:
+              type: "keyword"
+            document_id:
+              type: "keyword"
+            knowledge_base_id:
+              type: "keyword"
+            chunk_id:
+              type: "keyword"
+            embedding:
+              type: "dense_vector"
+              dims: "${VECTOR_DB_DEFAULT_DIMENSION:1536}"
+              index: true
+              similarity: "cosine"
+            content:
+              type: "text"
+              analyzer: "standard"
+            metadata:
+              type: "object"
+            created_at:
+              type: "date"
+            updated_at:
+              type: "date"
+      
+      knowledge_base_vectors:
+        index_name: "knowledge_base_vectors"
+        description: "知识库向量索引"
+        settings:
+          number_of_shards: 3
+          number_of_replicas: 1
+          refresh_interval: "5s"
+        mappings:
+          properties:
+            id:
+              type: "keyword"
+            document_id:
+              type: "keyword"
+            knowledge_base_id:
+              type: "keyword"
+            chunk_id:
+              type: "keyword"
+            embedding:
+              type: "dense_vector"
+              dims: "${VECTOR_DB_DEFAULT_DIMENSION:1536}"
+              index: true
+              similarity: "cosine"
+            content:
+              type: "text"
+              analyzer: "standard"
+            metadata:
+              type: "object"
+            created_at:
+              type: "date"
+            updated_at:
+              type: "date"
+    
+    # 性能配置
+    performance:
+      bulk_size: 1000
+      bulk_timeout: "10s"
+      max_concurrent_searches: 5
+      search_timeout: "30s"
+      index_timeout: "60s"
+      optimize_schedule: "0 1 * * *"  # 每天凌晨1点优化
+      snapshot_schedule: "0 2 * * *"  # 每天凌晨2点快照
+      delete_old_indices: "30d"       # 删除30天前的索引
+  
+  # 监控和维护配置
+  monitoring:
+    enabled: true
+    metrics_collection: true
+    health_check_interval: 60
+    performance_monitoring: true
+    alert_thresholds:
+      connection_failure_count: 3
+      query_timeout_ms: 30000
+      insert_timeout_ms: 60000
+      memory_usage_percent: 80
+      disk_usage_percent: 85
+    
+    # 日志配置
+    logging:
+      level: "INFO"
+      enable_query_logging: false
+      enable_performance_logging: true
+      log_slow_queries: true
+      slow_query_threshold_ms: 1000
+  
+  # 集成配置
+  integration:
+    # 与现有配置系统的集成
+    config_manager:
+      use_advanced_config: true
+      config_validation: true
+      auto_reload: false
+      cache_config: true
+      cache_ttl: 300
+    
+    # 环境变量映射
+    env_mapping:
+      VECTOR_DB_AUTO_INIT: "vector_database.auto_init.enabled"
+      VECTOR_DB_PRIMARY_BACKEND: "vector_database.auto_init.primary_backend"
+      VECTOR_DB_FALLBACK_BACKENDS: "vector_database.auto_init.fallback_backends"
+      VECTOR_DB_DEFAULT_DIMENSION: "vector_database.common.default_dimension"
+      VECTOR_DB_BATCH_SIZE: "vector_database.common.batch_size"
+      VECTOR_DB_MAX_CONNECTIONS: "vector_database.common.max_connections"
+    
+    # 配置覆盖优先级
+    priority_order:
+      - "environment_variables"  # 最高优先级
+      - "env_local"
+      - "env_environment"
+      - "env_secrets"
+      - "config_environment_yaml"
+      - "config_vector_database_yaml"
+      - "config_default_yaml"     # 最低优先级
+
+# ==============================================================================
+# 配置说明
+# ==============================================================================
+# 
+# 此配置文件定义了向量数据库的所有配置选项
+# 
+# 特性：
+# 1. 支持多种向量数据库后端（Milvus、PostgreSQL+pgvector、Elasticsearch）
+# 2. 环境变量替换支持（${VAR_NAME:default_value}）
+# 3. 配置验证和自动初始化
+# 4. 性能优化和监控配置
+# 5. 与现有配置系统完全集成
+# 
+# 使用方法：
+# 1. 此文件会被自动加载到 config.vector_database 配置节点
+# 2. 环境变量会自动替换配置值
+# 3. 可通过 get_config_manager().get_config_value("vector_database.milvus.host") 获取配置
+# 
+# 优先级：
+# 环境变量 > .env.local > .env.{environment} > {environment}.yaml > vector_database.yaml
+# ============================================================================== 

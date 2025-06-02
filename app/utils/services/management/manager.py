@@ -659,3 +659,16 @@ def register_lightrag_service():
     
     # 返回注册的服务
     return manager.get_service_status(service_name)
+
+# 全局便利函数
+def start_service(service_name: str) -> bool:
+    """启动指定服务的全局便利函数"""
+    return get_service_manager().start_service(service_name)
+
+def stop_service(service_name: str) -> bool:
+    """停止指定服务的全局便利函数"""
+    return get_service_manager().stop_service(service_name)
+
+def restart_service(service_name: str) -> bool:
+    """重启指定服务的全局便利函数"""
+    return get_service_manager().restart_service(service_name)

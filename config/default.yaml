@@ -1,0 +1,180 @@
+# ==============================================================================
+# 默认配置文件 - 基础配置层
+# 包含所有配置项的默认值，优先级最低
+# ==============================================================================
+
+# 应用基础配置
+app:
+  name: "知识QA系统"
+  environment: "default"
+  debug: false
+  version: "1.0.0"
+  timezone: "Asia/Shanghai"
+
+# 服务配置
+service:
+  name: "knowledge-qa-backend"
+  ip: "0.0.0.0"
+  port: 8000
+  host: "localhost"
+  workers: 1
+  
+# 日志配置
+logging:
+  level: "INFO"
+  format: "detailed"
+  file_enabled: true
+  console_enabled: true
+  max_file_size: "10MB"
+  backup_count: 5
+  
+# 安全配置
+security:
+  jwt:
+    algorithm: "HS256"
+    access_token_expire_minutes: 30
+    refresh_token_expire_days: 7
+  cors:
+    enabled: true
+    origins: ["*"]
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    headers: ["*"]
+  rate_limiting:
+    enabled: false
+    requests_per_minute: 60
+    
+# 数据库配置
+database:
+  url: "sqlite:///./app.db"
+  echo: false
+  pool_size: 5
+  max_overflow: 10
+  pool_timeout: 30
+  pool_recycle: 3600
+  
+# Redis配置
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: null
+  max_connections: 10
+  timeout: 5
+  
+# MinIO存储配置
+storage:
+  minio:
+    endpoint: "localhost:9000"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    bucket: "knowledge-docs"
+    secure: false
+    region: "us-east-1"
+    
+# 向量存储配置
+vector_store:
+  milvus:
+    host: "localhost"
+    port: 19530
+    collection: "knowledge_base"
+    dimension: 1536
+    metric_type: "IP"
+    index_type: "IVF_FLAT"
+    nlist: 1024
+    
+# 搜索服务配置
+search:
+  elasticsearch:
+    url: "http://localhost:9200"
+    index: "knowledge_docs"
+    timeout: 30
+    max_retries: 3
+    
+# AI模型配置
+ai:
+  openai:
+    api_key: "your-openai-api-key"
+    model: "gpt-3.5-turbo"
+    temperature: 0.7
+    max_tokens: 1500
+    timeout: 30
+  embedding:
+    model: "text-embedding-ada-002"
+    batch_size: 100
+    
+# 文档处理配置
+document:
+  max_file_size: "50MB"
+  allowed_extensions: [".pdf", ".docx", ".txt", ".md"]
+  chunk_size: 1000
+  chunk_overlap: 200
+  
+# 缓存配置
+cache:
+  default_ttl: 3600
+  max_size: 1000
+  cleanup_interval: 300
+  
+# 功能开关
+features:
+  voice_enabled: false
+  metrics_enabled: true
+  admin_panel_enabled: true
+  api_docs_enabled: true
+  cors_enabled: true
+  debug_tools: false
+  hot_reload: false
+  
+# 监控配置
+monitoring:
+  health_check_enabled: true
+  metrics_enabled: true
+  prometheus_enabled: false
+  jaeger_enabled: false
+  
+# 任务队列配置
+task_queue:
+  broker_url: "redis://localhost:6379/1"
+  result_backend: "redis://localhost:6379/2"
+  max_retries: 3
+  retry_delay: 60
+  
+# 邮件配置
+email:
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  username: ""
+  password: ""
+  use_tls: true
+  
+# WebSocket配置
+websocket:
+  enabled: false
+  max_connections: 100
+  heartbeat_interval: 30
+  
+# API配置
+api:
+  version: "v1"
+  title: "知识QA系统API"
+  description: "智能知识问答系统接口文档"
+  rate_limit_enabled: false
+  pagination_default_size: 20
+  pagination_max_size: 100
+
+# ==============================================================================
+# 配置说明
+# ==============================================================================
+# 
+# 此为默认配置文件，包含所有配置项的默认值
+# 具体环境配置会覆盖这些默认值
+# 
+# 配置优先级（从高到低）：
+# 1. 环境变量
+# 2. .env.local
+# 3. .env.{environment}
+# 4. .env.secrets
+# 5. .env.base
+# 6. config/{environment}.yaml
+# 7. config/default.yaml (当前文件)
+# ============================================================================== 

@@ -9,6 +9,9 @@ import os
 import asyncio
 import logging
 import json
+import sys
+from pathlib import Path
+from typing import Dict, Any, Optional
 
 from app.api import assistants, knowledge, chat, assistant, model_provider, assistant_qa, mcp, mcp_service
 from app.api import auth, user, api_key, resource_permission
@@ -23,21 +26,201 @@ from app.api import context_compression
 from app.api.frontend import frontend_router
 from app.config import settings
 from app.utils.core.database import init_database as init_db
-from app.utils.vector_store import init_milvus
+# 使用新的标准化向量存储组件，保持向后兼容
+from app.utils.storage.vector_storage import (
+    init_standard_document_collection,
+    init_milvus  # 向后兼容的导入
+)
 from app.utils.object_storage import init_minio
 from app.utils.service_discovery import register_service, deregister_service, start_heartbeat
 from app.utils.core.config import ConfigBootstrap, validate_config
 from app.utils.mcp_service_registrar import get_mcp_service_registrar
-from app.utils.service_manager import get_service_manager, register_lightrag_service
+from app.utils.services.management import get_service_manager, register_lightrag_service
 from core.mcp_service_manager import get_mcp_service_manager
 from app.middleware.sensitive_word_middleware import SensitiveWordMiddleware
 from app.startup import register_searxng_startup, register_context_compression
 from app.utils.core.config import inject_config_to_env, get_base_dependencies
-from app.utils.core.config import get_config_manager
+from app.utils.core.config import get_config_manager as get_legacy_config_manager
+
+# 导入新的高级配置管理系统
+from app.core.config.advanced_manager import (
+    AdvancedConfigManager, 
+    get_config_manager as get_advanced_config_manager,
+    load_minimal_config,
+    validate_current_config,
+    ConfigurationError
+)
 
 # 导入日志系统
 from app.middleware.logging_middleware import setup_logging, get_logger
 from app.utils.logging_config import load_logging_config, register_logging_env_mappings
+
+# ============================================================================
+# 配置系统启动检查
+# ============================================================================
+
+def pre_startup_config_check():
+    """启动前配置检查"""
+    print("🔍 执行启动前配置检查...")
+    
+    # 检查环境变量
+    app_env = os.getenv("APP_ENV", "development")
+    config_mode = os.getenv("CONFIG_MODE", "standard")
+    
+    print(f"   当前环境: {app_env}")
+    print(f"   配置模式: {config_mode}")
+    
+    # 检查配置文件存在性
+    project_root = Path(__file__).parent
+    config_dir = project_root / "config"
+    
+    if not config_dir.exists():
+        print("❌ 配置目录不存在，请确保 config/ 目录存在")
+        sys.exit(1)
+    
+    # 检查必需的配置文件
+    required_files = ["default.yaml"]
+    if config_mode != "minimal":
+        required_files.append(f"{app_env}.yaml")
+    
+    missing_files = []
+    for file_name in required_files:
+        config_file = config_dir / file_name
+        if not config_file.exists():
+            missing_files.append(file_name)
+    
+    if missing_files:
+        print(f"❌ 缺失必需的配置文件: {', '.join(missing_files)}")
+        print("请使用环境管理脚本创建配置文件:")
+        print(f"   python scripts/env_manager.py switch {app_env}")
+        sys.exit(1)
+    
+    print("✅ 配置检查通过")
+
+def validate_startup_config() -> Dict[str, Any]:
+    """验证启动配置"""
+    print("🔍 验证启动配置...")
+    
+    try:
+        # 检查是否为最小配置模式
+        config_mode = os.getenv("CONFIG_MODE", "standard")
+        minimal_mode = (config_mode == "minimal" or os.getenv("APP_ENV") == "minimal")
+        
+        # 初始化高级配置管理器
+        app_env = os.getenv("APP_ENV", "development")
+        config_manager = AdvancedConfigManager(environment=app_env)
+        
+        # 加载配置
+        config = config_manager.load_configuration(minimal_mode=minimal_mode)
+        
+        # 验证配置
+        validation_result = config_manager.validate_configuration(config)
+        
+        if not validation_result.is_valid:
+            print("❌ 配置验证失败:")
+            for error in validation_result.errors[:5]:  # 显示前5个错误
+                print(f"   • {error}")
+            
+            if validation_result.missing_required:
+                print("缺失必需配置:")
+                for missing in validation_result.missing_required[:5]:
+                    print(f"   • {missing}")
+            
+            # 非致命错误，继续启动但发出警告
+            print("⚠️ 配置验证有误，继续启动但可能影响功能")
+        else:
+            print("✅ 配置验证通过")
+        
+        # 显示配置摘要
+        print(f"   配置项总数: {len(config)}")
+        print(f"   环境: {app_env}")
+        print(f"   模式: {config_mode}")
+        
+        if minimal_mode:
+            print("   🚀 使用最小配置模式（快速启动）")
+        
+        return config
+        
+    except ConfigurationError as e:
+        print(f"❌ 配置错误: {str(e)}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ 配置验证失败: {str(e)}")
+        print("⚠️ 使用默认配置继续启动")
+        return {}
+
+def setup_application_config(config: Dict[str, Any]) -> FastAPI:
+    """根据配置设置应用"""
+    
+    # 从配置中获取应用设置
+    app_config = config.get("app", {})
+    api_config = config.get("api", {})
+    
+    app_title = api_config.get("title", app_config.get("name", "知识库问答系统API"))
+    app_description = api_config.get("description", "智能知识问答系统接口文档")
+    app_version = app_config.get("version", "1.0.0")
+    
+    # 创建FastAPI应用
+    app = FastAPI(
+        title=app_title,
+        description=app_description,
+        version=app_version,
+        docs_url=None,  # 禁用默认文档
+        redoc_url=None,  # 禁用默认redoc
+    )
+    
+    return app
+
+def setup_cors_middleware(app: FastAPI, config: Dict[str, Any]):
+    """设置CORS中间件"""
+    
+    # 检查是否启用CORS
+    features = config.get("features", {})
+    security_config = config.get("security", {})
+    cors_config = security_config.get("cors", {})
+    
+    cors_enabled = features.get("cors_enabled", cors_config.get("enabled", True))
+    
+    if cors_enabled:
+        # 获取CORS配置
+        origins = cors_config.get("origins", ["*"])
+        methods = cors_config.get("methods", ["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+        headers = cors_config.get("headers", ["*"])
+        
+        # 处理字符串格式的origins
+        if isinstance(origins, str):
+            try:
+                origins = json.loads(origins)
+            except json.JSONDecodeError:
+                origins = [origins]
+        
+        # 添加CORS中间件
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=methods,
+            allow_headers=headers,
+        )
+        print(f"✅ CORS已启用，允许的来源: {', '.join(origins) if len(origins) <= 3 else f'{len(origins)}个来源'}")
+    else:
+        print("ℹ️  CORS已禁用")
+
+# ============================================================================
+# 应用初始化
+# ============================================================================
+
+# 执行启动前检查
+pre_startup_config_check()
+
+# 验证配置并获取配置数据
+startup_config = validate_startup_config()
+
+# 创建应用
+app = setup_application_config(startup_config)
+
+# 设置CORS
+setup_cors_middleware(app, startup_config)
 
 # 初始化默认日志配置
 logging.basicConfig(
@@ -45,46 +228,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = get_logger(__name__)
-
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description="知识库问答系统API - 高级助手框架集成",
-    version="1.0.0",
-    docs_url=None,  # 禁用默认文档
-    redoc_url=None,  # 禁用默认redoc
-)
-
-# 从配置中加载CORS设置
-config = get_config_manager().get_config()
-
-# 检查是否启用CORS
-cors_enabled = config.get("cors_enabled", True)
-if cors_enabled:
-    # 获取CORS来源
-    cors_origins_str = config.get("cors_origins", '["http://localhost:3000", "http://127.0.0.1:3000"]')
-    try:
-        if isinstance(cors_origins_str, str):
-            cors_origins = json.loads(cors_origins_str)
-        else:
-            cors_origins = cors_origins_str
-    except json.JSONDecodeError:
-        logger.error(f"CORS来源解析失败: {cors_origins_str}，使用默认值")
-        cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
-    
-    # 获取是否允许携带认证信息
-    allow_credentials = config.get("cors_allow_credentials", True)
-    
-    # 添加CORS中间件
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_credentials=allow_credentials,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    logger.info(f"已配置CORS，允许的来源: {', '.join(cors_origins)}")
-else:
-    logger.info("CORS已禁用")
 
 # 安装所有安全中间件
 from app.middleware.security import setup_security_middleware
@@ -154,9 +297,12 @@ def root():
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
+    api_config = startup_config.get("api", {})
+    title = api_config.get("title", "知识库问答系统API")
+    
     return get_swagger_ui_html(
         openapi_url="/openapi.json",
-        title=f"{settings.PROJECT_NAME} - API文档",
+        title=f"{title} - API文档",
         swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
         swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
         swagger_favicon_url="/static/favicon.ico",
@@ -164,13 +310,20 @@ async def custom_swagger_ui_html():
 
 @app.get("/openapi.json", include_in_schema=False)
 async def get_open_api_endpoint():
+    app_config = startup_config.get("app", {})
+    api_config = startup_config.get("api", {})
+    
+    title = api_config.get("title", app_config.get("name", "知识库问答系统API"))
+    version = app_config.get("version", "1.0.0")
+    description = api_config.get("description", "智能知识问答系统接口文档")
+    
     return get_openapi(
-        title=settings.PROJECT_NAME,
-        version="1.0.0",
-        description="""
-# 知识库问答系统API
+        title=title,
+        version=version,
+        description=f"""
+# {title}
 
-## 功能特点
+## 🎯 功能特点
 - **多框架集成**: 支持Haystack、LlamaIndex和Agno
 - **知识库管理**: 创建、更新和查询知识库
 - **文档处理**: 上传、处理和检索文档
@@ -178,16 +331,23 @@ async def get_open_api_endpoint():
 - **对话管理**: 跟踪和管理对话
 - **多模态支持**: 文本、图像和语音交互
 
-## 认证
+## 🔧 环境信息
+- **当前环境**: {os.getenv('APP_ENV', 'development')}
+- **配置模式**: {os.getenv('CONFIG_MODE', 'standard')}
+- **服务版本**: {version}
+
+## 🔐 认证
 API请求需要使用API密钥进行认证。在`Authorization`头中包含您的API密钥:
 ```
 Authorization: Bearer YOUR_API_KEY
 ```
 
-## 速率限制
+## ⚡ 速率限制
 API请求受到速率限制以防止滥用。当前限制为:
 - 标准: 每分钟60个请求
 - 突发: 一次最多10个请求
+
+{description}
         """,
         routes=app.routes,
     )
@@ -225,231 +385,61 @@ async def startup_mcp_health_check():
 
 @app.on_event("startup")
 async def startup_event():
-    """启动时初始化服务"""
-    # 第1步: 将配置注入到环境变量
-    # 使用print而非logger，因为日志系统还未配置
-    print("正在将配置注入到环境变量...")
-    inject_config_to_env()
+    """应用启动事件"""
+    logger.info("ZZDSJ Backend API 启动中...")
     
-    # 注册日志配置环境变量映射
-    config_manager = get_config_manager()
-    register_logging_env_mappings(config_manager)
-    
-    # 第2步: 初始化日志系统
-    print("正在初始化日志系统...")
-    logging_config = load_logging_config()
-    setup_logging(
-        app=app,
-        log_level=logging_config.level,
-        log_to_console=logging_config.console_enabled,
-        log_to_file=logging_config.file_enabled,
-        log_file_path=logging_config.file_path,
-        log_format=logging_config.format,
-        log_retention=logging_config.file_retention,
-        log_rotation=logging_config.file_rotation,
-        exclude_paths=logging_config.request_exclude_paths,
-        log_request_body=logging_config.log_request_body,
-        log_response_body=logging_config.log_response_body
-    )
-    
-    # 设置模块特定的日志级别
-    if logging_config.module_levels:
-        for module_name, level in logging_config.module_levels.items():
-            module_logger = logging.getLogger(module_name)
-            module_logger.setLevel(getattr(logging, level.upper(), logging.INFO))
-    
-    logger.info("日志系统初始化完成")
-    
-    # 第3步: 检查基础依赖配置
-    base_deps = get_base_dependencies()
-    missing_deps = [dep for dep, config in base_deps.items() if not config]
-    if missing_deps:
-        logger.warning(f"以下必要的依赖配置缺失或不完整: {', '.join(missing_deps)}")
-    
-    # 第4步: 运行配置自检和引导流程
-    logger.info("正在执行配置自检和引导流程...")
-    config_manager = get_config_manager()
-    bootstrap = ConfigBootstrap()
-    await bootstrap.bootstrap_config()
-    
-    # 第5步: 初始化数据库
-    logger.info("正在初始化数据库...")
-    from app.utils.core.database.migration import get_migrator
-    migrator = get_migrator()
-    migrator.init_db(create_tables=True, seed_data=True)
-    
-    # 第6步: 生成数据库模式文档
+    # 初始化向量数据库
     try:
-        from app.utils.swagger_helper import save_db_schema_doc, add_schema_examples, generate_model_examples
-        logger.info("正在生成数据库模式文档...")
-        schema_path = save_db_schema_doc()
-        logger.info(f"数据库模式文档已保存到 {schema_path}")
+        from app.utils.vector_db_initializer import initialize_vector_database, get_current_vector_backend
         
-        # 为Swagger文档添加示例数据
-        examples = generate_model_examples()
-        add_schema_examples(app, examples)
-    except Exception as e:
-        logger.error(f"生成数据库模式文档时出错: {str(e)}", exc_info=True)
-    
-    # 第7步: 执行配置验证
-    config_data = config_manager.get_all()
-    service_health = validate_config(config_data)
-    
-    # 第8步: Milvus初始化
-    milvus_available = service_health.get("milvus", False)
-    if milvus_available:
-        try:
-            from app.utils.vector_store import init_milvus
-            logger.info("正在初始化Milvus...")
-            init_milvus()
-            logger.info("Milvus初始化成功")
-        except Exception as e:
-            logger.error(f"初始化Milvus时出错: {str(e)}", exc_info=True)
-    else:
-        logger.warning("Milvus服务不可用，跳过初始化")
-    
-    # 第9步: MinIO初始化
-    minio_available = service_health.get("minio", False)
-    if minio_available:
-        try:
-            from app.utils.object_storage import init_minio
-            logger.info("正在初始化MinIO...")
-            init_minio()
-            logger.info("MinIO初始化成功")
-        except Exception as e:
-            logger.error(f"初始化MinIO时出错: {str(e)}", exc_info=True)
-    else:
-        logger.warning("MinIO服务不可用，跳过初始化")
-    
-    # 第10步: Nacos服务注册
-    nacos_available = service_health.get("nacos", False)
-    if nacos_available:
-        try:
-            from app.utils.service_discovery import register_service, start_heartbeat
-            logger.info("正在向Nacos注册服务...")
-            register_service()
-            # 启动心跳线程
-            start_heartbeat()
-            logger.info("服务注册成功")
-            
-            # 注册装饰器标记的应用服务
-            from app.utils.service_registry import register_decorated_services
-            logger.info("正在注册应用服务到Nacos...")
-            registered_count = register_decorated_services()
-            logger.info(f"应用服务注册完成: {registered_count}个服务已注册")
-            
-            # 初始MCP服务注册器
-            mcp_registrar = get_mcp_service_registrar()
-            logger.info("MCP服务注册器初始化完成")
-            
-            # 注册正在运行的MCP服务
-            mcp_manager = get_mcp_service_manager()
-            for deployment in mcp_manager.list_deployments():
-                deployment_id = deployment.get("deployment_id")
-                # 仅注册运行中的服务
-                if deployment.get("status", {}).get("state") == "running":
-                    mcp_manager._register_service_to_nacos(deployment_id, deployment)
-            logger.info("已重新注册所有运行中的MCP服务")
-        except Exception as e:
-            logger.error(f"向Nacos注册服务时出错: {str(e)}", exc_info=True)
-    else:
-        logger.warning("Nacos服务不可用，跳过服务注册")
+        logger.info("开始初始化向量数据库...")
+        success = await initialize_vector_database()
         
-    # 第11步: 注册和启动LightRAG服务
-    try:
-        logger.info("正在注册 LightRAG 服务...")
-        # 初始化服务管理器
-        service_manager = get_service_manager()
-        
-        # 注册LightRAG服务
-        register_lightrag_service()
-        logger.info("LightRAG服务注册成功")
-        
-        # 检查是否启用LightRAG
-        lightrag_enabled = getattr(settings, "LIGHTRAG_ENABLED", True)
-        if lightrag_enabled:
-            # 自动启动LightRAG服务
-            logger.info("正在启动 LightRAG 服务...")
-            lightrag_status = service_manager.start_service("lightrag-api")
-            if lightrag_status:
-                logger.info("LightRAG服务启动成功")
-            else:
-                logger.warning("LightRAG服务启动失败")
+        if success:
+            current_backend = get_current_vector_backend()
+            logger.info(f"向量数据库初始化成功，当前使用: {current_backend.value if current_backend else 'None'}")
         else:
-            logger.info("LightRAG服务已注册但未启用")
+            logger.warning("向量数据库初始化失败，部分功能可能不可用")
+            
     except Exception as e:
-        logger.error(f"初始化LightRAG服务时出错: {str(e)}", exc_info=True)
+        logger.error(f"向量数据库初始化过程中发生异常: {str(e)}")
     
-    # 第12步: 初始化OWL框架
+    # 保留原有的Milvus初始化逻辑作为回退
     try:
-        logger.info("正在初始化OWL框架...")
-        from app.startup.owl_init import register_owl_init
-        # 注册OWL框架初始化模块
-        register_owl_init(app)
-        logger.info("OWL框架初始化模块注册成功")
+        from app.utils.storage.vector_storage import init_milvus
+        await init_milvus()
+        logger.info("备用Milvus初始化完成")
     except Exception as e:
-        logger.error(f"注册OWL框架初始化模块时出错: {str(e)}", exc_info=True)
-        
-    # 第13步: 初始化工具系统
-    try:
-        logger.info("正在初始化基础工具系统...")
-        from app.startup.tools import init_tools
-        # 获取系统配置
-        config = get_config_manager().get_config()
-        # 初始化工具系统
-        init_tools(app, config)
-        logger.info("基础工具系统初始化成功")
-    except Exception as e:
-        logger.error(f"初始化基础工具系统时出错: {str(e)}", exc_info=True)
-        
-    # 第14步: 初始化上下文压缩功能
-    try:
-        logger.info("正在初始化上下文压缩功能...")
-        # 注册上下文压缩功能
-        register_context_compression(app)
-        logger.info("上下文压缩功能初始化成功")
-    except Exception as e:
-        logger.error(f"初始化上下文压缩功能时出错: {str(e)}", exc_info=True)
+        logger.warning(f"备用Milvus初始化失败: {str(e)}")
+    
+    logger.info("ZZDSJ Backend API 启动完成")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """关闭时清理"""
-    # 从Nacos注销服务
-    try:
-        # 注销所有MCP服务
-        mcp_registrar = get_mcp_service_registrar()
-        mcp_registrar.stop()
-        logger.info("已注销所有MCP服务")
-        
-        # 注销装饰器标记的应用服务
-        try:
-            from app.utils.service_registry import deregister_decorated_services
-            logger.info("正在从Nacos注销应用服务...")
-            deregistered_count = deregister_decorated_services()
-            logger.info(f"应用服务注销完成: {deregistered_count}个服务已注销")
-        except Exception as e:
-            logger.error(f"注销应用服务时出错: {str(e)}", exc_info=True)
-        
-        # 注销主服务
-        logger.info("正在从Nacos注销主服务...")
-        deregister_service()
-        logger.info("主服务注销成功")
-    except Exception as e:
-        logger.error(f"从Nacos注销服务时出错: {str(e)}", exc_info=True)
+    """应用关闭事件"""
+    logger.info("ZZDSJ Backend API 关闭中...")
     
-    # 停止LightRAG服务
+    # 关闭向量数据库
     try:
-        service_manager = get_service_manager()
-        lightrag_status = service_manager.stop_service("lightrag-api")
-        if lightrag_status:
-            logger.info("LightRAG服务已停止")
-        else:
-            logger.warning("LightRAG服务停止失败")
+        from app.utils.vector_db_initializer import shutdown_vector_database
+        await shutdown_vector_database()
+        logger.info("向量数据库已关闭")
     except Exception as e:
-        logger.error(f"停止LightRAG服务时出错: {e}")
+        logger.error(f"关闭向量数据库时发生异常: {str(e)}")
+    
+    logger.info("ZZDSJ Backend API 已关闭")
 
 # 注册关闭处理程序
 atexit.register(deregister_service)
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=settings.SERVICE_PORT, reload=True)
+    # 获取配置
+    service_config = startup_config.get("service", {})
+    host = service_config.get("ip", "0.0.0.0")
+    port = service_config.get("port", getattr(settings, "SERVICE_PORT", 8000))
+    
+    # 开发环境启用重载
+    reload = startup_config.get("app", {}).get("debug", False)
+    
+    logger.info(f"🚀 启动服务: {host}:{port} (重载: {reload})")
+    uvicorn.run("main:app", host=host, port=port, reload=reload)

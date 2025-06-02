@@ -1,0 +1,8 @@
+vector_database:
+  auto_init:
+    enabled: true
+    primary_backend: milvus
+  milvus:
+    connection:
+      host: ${MILVUS_HOST:localhost}
+      port: ${MILVUS_PORT:19530}
