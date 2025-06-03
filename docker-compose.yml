@@ -1,9 +1,15 @@
 version: '3.8'
 
+# 智政知识库 - 完整版配置
+# 包含所有功能服务，适用于生产环境和完整功能测试
+
 services:
-  # PostgreSQL for relational data
+  # ===== 基础存储服务 (必需) =====
+  
+  # PostgreSQL for relational data - 基础数据库
   postgres:
-    image: postgres:14
+    image: postgres:15
+    container_name: zzdsj-postgres
     ports:
       - "5432:5432"
     environment:
@@ -13,22 +19,52 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
-  # Milvus for vector search
-  etcd:
-    image: quay.io/coreos/etcd:v3.5.0
+  # Elasticsearch - 文档分片和混合检索引擎 (基础必需)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: zzdsj-elasticsearch
     environment:
-      - ETCD_AUTO_COMPACTION_MODE=revision
-      - ETCD_AUTO_COMPACTION_RETENTION=1000
-      - ETCD_QUOTA_BACKEND_BYTES=4294967296
-      - ETCD_SNAPSHOT_COUNT=50000
+      - node.name=elasticsearch
+      - cluster.name=zzdsj-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
-      - etcd_data:/etcd
-    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
+  # ===== 高性能向量搜索服务 (可选增强) =====
+  
+  # MinIO - Milvus的存储依赖 (可选增强)
+  # 注意：MinIO主要作为Milvus的存储后端，不是独立的文件存储服务
   minio:
     image: minio/minio:RELEASE.2023-09-30T07-02-29Z
+    container_name: zzdsj-minio
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -39,9 +75,30 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
+  # etcd for Milvus
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.0
+    container_name: zzdsj-etcd
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - etcd_data:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    restart: always
+
+  # Milvus - 高性能向量搜索引擎 (可选增强)
   milvus:
     image: milvusdb/milvus:v2.3.2
+    container_name: zzdsj-milvus
     depends_on:
       - etcd
       - minio
@@ -55,18 +112,27 @@ services:
       - "9091:9091"
     restart: always
 
+  # ===== 缓存和消息队列服务 =====
+  
   # Redis for caching and Pub/Sub
   redis:
     image: redis:7.0
+    container_name: zzdsj-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # RabbitMQ for message queue
   rabbitmq:
     image: rabbitmq:3.12-management
+    container_name: zzdsj-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -76,10 +142,36 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ===== 服务发现和配置中心 =====
+  
+  # MySQL for Nacos
+  mysql:
+    image: mysql:8.0
+    container_name: zzdsj-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: nacos
+      MYSQL_USER: nacos
+      MYSQL_PASSWORD: nacos
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # Nacos for service discovery and configuration
   nacos:
     image: nacos/nacos-server:v2.2.3
+    container_name: zzdsj-nacos
     environment:
       MODE: standalone
       PREFER_HOST_MODE: hostname
@@ -96,21 +188,12 @@ services:
       - mysql
     restart: always
 
-  # MySQL for Nacos
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: nacos
-      MYSQL_USER: nacos
-      MYSQL_PASSWORD: nacos
-    volumes:
-      - mysql_data:/var/lib/mysql
-    restart: always
-
-  # Celery Worker - 处理异步任务
+  # ===== 异步任务处理服务 =====
+  
+  # Celery Worker - 主要异步任务处理器
   celery-worker:
     build: .
+    container_name: zzdsj-celery-worker
     command: celery -A app.worker worker --loglevel=info --concurrency=4
     volumes:
       - .:/app
@@ -119,13 +202,31 @@ services:
       - redis
       - rabbitmq
       - postgres
+      - elasticsearch  # 基础必需依赖
     environment:
+      # 数据库配置
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_qa
+      
+      # 任务队列配置
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/0
+      
+      # 基础必需存储配置
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_HYBRID_SEARCH=true
+      - ELASTICSEARCH_HYBRID_WEIGHT=0.7
+      - ELASTICSEARCH_INDEX=document_index
+      
+      # 用户文件存储配置 (本地文件系统)
+      - FILE_STORAGE_TYPE=local
+      - FILE_STORAGE_PATH=/app/data/uploads
+      
+      # 可选增强配置
       - MILVUS_HOST=milvus
-      - MINIO_ENDPOINT=minio:9000
+      - MILVUS_PORT=19530
+      - MILVUS_COLLECTION=document_vectors
+      - MILVUS_ENABLED=true
     restart: always
     healthcheck:
       test: ["CMD", "celery", "-A", "app.worker", "inspect", "ping"]
@@ -136,6 +237,7 @@ services:
   # Celery Beat - 定时任务调度器
   celery-beat:
     build: .
+    container_name: zzdsj-celery-beat
     command: celery -A app.worker beat --loglevel=info
     volumes:
       - .:/app
@@ -145,17 +247,31 @@ services:
       - redis
       - rabbitmq
       - postgres
+      - elasticsearch  # 基础必需依赖
     environment:
+      # 数据库配置
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_qa
+      
+      # 任务队列配置
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BEAT_SCHEDULE_FILENAME=/app/celerybeat/celerybeat-schedule
+      
+      # 基础必需存储配置
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_HYBRID_SEARCH=true
+      - ELASTICSEARCH_HYBRID_WEIGHT=0.7
+      
+      # 用户文件存储配置 (本地文件系统)
+      - FILE_STORAGE_TYPE=local
+      - FILE_STORAGE_PATH=/app/data/uploads
     restart: always
 
   # Flower - Celery监控界面
   flower:
     build: .
+    container_name: zzdsj-flower
     command: celery -A app.worker flower --port=5555 --basic_auth=admin:password
     ports:
       - "5555:5555"
@@ -173,6 +289,7 @@ services:
   # Celery Worker - 专用维护队列
   celery-worker-maintenance:
     build: .
+    container_name: zzdsj-celery-maintenance
     command: celery -A app.worker worker --loglevel=info --queues=maintenance,monitoring --concurrency=2
     volumes:
       - .:/app
@@ -181,16 +298,29 @@ services:
       - redis
       - rabbitmq
       - postgres
+      - elasticsearch  # 基础必需依赖
     environment:
+      # 数据库配置
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_qa
+      
+      # 任务队列配置
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/0
+      
+      # 基础必需存储配置
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_HYBRID_SEARCH=true
+      
+      # 用户文件存储配置 (本地文件系统)
+      - FILE_STORAGE_TYPE=local
+      - FILE_STORAGE_PATH=/app/data/uploads
     restart: always
 
   # Celery Worker - 专用报表队列
   celery-worker-reports:
     build: .
+    container_name: zzdsj-celery-reports
     command: celery -A app.worker worker --loglevel=info --queues=reports,analytics --concurrency=1
     volumes:
       - .:/app
@@ -199,20 +329,57 @@ services:
       - redis
       - rabbitmq
       - postgres
+      - elasticsearch  # 基础必需依赖
     environment:
+      # 数据库配置
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_qa
+      
+      # 任务队列配置
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/0
+      
+      # 基础必需存储配置
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_HYBRID_SEARCH=true
+      
+      # 用户文件存储配置 (本地文件系统)  
+      - FILE_STORAGE_TYPE=local
+      - FILE_STORAGE_PATH=/app/data/uploads
     restart: always
 
 volumes:
+  # 基础存储卷
   postgres_data:
-  etcd_data:
-  milvus_data:
-  redis_data:
-  rabbitmq_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  
+  # 高性能搜索存储卷 (可选增强)
   minio_data:
+    driver: local
+  etcd_data:
+    driver: local
+  milvus_data:
+    driver: local
+  
+  # 缓存和队列存储卷
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  
+  # 服务配置存储卷
   mysql_data:
+    driver: local
+  
+  # 应用日志存储卷
   celery_logs:
+    driver: local
   celery_beat_data:
+    driver: local
+
+networks:
+  default:
+    name: zzdsj-network
+    driver: bridge
