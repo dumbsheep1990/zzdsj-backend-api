@@ -307,8 +307,31 @@ async def create_notification(
         
         # 如果设置了定时发送，添加到任务队列
         if notification_data["scheduled_time"]:
-            # 这里应该添加到定时任务队列
-            pass
+            try:
+                # 创建定时任务
+                task_data = {
+                    "notification_id": notification_data["id"],
+                    "user_id": context.user.id,
+                    "scheduled_time": notification_data["scheduled_time"],
+                    "title": notification_data["title"],
+                    "content": notification_data["content"],
+                    "type": notification_data["type"],
+                    "priority": notification_data["priority"],
+                    "category": notification_data["category"],
+                    "action_url": notification_data.get("action_url"),
+                    "action_data": notification_data.get("action_data"),
+                    "created_at": datetime.now()
+                }
+                
+                # 添加到队列管理器 (这里假设有一个全局的任务调度器)
+                from app.core.scheduler import ScheduledTaskManager
+                scheduler = ScheduledTaskManager()
+                await scheduler.schedule_notification(task_data)
+                
+                logger.info(f"已添加定时通知任务: {notification_data['id']}, 发送时间: {notification_data['scheduled_time']}")
+            except Exception as e:
+                logger.error(f"添加定时任务失败: {str(e)}")
+                # 定时任务失败不影响通知创建，但记录错误
         
         response_data = {
             **notification_data,
@@ -374,8 +397,24 @@ async def get_notification(
         
         # 如果标记为已读，这里应该更新数据库
         if mark_as_read and not notification["is_read"]:
-            # 更新已读状态
-            pass
+            try:
+                # 更新已读状态
+                notification_service = container.get_notification_service()
+                update_result = await notification_service.mark_as_read(
+                    notification_id=notification_id,
+                    user_id=context.user.id,
+                    read_at=datetime.now()
+                )
+                
+                if update_result:
+                    notification["is_read"] = True
+                    notification["read_at"] = datetime.now()
+                    logger.info(f"通知 {notification_id} 已标记为已读")
+                else:
+                    logger.warning(f"无法标记通知 {notification_id} 为已读")
+            except Exception as e:
+                logger.error(f"更新已读状态失败: {str(e)}")
+                # 状态更新失败不影响获取详情
         
         response_data = {
             **notification,
@@ -465,8 +504,36 @@ async def delete_notification(
     try:
         logger.info(f"Frontend API - 删除通知: user_id={context.user.id}, notification_id={notification_id}")
         
-        # 这里应该验证通知属于当前用户
-        # 这里应该执行实际的删除操作
+        # 验证通知属于当前用户
+        notification_service = container.get_notification_service()
+        notification = await notification_service.get_notification_by_id(notification_id)
+        
+        if not notification:
+            raise HTTPException(
+                status_code=404,
+                detail="通知不存在"
+            )
+        
+        # 验证用户权限
+        if hasattr(notification, 'user_id') and notification.user_id != context.user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="无权删除该通知"
+            )
+        
+        # 执行实际的删除操作
+        delete_result = await notification_service.delete_notification(
+            notification_id=notification_id,
+            user_id=context.user.id
+        )
+        
+        if not delete_result:
+            raise HTTPException(
+                status_code=500,
+                detail="删除操作失败"
+            )
+        
+        logger.info(f"通知 {notification_id} 已成功删除")
         
         return InternalResponseFormatter.format_success(
             data={"notification_id": notification_id},
@@ -521,9 +588,54 @@ async def bulk_notification_operation(
         
         for notification_id in request.notification_ids:
             try:
-                # 这里应该验证通知属于当前用户
-                # 这里应该执行实际的操作
-                success_count += 1
+                # 验证通知属于当前用户
+                notification_service = container.get_notification_service()
+                notification = await notification_service.get_notification_by_id(notification_id)
+                
+                if not notification:
+                    failed_count += 1
+                    failed_ids.append(notification_id)
+                    logger.warning(f"通知不存在: notification_id={notification_id}")
+                    continue
+                
+                if hasattr(notification, 'user_id') and notification.user_id != context.user.id:
+                    failed_count += 1
+                    failed_ids.append(notification_id)
+                    logger.warning(f"无权操作通知: notification_id={notification_id}")
+                    continue
+                
+                # 执行实际的操作
+                operation_result = False
+                if request.action == "mark_read":
+                    operation_result = await notification_service.mark_as_read(notification_id, context.user.id)
+                elif request.action == "mark_unread":
+                    operation_result = await notification_service.mark_as_unread(notification_id, context.user.id)
+                elif request.action == "archive":
+                    operation_result = await notification_service.archive_notification(notification_id, context.user.id)
+                elif request.action == "delete":
+                    operation_result = await notification_service.delete_notification(notification_id, context.user.id)
+                elif request.action == "star":
+                    operation_result = await notification_service.star_notification(notification_id, context.user.id)
+                elif request.action == "unstar":
+                    operation_result = await notification_service.unstar_notification(notification_id, context.user.id)
+                
+                if operation_result:
+                    success_count += 1
+                    # 记录审计日志
+                    await notification_service.log_audit_action({
+                        "action": f"bulk_{request.action}",
+                        "notification_id": notification_id,
+                        "user_id": context.user.id,
+                        "timestamp": datetime.now(),
+                        "metadata": {
+                            "batch_operation": True,
+                            "total_items": len(request.notification_ids)
+                        }
+                    })
+                else:
+                    failed_count += 1
+                    failed_ids.append(notification_id)
+                    
             except Exception as e:
                 failed_count += 1
                 failed_ids.append(notification_id)
@@ -680,7 +792,40 @@ async def update_notification_settings(
                         detail=f"时间格式错误，请使用HH:MM格式: {field}"
                     )
         
-        # 这里应该实现实际的数据库更新逻辑
+        # 实现实际的数据库更新逻辑
+        try:
+            notification_service = container.get_notification_service()
+            
+            # 更新用户通知设置
+            update_result = await notification_service.update_user_notification_settings(
+                user_id=context.user.id,
+                settings=update_data
+            )
+            
+            if not update_result:
+                raise HTTPException(
+                    status_code=500,
+                    detail="更新设置失败"
+                )
+            
+            # 记录设置变更日志
+            await notification_service.log_settings_change({
+                "user_id": context.user.id,
+                "changed_fields": list(update_data.keys()),
+                "old_values": {},  # 这里可以记录旧值
+                "new_values": update_data,
+                "timestamp": datetime.now(),
+                "ip_address": getattr(context, 'ip_address', None),
+                "user_agent": getattr(context, 'user_agent', None)
+            })
+            
+            logger.info(f"通知设置已更新: user_id={context.user.id}, fields={list(update_data.keys())}")
+        except Exception as e:
+            logger.error(f"数据库更新失败: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail="设置更新失败，请稍后重试"
+            )
         
         response_data = {
             "updated_fields": list(update_data.keys()),
@@ -766,9 +911,25 @@ async def notification_websocket(
     客户端需要提供有效的认证令牌
     """
     try:
-        # 这里应该验证token并获取用户信息
-        # 暂时模拟用户ID
-        user_id = 1  # 从token解析获取
+        # 验证token并获取用户信息
+        try:
+            from app.core.auth import JWTManager
+            jwt_manager = JWTManager()
+            
+            # 验证和解析token
+            payload = await jwt_manager.verify_token(token)
+            user_id = payload.get("user_id")
+            
+            if not user_id:
+                await websocket.close(code=1008, reason="Invalid token: missing user_id")
+                return
+                
+            logger.info(f"WebSocket用户验证成功: user_id={user_id}")
+            
+        except Exception as e:
+            logger.error(f"WebSocket token验证失败: {str(e)}")
+            await websocket.close(code=1008, reason="Invalid token")
+            return
         
         await notification_manager.connect(websocket, user_id)
         

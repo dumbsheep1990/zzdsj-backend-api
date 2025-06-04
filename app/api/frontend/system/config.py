@@ -29,7 +29,15 @@ class ConfigCategoryBase(BaseModel):
 
 class ConfigCategoryCreate(ConfigCategoryBase):
     """创建配置类别请求模型"""
-    pass
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "数据库配置",
+                "description": "数据库连接和性能相关配置",
+                "order": 1
+            }
+        }
 
 
 class ConfigCategoryUpdate(BaseModel):

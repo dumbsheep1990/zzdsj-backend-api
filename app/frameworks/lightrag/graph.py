@@ -20,10 +20,28 @@ except ImportError:
     # 创建模拟类，用于类型提示
     class KnowledgeGraph:
         def __init__(self, *args, **kwargs):
-            pass
+            """模拟知识图谱类，当LightRAG不可用时使用"""
+            self.config = kwargs.get('config', None)
+            self.enabled = False
+            logger.warning("使用模拟知识图谱类 - LightRAG不可用")
+            
+        def get_all_documents(self):
+            return []
+            
+        def get_all_chunks(self):
+            return []
+            
+        def get_all_relations(self):
+            return []
+    
     class KnowledgeGraphConfig:
         def __init__(self, *args, **kwargs):
-            pass
+            """模拟知识图谱配置类，当LightRAG不可用时使用"""
+            self.storage = kwargs.get('storage', None)
+            self.base_dir = kwargs.get('base_dir', '')
+            self.embedding_dim = kwargs.get('embedding_dim', 1536)
+            self.max_token_size = kwargs.get('max_token_size', 4096)
+            logger.warning("使用模拟知识图谱配置类 - LightRAG不可用")
 
 from app.config import settings
 
@@ -210,12 +228,68 @@ class GraphManager:
                     shutil.rmtree(graph_dir)
                 # 对于数据库存储，需要删除相关记录
                 elif self.graph_db_type in ["postgres", "redis"]:
-                    # 临时创建图谱实例，然后清空所有数据
-                    temp_graph = self.create_graph(graph_id + "_temp_" + str(int(time.time())))
-                    if temp_graph:
-                        # 这里应该有清空数据的API，但如果没有，可以使用底层存储API
-                        # 具体实现取决于LightRAG的API设计
-                        pass
+                    # 删除数据库中的相关记录
+                    storage_config = self.get_storage_config()
+                    storage_config["prefix"] = graph_id
+                    
+                    if self.graph_db_type == "postgres":
+                        # 删除PostgreSQL中的相关表
+                        try:
+                            import psycopg2
+                            conn = psycopg2.connect(
+                                host=storage_config["host"],
+                                port=storage_config["port"],
+                                user=storage_config["user"],
+                                password=storage_config["password"],
+                                database=storage_config["database"]
+                            )
+                            cursor = conn.cursor()
+                            
+                            # 删除带有图谱前缀的所有表
+                            prefix = storage_config["prefix"]
+                            tables_to_drop = [
+                                f"{prefix}_documents",
+                                f"{prefix}_chunks", 
+                                f"{prefix}_relations",
+                                f"{prefix}_entities"
+                            ]
+                            
+                            for table in tables_to_drop:
+                                try:
+                                    cursor.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
+                                    logger.info(f"删除表: {table}")
+                                except Exception as e:
+                                    logger.warning(f"删除表 {table} 失败: {str(e)}")
+                            
+                            conn.commit()
+                            cursor.close()
+                            conn.close()
+                            
+                        except Exception as e:
+                            logger.error(f"清理PostgreSQL数据失败: {str(e)}")
+                            
+                    elif self.graph_db_type == "redis":
+                        # 删除Redis中的相关键
+                        try:
+                            import redis
+                            r = redis.Redis(
+                                host=storage_config["host"],
+                                port=storage_config["port"],
+                                db=storage_config["db"],
+                                password=storage_config["password"]
+                            )
+                            
+                            # 删除带有图谱前缀的所有键
+                            prefix = storage_config["prefix"]
+                            pattern = f"{prefix}:*"
+                            keys = r.keys(pattern)
+                            
+                            if keys:
+                                r.delete(*keys)
+                                logger.info(f"删除Redis键: {len(keys)}个")
+                                
+                        except Exception as e:
+                            logger.error(f"清理Redis数据失败: {str(e)}")
                     
                 logger.info(f"删除知识图谱成功: {graph_id}")
                 return True

@@ -63,7 +63,17 @@ ProgressCallback = Callable[[str, ProcessingStatus, float, Optional[Dict[str, An
 
 # 空回调函数
 def null_callback(task_id: str, status: ProcessingStatus, progress: float, info: Optional[Dict[str, Any]] = None) -> None:
-    pass
+    """
+    默认的空回调函数，不执行任何操作
+    
+    参数:
+        task_id: 任务ID
+        status: 处理状态
+        progress: 进度百分比 (0.0-1.0)
+        info: 附加信息
+    """
+    # 可以在这里添加默认的日志记录
+    logger.debug(f"Task {task_id}: {status.value} - {progress:.1%} {info or ''}")
 
 class ProcessingTask:
     """处理任务对象，用于跟踪任务状态和进度"""
@@ -428,9 +438,38 @@ class DocumentProcessor:
             
             # 4. 元数据提取和增强
             if metadata_extractor_configs:
-                # 这里可以扩展实现多种元数据提取策略
-                # 例如: 自动摘要、关键词提取等
-                pass
+                task.update_progress(
+                    ProcessingStatus.EMBEDDING, 
+                    0.4, 
+                    {"message": "正在提取文档元数据..."}
+                )
+                
+                # 实现多种元数据提取策略
+                for config in metadata_extractor_configs:
+                    extractor_type = config.get("type", "")
+                    
+                    try:
+                        if extractor_type == "summary":
+                            # 自动摘要提取
+                            await self._extract_summaries(nodes, config)
+                        elif extractor_type == "keywords":
+                            # 关键词提取
+                            await self._extract_keywords(nodes, config)
+                        elif extractor_type == "topics":
+                            # 主题标签提取
+                            await self._extract_topics(nodes, config)
+                        elif extractor_type == "entities":
+                            # 实体识别提取
+                            await self._extract_entities(nodes, config)
+                        elif extractor_type == "questions":
+                            # 问题生成
+                            await self._generate_questions(nodes, config)
+                        else:
+                            logger.warning(f"未知的元数据提取器类型: {extractor_type}")
+                            
+                    except Exception as e:
+                        logger.error(f"元数据提取失败 ({extractor_type}): {str(e)}")
+                        # 继续处理其他提取器
             
             # 5. 向量化
             task.update_progress(
@@ -635,6 +674,140 @@ class DocumentProcessor:
         
         # 关闭线程池
         self.executor.shutdown(wait=False)
+    
+    # 元数据提取方法
+    async def _extract_summaries(self, nodes: List[BaseNode], config: Dict[str, Any]) -> None:
+        """提取文档摘要"""
+        try:
+            from llama_index.core.llms import LLM
+            from llama_index.core import Settings
+            
+            llm = Settings.llm
+            max_length = config.get("max_length", 150)
+            
+            for node in nodes:
+                if len(node.text) > 200:  # 只为较长的文本生成摘要
+                    prompt = f"请为以下文本生成{max_length}字以内的摘要:\n\n{node.text[:2000]}"
+                    try:
+                        response = await llm.acomplete(prompt)
+                        node.metadata["summary"] = response.text.strip()
+                    except:
+                        # 简化摘要逻辑
+                        node.metadata["summary"] = node.text[:max_length] + "..."
+                        
+        except Exception as e:
+            logger.error(f"摘要提取失败: {str(e)}")
+    
+    async def _extract_keywords(self, nodes: List[BaseNode], config: Dict[str, Any]) -> None:
+        """提取关键词"""
+        try:
+            import re
+            from collections import Counter
+            
+            max_keywords = config.get("max_keywords", 10)
+            
+            for node in nodes:
+                # 简单的关键词提取（基于词频）
+                text = re.sub(r'[^\w\s]', '', node.text.lower())
+                words = [word for word in text.split() if len(word) > 3]
+                
+                # 过滤常见停用词
+                stop_words = {'这个', '那个', '可以', '需要', '进行', '使用', '具有', '包括', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
+                words = [word for word in words if word not in stop_words]
+                
+                # 提取高频词作为关键词
+                keyword_counts = Counter(words)
+                keywords = [word for word, _ in keyword_counts.most_common(max_keywords)]
+                node.metadata["keywords"] = keywords
+                
+        except Exception as e:
+            logger.error(f"关键词提取失败: {str(e)}")
+    
+    async def _extract_topics(self, nodes: List[BaseNode], config: Dict[str, Any]) -> None:
+        """提取主题标签"""
+        try:
+            # 基于关键词的简单主题分类
+            topic_keywords = {
+                "技术": ["技术", "开发", "编程", "代码", "algorithm", "programming", "development"],
+                "商业": ["商业", "市场", "销售", "客户", "business", "market", "sales"],
+                "教育": ["教育", "学习", "培训", "知识", "education", "learning", "training"],
+                "健康": ["健康", "医疗", "治疗", "健身", "health", "medical", "fitness"],
+                "科学": ["科学", "研究", "实验", "理论", "science", "research", "theory"]
+            }
+            
+            for node in nodes:
+                text_lower = node.text.lower()
+                detected_topics = []
+                
+                for topic, keywords in topic_keywords.items():
+                    for keyword in keywords:
+                        if keyword in text_lower:
+                            detected_topics.append(topic)
+                            break
+                
+                node.metadata["topics"] = list(set(detected_topics))
+                
+        except Exception as e:
+            logger.error(f"主题提取失败: {str(e)}")
+    
+    async def _extract_entities(self, nodes: List[BaseNode], config: Dict[str, Any]) -> None:
+        """提取实体信息"""
+        try:
+            import re
+            
+            for node in nodes:
+                entities = {
+                    "dates": [],
+                    "emails": [],
+                    "urls": [],
+                    "phone_numbers": []
+                }
+                
+                # 提取日期
+                date_pattern = r'\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4}|\d{4}年\d{1,2}月\d{1,2}日'
+                entities["dates"] = re.findall(date_pattern, node.text)
+                
+                # 提取邮箱
+                email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+                entities["emails"] = re.findall(email_pattern, node.text)
+                
+                # 提取URL
+                url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+                entities["urls"] = re.findall(url_pattern, node.text)
+                
+                # 提取电话号码
+                phone_pattern = r'\d{3}-\d{3}-\d{4}|\d{11}|1[3-9]\d{9}'
+                entities["phone_numbers"] = re.findall(phone_pattern, node.text)
+                
+                node.metadata["entities"] = entities
+                
+        except Exception as e:
+            logger.error(f"实体提取失败: {str(e)}")
+    
+    async def _generate_questions(self, nodes: List[BaseNode], config: Dict[str, Any]) -> None:
+        """生成问题"""
+        try:
+            max_questions = config.get("max_questions", 3)
+            
+            for node in nodes:
+                if len(node.text) > 100:
+                    # 基于文本内容生成简单问题
+                    questions = []
+                    
+                    # 基于关键词生成问题
+                    if "什么" not in node.text.lower():
+                        questions.append(f"什么是{node.text.split('。')[0][:20]}？")
+                    
+                    if "如何" not in node.text.lower():
+                        questions.append(f"如何{node.text.split('。')[0][:20]}？")
+                    
+                    if "为什么" not in node.text.lower():
+                        questions.append(f"为什么{node.text.split('。')[0][:20]}？")
+                    
+                    node.metadata["questions"] = questions[:max_questions]
+                    
+        except Exception as e:
+            logger.error(f"问题生成失败: {str(e)}")
 
 # 全局单例
 _processor_instance = None

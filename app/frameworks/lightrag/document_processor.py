@@ -35,7 +35,17 @@ ProgressCallback = Callable[[str, str, float, Optional[Dict[str, Any]]], None]
 
 # 空回调函数
 def null_callback(task_id: str, status: str, progress: float, info: Optional[Dict[str, Any]] = None) -> None:
-    pass
+    """
+    默认的空回调函数，不执行任何操作
+    
+    参数:
+        task_id: 任务ID
+        status: 处理状态
+        progress: 进度百分比 (0.0-1.0)
+        info: 附加信息
+    """
+    # 可以在这里添加默认的日志记录
+    logger.debug(f"LightRAG Task {task_id}: {status} - {progress:.1%} {info or ''}")
 
 class DocumentProcessor:
     """文档处理器，处理文档并构建知识图谱"""
