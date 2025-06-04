@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: assistant_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: assistant_db
+      POSTGRES_USER: assistant_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_secure_password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assistant_user -d assistant_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - assistant_network
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: assistant_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-your_redis_password}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - assistant_network
+
+  # 应用服务
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: assistant_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://assistant_user:${DB_PASSWORD:-your_secure_password}@postgres:5432/assistant_db
+      REDIS_URL: redis://:${REDIS_PASSWORD:-your_redis_password}@redis:6379/0
+      PYTHONPATH: /app
+    volumes:
+      - ./app:/app/app
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - assistant_network
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        python scripts/wait_for_db.py &&
+        echo 'Running migrations...' &&
+        alembic upgrade head &&
+        echo 'Starting application...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # Nginx反向代理（生产环境）
+  nginx:
+    image: nginx:alpine
+    container_name: assistant_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./static:/usr/share/nginx/html/static
+    depends_on:
+      - app
+    networks:
+      - assistant_network
+
+  # 数据库管理工具（可选）
+  adminer:
+    image: adminer
+    container_name: assistant_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - assistant_network
+
+# 网络配置
+networks:
+  assistant_network:
+    driver: bridge
+
+# 数据卷配置
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

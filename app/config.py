@@ -1,3 +1,4 @@
+
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List, Dict, Any, Optional
@@ -92,6 +93,12 @@ def get_celery_result_backend() -> str:
             url = f"redis://{host}:{port}/{db}"
     
     return url
+
+from typing import List, Dict, Any
+from app.utils.config_manager import get_config
+from pydantic_settings import BaseSettings
+from pydantic import Field
+
 
 class Settings:
     # 服务信息
