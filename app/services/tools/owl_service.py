@@ -26,8 +26,8 @@ class OwlToolService(BaseToolService):
             permission_service: 资源权限服务
         """
         # 初始化工具仓库
-        self.tool_repository = OwlToolRepository()
-        self.toolkit_repository = OwlToolkitRepository()
+        self.tool_repository = OwlToolRepository(db)
+        self.toolkit_repository = OwlToolkitRepository(db)
         
         # 调用父类初始化方法
         super().__init__(db, self.tool_repository, permission_service)
@@ -57,7 +57,7 @@ class OwlToolService(BaseToolService):
         
         # 检查工具名称是否已存在
         existing_tool = await self.tool_repository.get_by_name(
-            tool_data.get("name"), self.db
+            tool_data.get("name")
         )
         if existing_tool:
             raise HTTPException(
@@ -67,7 +67,7 @@ class OwlToolService(BaseToolService):
         
         # 检查工具包是否存在
         toolkit_name = tool_data.get("toolkit_name")
-        existing_toolkit = await self.toolkit_repository.get_by_name(toolkit_name, self.db)
+        existing_toolkit = await self.toolkit_repository.get_by_name(toolkit_name)
         if not existing_toolkit:
             # 自动创建工具包
             toolkit_data = {
@@ -76,7 +76,7 @@ class OwlToolService(BaseToolService):
                 "is_enabled": True,
                 "config": {}
             }
-            await self.toolkit_repository.create(toolkit_data, self.db)
+            await self.toolkit_repository.create(toolkit_data)
         
         # 使用基类方法创建工具
         return await super().create_tool(tool_data, user_id)
@@ -104,7 +104,7 @@ class OwlToolService(BaseToolService):
         Returns:
             Optional[OwlTool]: 获取的工具实例或None
         """
-        return await self.tool_repository.get_by_name(name, self.db)
+        return await self.tool_repository.get_by_name(name)
     
     async def list_tools(self, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None) -> List[OwlTool]:
         """获取OWL工具列表，调用基类方法
@@ -129,7 +129,7 @@ class OwlToolService(BaseToolService):
             List[OwlTool]: 工具列表
         """
         # 获取工具列表
-        return await self.tool_repository.list_by_toolkit(toolkit_name, self.db)
+        return await self.tool_repository.list_by_toolkit(toolkit_name)
     
     async def list_enabled_tools(self) -> List[OwlTool]:
         """获取已启用的OWL工具列表，利用基类的list_tools方法
@@ -204,7 +204,7 @@ class OwlToolService(BaseToolService):
             HTTPException: 如果没有权限或工具不存在
         """
         # 获取工具
-        tool = await self.tool_repository.get_by_id(tool_id, self.db)
+        tool = await self.tool_repository.get_by_id(tool_id)
         if not tool:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -225,7 +225,7 @@ class OwlToolService(BaseToolService):
             "api_key_config": api_key_config
         }
         
-        return await self.tool_repository.update(tool_id, update_data, self.db)
+        return await self.tool_repository.update(tool_id, update_data)
     
     async def delete_tool(self, tool_id: str, user_id: str) -> bool:
         """删除OWL工具，提供特定的权限检查
@@ -276,7 +276,7 @@ class OwlToolService(BaseToolService):
         
         # 检查工具包名称是否已存在
         existing_toolkit = await self.toolkit_repository.get_by_name(
-            toolkit_data.get("name"), self.db
+            toolkit_data.get("name")
         )
         if existing_toolkit:
             raise HTTPException(
@@ -285,7 +285,7 @@ class OwlToolService(BaseToolService):
             )
         
         # 创建工具包
-        return await self.toolkit_repository.create(toolkit_data, self.db)
+        return await self.toolkit_repository.create(toolkit_data)
     
     async def get_toolkit(self, toolkit_id: str) -> Optional[OwlToolkit]:
         """获取工具包
@@ -297,7 +297,7 @@ class OwlToolService(BaseToolService):
             Optional[OwlToolkit]: 获取的工具包实例或None
         """
         # 获取工具包
-        toolkit = await self.toolkit_repository.get_by_id(toolkit_id, self.db)
+        toolkit = await self.toolkit_repository.get_by_id(toolkit_id)
         return toolkit
     
     async def get_toolkit_by_name(self, name: str) -> Optional[OwlToolkit]:
@@ -310,7 +310,7 @@ class OwlToolService(BaseToolService):
             Optional[OwlToolkit]: 获取的工具包实例或None
         """
         # 获取工具包
-        toolkit = await self.toolkit_repository.get_by_name(name, self.db)
+        toolkit = await self.toolkit_repository.get_by_name(name)
         return toolkit
     
     async def list_toolkits(self, skip: int = 0, limit: int = 100) -> List[OwlToolkit]:
@@ -324,7 +324,7 @@ class OwlToolService(BaseToolService):
             List[OwlToolkit]: 工具包列表
         """
         # 获取工具包列表
-        return await self.toolkit_repository.list_all(skip, limit, self.db)
+        return await self.toolkit_repository.list_all(skip, limit)
     
     async def list_enabled_toolkits(self) -> List[OwlToolkit]:
         """获取已启用的工具包列表
@@ -333,7 +333,7 @@ class OwlToolService(BaseToolService):
             List[OwlToolkit]: 已启用的工具包列表
         """
         # 获取已启用的工具包列表
-        return await self.toolkit_repository.list_enabled(self.db)
+        return await self.toolkit_repository.list_enabled()
     
     async def update_toolkit(self, toolkit_id: str, update_data: Dict[str, Any], user_id: str) -> Optional[OwlToolkit]:
         """更新工具包
@@ -358,7 +358,7 @@ class OwlToolService(BaseToolService):
             )
         
         # 获取工具包
-        toolkit = await self.toolkit_repository.get_by_id(toolkit_id, self.db)
+        toolkit = await self.toolkit_repository.get_by_id(toolkit_id)
         if not toolkit:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -366,7 +366,7 @@ class OwlToolService(BaseToolService):
             )
         
         # 更新工具包
-        return await self.toolkit_repository.update(toolkit_id, update_data, self.db)
+        return await self.toolkit_repository.update(toolkit_id, update_data)
     
     async def enable_toolkit(self, toolkit_id: str, user_id: str) -> Optional[OwlToolkit]:
         """启用工具包
@@ -422,7 +422,7 @@ class OwlToolService(BaseToolService):
             )
         
         # 获取工具包
-        toolkit = await self.toolkit_repository.get_by_id(toolkit_id, self.db)
+        toolkit = await self.toolkit_repository.get_by_id(toolkit_id)
         if not toolkit:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -430,12 +430,12 @@ class OwlToolService(BaseToolService):
             )
         
         # 删除工具包关联的所有工具
-        tools = await self.tool_repository.list_by_toolkit(toolkit.name, self.db)
+        tools = await self.tool_repository.list_by_toolkit(toolkit.name)
         for tool in tools:
-            await self.tool_repository.delete(tool.id, self.db)
+            await self.tool_repository.delete(tool.id)
         
         # 删除工具包
-        return await self.toolkit_repository.delete(toolkit_id, self.db)
+        return await self.toolkit_repository.delete(toolkit_id)
     
     # ==================== 辅助方法 ====================
     

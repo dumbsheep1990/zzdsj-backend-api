@@ -13,20 +13,27 @@ from app.repositories.base import BaseRepository
 class ToolExecutionRepository(BaseRepository):
     """工具执行记录仓库类"""
     
-    async def create(self, data: Dict[str, Any], db: Session) -> ToolExecution:
+    def __init__(self, db: Session):
+        """初始化工具执行记录仓库
+        
+        Args:
+            db: 数据库会话
+        """
+        self.db = db
+    
+    async def create(self, data: Dict[str, Any]) -> ToolExecution:
         """创建工具执行记录
         
         Args:
             data: 工具执行记录数据
-            db: 数据库会话
             
         Returns:
             ToolExecution: 创建的工具执行记录实例
         """
         tool_execution = ToolExecution(**data)
-        db.add(tool_execution)
-        db.commit()
-        db.refresh(tool_execution)
+        self.db.add(tool_execution)
+        self.db.commit()
+        self.db.refresh(tool_execution)
         return tool_execution
     
     async def get_by_id(self, execution_id: str, db: Session) -> Optional[ToolExecution]:

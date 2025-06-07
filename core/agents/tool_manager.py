@@ -26,8 +26,8 @@ class ToolManager:
             db: 数据库会话
         """
         self.db = db
-        self.tool_repository = ToolRepository()
-        self.execution_repository = ToolExecutionRepository()
+        self.tool_repository = ToolRepository(db)
+        self.execution_repository = ToolExecutionRepository(db)
         self._registered_tools = {}  # 注册的工具函数
         
     # ============ 工具注册管理方法 ============
@@ -212,7 +212,7 @@ class ToolManager:
                 }
             
             # 检查名称是否已存在
-            existing_tool = await self.tool_repository.get_by_name(name.strip(), self.db)
+            existing_tool = await self.tool_repository.get_by_name(name.strip())
             if existing_tool:
                 return {
                     "success": False,
@@ -235,7 +235,7 @@ class ToolManager:
             }
             
             # 创建工具定义
-            tool = await self.tool_repository.create(tool_data, self.db)
+            tool = await self.tool_repository.create(tool_data)
             
             logger.info(f"工具定义创建成功: {tool.id} - {tool.name}")
             
@@ -272,7 +272,7 @@ class ToolManager:
             Dict[str, Any]: 操作结果
         """
         try:
-            tool = await self.tool_repository.get_by_id(tool_id, self.db)
+            tool = await self.tool_repository.get_by_id(tool_id)
             if not tool:
                 return {
                     "success": False,
@@ -330,7 +330,7 @@ class ToolManager:
                 filters["is_active"] = is_active
             
             # 获取工具定义列表
-            tools = await self.tool_repository.list_with_filters(filters, skip, limit, self.db)
+            tools = await self.tool_repository.list_with_filters(filters, skip, limit)
             
             # 转换为标准格式
             tool_list = []
@@ -399,6 +399,19 @@ class ToolManager:
                     "execution_id": execution_id
                 }
             
+            # 检查工具配置状态（新增）
+            if user_id:
+                config_check = await self._check_tool_configuration(tool_name, user_id)
+                if not config_check["ready"]:
+                    return {
+                        "success": False,
+                        "error": config_check["message"],
+                        "error_code": config_check.get("error_code", "CONFIG_REQUIRED"),
+                        "execution_id": execution_id,
+                        "action_required": config_check.get("action_required"),
+                        "validation_errors": config_check.get("validation_errors")
+                    }
+            
             tool_info = self._registered_tools[tool_name]
             
             # 记录执行开始
@@ -415,7 +428,7 @@ class ToolManager:
                 "error_message": None
             }
             
-            await self.execution_repository.create(execution_data, self.db)
+            await self.execution_repository.create(execution_data)
             
             # 执行工具函数
             try:
@@ -687,4 +700,41 @@ class ToolManager:
                 "valid": False,
                 "error": f"验证工具参数失败: {str(e)}",
                 "error_code": "VALIDATION_ERROR"
+            }
+    
+    # ============ 配置检查方法 ============
+    
+    async def _check_tool_configuration(self, tool_name: str, user_id: str) -> Dict[str, Any]:
+        """检查工具配置状态
+        
+        Args:
+            tool_name: 工具名称
+            user_id: 用户ID
+            
+        Returns:
+            Dict[str, Any]: 检查结果
+        """
+        try:
+            # 导入配置管理器（避免循环导入）
+            from core.tools.configuration_manager import ToolConfigurationManager
+            
+            config_manager = ToolConfigurationManager(self.db)
+            
+            # 通过工具名称获取工具ID
+            tool = await self.tool_repository.get_by_name(tool_name)
+            if not tool:
+                return {
+                    "ready": False,
+                    "message": f"工具 {tool_name} 不存在",
+                    "error_code": "TOOL_NOT_FOUND"
+                }
+            
+            # 检查工具是否准备就绪
+            return await config_manager.check_tool_ready_for_execution(tool.id, user_id)
+            
+        except Exception as e:
+            logger.error(f"检查工具配置状态失败: {str(e)}")
+            return {
+                "ready": True,  # 发生错误时默认允许执行
+                "message": "配置检查失败，允许执行"
             } 

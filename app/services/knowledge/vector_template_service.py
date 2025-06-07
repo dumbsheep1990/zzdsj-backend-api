@@ -50,74 +50,113 @@ class VectorTemplateService:
             logger.error(f"加载行业模板配置失败: {str(e)}")
             return {}
     
-    def list_available_templates(self) -> Dict[str, List[Dict[str, Any]]]:
+    def get_available_templates(self, industry: str = None) -> List[Dict[str, Any]]:
         """
-        获取所有可用的向量化模板
-        
-        Returns:
-            按行业分类的模板列表
-        """
-        try:
-            templates_by_industry = {}
-            industry_templates = self.industry_templates.get("industry_templates", {})
-            
-            for template_name, template_config in industry_templates.items():
-                industry = template_config.get("industry", "general")
-                
-                if industry not in templates_by_industry:
-                    templates_by_industry[industry] = []
-                
-                template_info = {
-                    "template_id": template_name,
-                    "name": template_config.get("name", template_name),
-                    "description": template_config.get("description", ""),
-                    "scenario": template_config.get("scenario", ""),
-                    "industry": industry,
-                    "vectorization_config": template_config.get("vectorization_config", {}),
-                    "search_config": template_config.get("search_config", {})
-                }
-                
-                templates_by_industry[industry].append(template_info)
-            
-            return templates_by_industry
-            
-        except Exception as e:
-            logger.error(f"获取可用模板失败: {str(e)}")
-            return {}
-    
-    def get_template_by_id(self, template_id: str) -> Optional[Dict[str, Any]]:
-        """
-        根据ID获取模板配置
+        获取可用的向量化模板列表
         
         Args:
-            template_id: 模板ID
+            industry: 可选的行业筛选
             
         Returns:
-            模板配置或None
+            模板列表
         """
         try:
+            templates = []
             industry_templates = self.industry_templates.get("industry_templates", {})
-            return industry_templates.get(template_id)
+            
+            for template_id, template_config in industry_templates.items():
+                template_info = {
+                    "id": template_id,
+                    "name": template_config.get("name", template_id),
+                    "description": template_config.get("description", ""),
+                    "industry": template_config.get("industry", "general"),
+                    "scenario": template_config.get("scenario", ""),
+                    "metadata_fields": self._get_template_fields(template_config),
+                    "vectorization_features": self._extract_vectorization_features(template_config)
+                }
+                
+                # 行业筛选
+                if industry and template_info["industry"] != industry and template_info["industry"] != "general":
+                    continue
+                    
+                templates.append(template_info)
+            
+            return templates
+            
         except Exception as e:
-            logger.error(f"获取模板 {template_id} 失败: {str(e)}")
-            return None
+            logger.error(f"获取模板列表失败: {str(e)}")
+            return []
     
+    def _get_template_fields(self, template_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """获取模板的元数据字段信息"""
+        metadata_schema = template_config.get("metadata_schema", {})
+        fields_ref = metadata_schema.get("fields", "")
+        
+        if fields_ref and fields_ref in self.industry_templates.get("metadata_fields", {}):
+            field_definitions = self.industry_templates["metadata_fields"][fields_ref]
+            return [
+                {
+                    "name": field.get("name"),
+                    "data_type": field.get("data_type"),
+                    "description": field.get("description"),
+                    "required": field.get("name") in metadata_schema.get("required_fields", []),
+                    "searchable": field.get("name") in metadata_schema.get("searchable_fields", []),
+                    "filterable": field.get("name") in metadata_schema.get("filterable_fields", [])
+                }
+                for field in field_definitions
+            ]
+        return []
+    
+    def _extract_vectorization_features(self, template_config: Dict[str, Any]) -> Dict[str, Any]:
+        """提取向量化特性"""
+        vectorization_config = template_config.get("vectorization_config", {})
+        search_config = template_config.get("search_config", {})
+        
+        return {
+            "chunk_size": vectorization_config.get("chunk_size", 1000),
+            "chunk_strategy": vectorization_config.get("chunk_strategy", "general"),
+            "language": vectorization_config.get("language", "auto"),
+            "embedding_model": vectorization_config.get("embedding_model", "text-embedding-ada-002"),
+            "similarity_threshold": search_config.get("similarity_threshold", 0.7),
+            "hybrid_search": search_config.get("hybrid_search", {}).get("enabled", False),
+            "special_features": self._extract_special_features(vectorization_config)
+        }
+    
+    def _extract_special_features(self, vectorization_config: Dict[str, Any]) -> List[str]:
+        """提取特殊处理功能"""
+        features = []
+        if vectorization_config.get("structured_data_processing"):
+            features.append("结构化数据处理")
+        if vectorization_config.get("table_aware"):
+            features.append("表格识别")
+        if vectorization_config.get("legal_document_processing"):
+            features.append("法律文档处理")
+        if vectorization_config.get("policy_reference_extraction"):
+            features.append("政策引用提取")
+        if vectorization_config.get("citizen_friendly_processing"):
+            features.append("民生服务导向")
+        return features
+
     def recommend_template(self, 
                           content_type: str = None,
                           industry: str = None,
                           use_case: str = None,
-                          document_count: int = None) -> List[Dict[str, Any]]:
+                          document_count: int = None,
+                          content_complexity: str = None,
+                          service_type: str = None) -> List[Dict[str, Any]]:
         """
-        推荐适合的向量化模板
+        基于场景推荐合适的向量化模板
         
         Args:
-            content_type: 内容类型 (document, qa, manual等)
-            industry: 行业类型
+            content_type: 内容类型
+            industry: 行业
             use_case: 使用场景
             document_count: 文档数量
+            content_complexity: 内容复杂度 (simple/medium/complex)
+            service_type: 服务类型 (针对政府服务)
             
         Returns:
-            推荐的模板列表，按适合度排序
+            推荐的模板列表，按推荐度排序
         """
         try:
             recommendations = []
@@ -128,26 +167,34 @@ class VectorTemplateService:
                 template_industry = template_config.get("industry", "general")
                 template_scenario = template_config.get("scenario", "")
                 
-                # 行业匹配
+                # 行业匹配 (40分)
                 if industry:
                     if template_industry == industry:
                         score += 40
                     elif template_industry == "general":
                         score += 10
                 
-                # 内容类型匹配
+                # 内容类型匹配 (30分)
                 if content_type:
                     if content_type in template_scenario:
                         score += 30
                     elif content_type in template_id:
                         score += 20
                 
-                # 使用场景匹配
+                # 使用场景匹配 (20分)
                 if use_case:
                     if use_case in template_scenario:
                         score += 20
                 
-                # 文档数量考虑
+                # 特殊：政府服务类型匹配 (25分)
+                if service_type and industry == "government":
+                    score += self._calculate_government_service_score(template_id, service_type)
+                
+                # 内容复杂度匹配 (15分)
+                if content_complexity:
+                    score += self._calculate_complexity_score(template_config, content_complexity)
+                
+                # 文档数量考虑 (10分)
                 if document_count:
                     vectorization_config = template_config.get("vectorization_config", {})
                     chunk_size = vectorization_config.get("chunk_size", 1000)
@@ -164,30 +211,242 @@ class VectorTemplateService:
                             score += 15
                 
                 if score > 0:
-                    recommendation = {
+                    recommendations.append({
                         "template_id": template_id,
                         "name": template_config.get("name", template_id),
                         "description": template_config.get("description", ""),
-                        "industry": template_industry,
-                        "scenario": template_scenario,
                         "score": score,
-                        "config": template_config
-                    }
-                    recommendations.append(recommendation)
+                        "match_reasons": self._get_match_reasons(template_config, industry, content_type, use_case),
+                        "industry": template_industry,
+                        "scenario": template_scenario
+                    })
             
             # 按评分排序
             recommendations.sort(key=lambda x: x["score"], reverse=True)
             return recommendations[:5]  # 返回前5个推荐
             
         except Exception as e:
-            logger.error(f"推荐模板失败: {str(e)}")
+            logger.error(f"模板推荐失败: {str(e)}")
             return []
     
-    async def apply_template_to_knowledge_base(self,
-                                             kb_id: str,
-                                             template_id: str,
-                                             backend_type: VectorBackendType = VectorBackendType.MILVUS,
-                                             custom_config: Dict[str, Any] = None) -> Dict[str, Any]:
+    def _calculate_government_service_score(self, template_id: str, service_type: str) -> int:
+        """计算政府服务类型匹配分数"""
+        service_mapping = {
+            "real_estate": ["real_estate_registration_template"],
+            "property_registration": ["real_estate_registration_template"],
+            "mortgage_registration": ["real_estate_registration_template"],
+            "social_security": ["social_security_template"],
+            "insurance": ["social_security_template"],
+            "benefit_application": ["social_security_template"],
+            "general_service": ["government_service_template"]
+        }
+        
+        for service_key, templates in service_mapping.items():
+            if service_type.lower() in service_key or service_key in service_type.lower():
+                if template_id in templates:
+                    return 25
+        
+        return 0
+    
+    def _calculate_complexity_score(self, template_config: Dict[str, Any], complexity: str) -> int:
+        """计算复杂度匹配分数"""
+        vectorization_config = template_config.get("vectorization_config", {})
+        
+        if complexity == "simple":
+            # 简单内容偏向小chunk和基础处理
+            if vectorization_config.get("chunk_size", 1000) <= 800:
+                return 15
+            return 5
+        elif complexity == "complex":
+            # 复杂内容偏向大chunk和特殊处理
+            if (vectorization_config.get("chunk_size", 1000) >= 1000 or 
+                vectorization_config.get("legal_document_processing") or
+                vectorization_config.get("policy_reference_extraction")):
+                return 15
+            return 5
+        else:  # medium
+            return 10
+    
+    def _get_match_reasons(self, template_config: Dict[str, Any], industry: str, 
+                          content_type: str, use_case: str) -> List[str]:
+        """获取匹配原因"""
+        reasons = []
+        template_industry = template_config.get("industry", "general")
+        template_scenario = template_config.get("scenario", "")
+        
+        if industry and template_industry == industry:
+            reasons.append(f"行业匹配: {industry}")
+        if content_type and content_type in template_scenario:
+            reasons.append(f"内容类型匹配: {content_type}")
+        if use_case and use_case in template_scenario:
+            reasons.append(f"使用场景匹配: {use_case}")
+            
+        return reasons
+
+    def get_template_by_id(self, template_id: str) -> Optional[Dict[str, Any]]:
+        """
+        根据ID获取模板详情
+        
+        Args:
+            template_id: 模板ID
+            
+        Returns:
+            模板详细信息
+        """
+        try:
+            industry_templates = self.industry_templates.get("industry_templates", {})
+            if template_id not in industry_templates:
+                return None
+                
+            template_config = industry_templates[template_id]
+            
+            return {
+                "id": template_id,
+                "name": template_config.get("name", template_id),
+                "description": template_config.get("description", ""),
+                "industry": template_config.get("industry", "general"),
+                "scenario": template_config.get("scenario", ""),
+                "metadata_schema": template_config.get("metadata_schema", {}),
+                "vectorization_config": template_config.get("vectorization_config", {}),
+                "index_config": template_config.get("index_config", {}),
+                "search_config": template_config.get("search_config", {}),
+                "metadata_fields": self._get_template_fields(template_config),
+                "field_combinations": self._get_field_combinations(template_config)
+            }
+            
+        except Exception as e:
+            logger.error(f"获取模板详情失败: {str(e)}, template_id: {template_id}")
+            return None
+    
+    def _get_field_combinations(self, template_config: Dict[str, Any]) -> Dict[str, List[str]]:
+        """获取字段组合建议（用于复杂场景的字段动态组合）"""
+        metadata_schema = template_config.get("metadata_schema", {})
+        fields_ref = metadata_schema.get("fields", "")
+        
+        combinations = {
+            "basic_fields": metadata_schema.get("required_fields", []),
+            "search_optimized": metadata_schema.get("searchable_fields", []),
+            "filter_optimized": metadata_schema.get("filterable_fields", [])
+        }
+        
+        # 针对政府服务的特殊字段组合
+        if "government" in template_config.get("industry", ""):
+            combinations.update({
+                "citizen_focused": [
+                    "service_name", "service_department", "target_audience", 
+                    "service_conditions", "required_materials", "contact_info"
+                ],
+                "fee_focused": [
+                    "service_name", "fee_type", "is_free", "fee_standard", "fee_basis"
+                ],
+                "process_focused": [
+                    "service_name", "process_steps", "legal_deadline", 
+                    "actual_deadline", "service_channels"
+                ]
+            })
+            
+            # 针对不动产登记的专门组合
+            if "real_estate" in template_config.get("scenario", ""):
+                combinations["legal_focused"] = [
+                    "service_name", "registration_type", "property_type",
+                    "fee_calculation_rules", "policy_references", "special_conditions"
+                ]
+        
+        return combinations
+
+    def get_compatible_backends(self, template_id: str) -> List[Dict[str, Any]]:
+        """
+        获取模板兼容的向量数据库后端
+        
+        Args:
+            template_id: 模板ID
+            
+        Returns:
+            兼容的后端列表及其配置
+        """
+        try:
+            compatible_backends = []
+            backend_configs = self.industry_templates.get("backend_specific_configs", {})
+            
+            for backend_name, backend_config in backend_configs.items():
+                if template_id in backend_config:
+                    backend_info = {
+                        "backend": backend_name,
+                        "config": backend_config[template_id],
+                        "recommended": False
+                    }
+                    
+                    # 根据模板特性推荐后端
+                    template_config = self.industry_templates.get("industry_templates", {}).get(template_id, {})
+                    vectorization_config = template_config.get("vectorization_config", {})
+                    
+                    if backend_name == "milvus" and vectorization_config.get("chunk_size", 1000) > 1000:
+                        backend_info["recommended"] = True
+                    elif backend_name == "pgvector" and vectorization_config.get("chunk_size", 1000) <= 1000:
+                        backend_info["recommended"] = True
+                        
+                    compatible_backends.append(backend_info)
+            
+            return compatible_backends
+            
+        except Exception as e:
+            logger.error(f"获取兼容后端失败: {str(e)}")
+            return []
+
+    def create_custom_template(self, base_template_id: str, custom_config: Dict[str, Any], 
+                             template_name: str) -> Dict[str, Any]:
+        """
+        基于现有模板创建自定义模板
+        
+        Args:
+            base_template_id: 基础模板ID
+            custom_config: 自定义配置
+            template_name: 自定义模板名称
+            
+        Returns:
+            创建的自定义模板信息
+        """
+        try:
+            base_template = self.get_template_by_id(base_template_id)
+            if not base_template:
+                raise ValueError(f"基础模板不存在: {base_template_id}")
+            
+            custom_template_id = f"custom_{uuid.uuid4().hex[:8]}"
+            
+            # 合并配置
+            custom_template = {
+                "id": custom_template_id,
+                "name": template_name,
+                "description": f"基于 {base_template['name']} 的自定义模板",
+                "base_template": base_template_id,
+                "industry": base_template["industry"],
+                "scenario": base_template["scenario"],
+                "metadata_schema": base_template["metadata_schema"].copy(),
+                "vectorization_config": base_template["vectorization_config"].copy(),
+                "index_config": base_template["index_config"].copy(),
+                "search_config": base_template["search_config"].copy(),
+                "created_at": datetime.now().isoformat(),
+                "custom": True
+            }
+            
+            # 应用自定义配置
+            if "vectorization_overrides" in custom_config:
+                custom_template["vectorization_config"].update(custom_config["vectorization_overrides"])
+                
+            if "custom_fields" in custom_config:
+                # 添加自定义字段（这里可以扩展实现）
+                pass
+            
+            logger.info(f"创建自定义模板成功: {custom_template_id}")
+            return custom_template
+            
+        except Exception as e:
+            logger.error(f"创建自定义模板失败: {str(e)}")
+            raise
+
+    def apply_template_to_knowledge_base(self, kb_id: str, template_id: str, 
+                                       backend_type: VectorBackendType,
+                                       custom_config: Dict[str, Any] = None) -> bool:
         """
         将模板应用到知识库
         
@@ -195,296 +454,98 @@ class VectorTemplateService:
             kb_id: 知识库ID
             template_id: 模板ID
             backend_type: 向量数据库后端类型
-            custom_config: 自定义配置覆盖
+            custom_config: 自定义配置
             
         Returns:
-            应用结果
+            应用成功状态
         """
         try:
             # 获取知识库
-            kb = await self.kb_repo.get_by_id(kb_id)
+            kb = self.kb_repo.get_by_id(kb_id)
             if not kb:
-                return {
-                    "success": False,
-                    "error": f"知识库 {kb_id} 不存在"
-                }
+                raise ValueError(f"知识库不存在: {kb_id}")
             
-            # 获取模板配置
-            template_config = self.get_template_by_id(template_id)
-            if not template_config:
-                return {
-                    "success": False,
-                    "error": f"模板 {template_id} 不存在"
-                }
+            # 获取模板
+            template = self.get_template_by_id(template_id)
+            if not template:
+                raise ValueError(f"模板不存在: {template_id}")
             
-            # 构建向量存储配置
-            vector_config = self._build_vector_config(
-                template_config, 
-                backend_type, 
-                template_id, 
-                custom_config
-            )
+            # 检查后端兼容性
+            compatible_backends = self.get_compatible_backends(template_id)
+            backend_names = [b["backend"] for b in compatible_backends]
             
-            # 创建向量存储实例
-            vector_store = VectorStorageFactory.create_vector_store(
-                backend_type=backend_type,
-                name=f"kb_{kb_id}",
-                config=vector_config
-            )
+            if backend_type.value not in backend_names:
+                logger.warning(f"模板 {template_id} 可能不完全兼容后端 {backend_type.value}")
             
-            # 初始化向量存储
-            await vector_store.initialize()
-            
-            # 创建集合/表
-            collection_name = f"kb_{kb_id}"
-            dimension = vector_config.get("dimension", 1536)
-            
-            success = await vector_store.create_collection(
-                name=collection_name,
-                dimension=dimension,
-                **vector_config
-            )
-            
-            if success:
-                # 更新知识库配置
-                kb_settings = kb.settings or {}
-                kb_settings.update({
-                    "vector_template_id": template_id,
-                    "vector_backend": backend_type.value,
-                    "vector_config": vector_config,
-                    "applied_at": datetime.now().isoformat()
-                })
-                
-                await self.kb_repo.update(kb_id, {"settings": kb_settings})
-                
-                logger.info(f"成功将模板 {template_id} 应用到知识库 {kb_id}")
-                
-                return {
-                    "success": True,
-                    "data": {
-                        "kb_id": kb_id,
-                        "template_id": template_id,
-                        "backend_type": backend_type.value,
-                        "collection_name": collection_name,
-                        "vector_config": vector_config
-                    }
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": "创建向量集合失败"
-                }
-            
-        except Exception as e:
-            logger.error(f"应用模板到知识库失败: {str(e)}")
-            return {
-                "success": False,
-                "error": f"应用模板失败: {str(e)}"
-            }
-    
-    def _build_vector_config(self,
-                           template_config: Dict[str, Any],
-                           backend_type: VectorBackendType,
-                           template_id: str,
-                           custom_config: Dict[str, Any] = None) -> Dict[str, Any]:
-        """构建向量存储配置"""
-        try:
-            # 基础配置
-            vectorization_config = template_config.get("vectorization_config", {})
-            index_config = template_config.get("index_config", {})
-            metadata_schema = template_config.get("metadata_schema", {})
-            
-            # 构建向量配置
-            vector_config = {
-                "dimension": 1536,  # 默认OpenAI embedding维度
-                "embedding_model": vectorization_config.get("embedding_model", "text-embedding-ada-002"),
-                "chunk_size": vectorization_config.get("chunk_size", 1000),
-                "chunk_overlap": vectorization_config.get("chunk_overlap", 200),
-                "chunk_strategy": vectorization_config.get("chunk_strategy", "paragraph"),
-                "language": vectorization_config.get("language", "auto"),
-            }
-            
-            # 索引配置
-            vector_index_config = index_config.get("vector_index", {})
-            vector_config.update({
-                "index_type": vector_index_config.get("type", "HNSW"),
-                "metric_type": vector_index_config.get("metric", "cosine"),
-                "index_params": vector_index_config.get("parameters", {})
-            })
-            
-            # 元数据字段配置
-            fields_template = metadata_schema.get("fields", "")
-            if fields_template:
-                metadata_fields = self.industry_templates.get("metadata_field_templates", {}).get(fields_template, [])
-                vector_config["metadata_fields"] = metadata_fields
-                vector_config["required_fields"] = metadata_schema.get("required_fields", [])
-                vector_config["searchable_fields"] = metadata_schema.get("searchable_fields", [])
-                vector_config["filterable_fields"] = metadata_schema.get("filterable_fields", [])
-            
-            # 后端特定配置
-            backend_configs = self.industry_templates.get("backend_specific_configs", {})
-            backend_name = backend_type.value.lower()
-            
-            if backend_name in backend_configs:
-                backend_config = backend_configs[backend_name]
-                # 尝试获取模板特定的配置
-                template_key = template_id.replace("_template", "")
-                if template_key in backend_config:
-                    vector_config.update(backend_config[template_key])
-            
-            # 应用自定义配置覆盖
+            # 准备向量存储配置
+            vector_config = template["vectorization_config"].copy()
             if custom_config:
                 vector_config.update(custom_config)
             
-            return vector_config
+            # 创建向量存储
+            vector_storage = VectorStorageFactory.create_storage(
+                backend_type=backend_type,
+                collection_name=f"kb_{kb_id}",
+                **vector_config
+            )
+            
+            # 更新知识库配置
+            kb.vector_template_id = template_id
+            kb.vector_backend_type = backend_type.value
+            kb.vector_config = vector_config
+            kb.updated_at = datetime.now()
+            
+            self.db.commit()
+            
+            logger.info(f"模板应用成功: kb_id={kb_id}, template_id={template_id}")
+            return True
             
         except Exception as e:
-            logger.error(f"构建向量配置失败: {str(e)}")
-            return {}
-    
-    def get_template_metadata_schema(self, template_id: str) -> Dict[str, Any]:
+            logger.error(f"应用模板失败: {str(e)}")
+            self.db.rollback()
+            return False
+
+    def get_metadata_schema(self, template_id: str) -> Dict[str, Any]:
         """
-        获取模板的元数据schema
+        获取模板的元数据模式
         
         Args:
             template_id: 模板ID
             
         Returns:
-            元数据schema配置
+            元数据模式信息
         """
         try:
-            template_config = self.get_template_by_id(template_id)
-            if not template_config:
+            template = self.get_template_by_id(template_id)
+            if not template:
                 return {}
             
-            metadata_schema = template_config.get("metadata_schema", {})
-            fields_template = metadata_schema.get("fields", "")
-            
-            if fields_template:
-                metadata_fields = self.industry_templates.get("metadata_field_templates", {}).get(fields_template, [])
-                return {
-                    "fields": metadata_fields,
-                    "required_fields": metadata_schema.get("required_fields", []),
-                    "searchable_fields": metadata_schema.get("searchable_fields", []),
-                    "filterable_fields": metadata_schema.get("filterable_fields", [])
-                }
-            
-            return {}
-            
-        except Exception as e:
-            logger.error(f"获取模板元数据schema失败: {str(e)}")
-            return {}
-    
-    def validate_template_compatibility(self,
-                                      template_id: str,
-                                      backend_type: VectorBackendType,
-                                      document_count: int = None,
-                                      storage_size_mb: int = None) -> Dict[str, Any]:
-        """
-        验证模板与后端的兼容性
-        
-        Args:
-            template_id: 模板ID
-            backend_type: 后端类型
-            document_count: 预期文档数量
-            storage_size_mb: 预期存储大小(MB)
-            
-        Returns:
-            兼容性检查结果
-        """
-        try:
-            template_config = self.get_template_by_id(template_id)
-            if not template_config:
-                return {
-                    "compatible": False,
-                    "error": "模板不存在"
-                }
-            
-            warnings = []
-            recommendations = []
-            
-            # 检查后端配置支持
-            backend_configs = self.industry_templates.get("backend_specific_configs", {})
-            backend_name = backend_type.value.lower()
-            
-            if backend_name not in backend_configs:
-                warnings.append(f"后端 {backend_name} 没有特定配置，将使用默认配置")
-            
-            # 检查索引类型支持
-            index_config = template_config.get("index_config", {})
-            vector_index = index_config.get("vector_index", {})
-            index_type = vector_index.get("type", "HNSW")
-            
-            # 不同后端的索引类型支持检查
-            if backend_type == VectorBackendType.PGVECTOR:
-                if index_type not in ["HNSW", "IVFFLAT"]:
-                    warnings.append(f"PostgreSQL+pgvector 不支持索引类型 {index_type}，建议使用 HNSW 或 IVFFLAT")
-            elif backend_type == VectorBackendType.ELASTICSEARCH:
-                if index_type != "DENSE_VECTOR":
-                    warnings.append(f"Elasticsearch 将使用 DENSE_VECTOR 替代 {index_type}")
-            
-            # 性能预估
-            if document_count:
-                vectorization_config = template_config.get("vectorization_config", {})
-                chunk_size = vectorization_config.get("chunk_size", 1000)
-                estimated_chunks = document_count * 10  # 粗略估算：每个文档约10个chunk
-                
-                if estimated_chunks > 100000:
-                    if index_type == "IVFFLAT":
-                        recommendations.append("大量数据建议使用 HNSW 索引以获得更好的查询性能")
-                    if backend_type == VectorBackendType.MILVUS:
-                        recommendations.append("建议启用分区功能以提高大规模数据的管理效率")
+            metadata_schema = template.get("metadata_schema", {})
+            field_definitions = template.get("metadata_fields", [])
             
             return {
-                "compatible": True,
-                "warnings": warnings,
-                "recommendations": recommendations,
-                "estimated_performance": self._estimate_performance(template_config, document_count)
+                "schema": metadata_schema,
+                "fields": field_definitions,
+                "field_combinations": template.get("field_combinations", {}),
+                "validation_rules": self._get_validation_rules(field_definitions)
             }
             
         except Exception as e:
-            logger.error(f"验证模板兼容性失败: {str(e)}")
-            return {
-                "compatible": False,
-                "error": f"兼容性检查失败: {str(e)}"
-            }
-    
-    def _estimate_performance(self, template_config: Dict[str, Any], document_count: int = None) -> Dict[str, Any]:
-        """估算性能指标"""
-        try:
-            performance = {
-                "search_latency": "medium",
-                "indexing_speed": "medium",
-                "memory_usage": "medium",
-                "accuracy": "high"
-            }
-            
-            if not document_count:
-                return performance
-            
-            index_config = template_config.get("index_config", {})
-            vector_index = index_config.get("vector_index", {})
-            index_type = vector_index.get("type", "HNSW")
-            
-            # 基于索引类型和数据量的性能估算
-            if index_type == "HNSW":
-                if document_count < 10000:
-                    performance["search_latency"] = "low"
-                    performance["accuracy"] = "very_high"
-                elif document_count > 100000:
-                    performance["memory_usage"] = "high"
-                    performance["indexing_speed"] = "slow"
-            elif index_type == "IVFFLAT":
-                performance["indexing_speed"] = "fast"
-                if document_count > 50000:
-                    performance["search_latency"] = "medium"
-                    performance["accuracy"] = "medium"
-            
-            return performance
-            
-        except Exception as e:
-            logger.error(f"性能估算失败: {str(e)}")
+            logger.error(f"获取元数据模式失败: {str(e)}")
             return {}
+    
+    def _get_validation_rules(self, field_definitions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """获取字段验证规则"""
+        rules = {}
+        for field in field_definitions:
+            field_name = field.get("name")
+            if field_name:
+                rules[field_name] = {
+                    "required": not field.get("nullable", True),
+                    "data_type": field.get("data_type"),
+                    "max_length": field.get("max_length")
+                }
+        return rules
 
 
 # 全局实例获取函数

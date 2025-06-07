@@ -4,6 +4,8 @@
 
 基于现有系统的向量存储基础设施，我们设计了一套完整的向量化模板方案，允许用户在创建知识库时选择适合不同场景和行业的向量化模板。这套方案规定了元数据格式、向量化索引构建方式，并针对不同场景进行了优化。
 
+**特别针对政府服务事项的字段和格式差异，我们提供了智能模板选择和动态字段组合功能。**
+
 ## 方案架构
 
 ### 1. 核心组件
@@ -15,6 +17,7 @@
 │   └── vector_store_templates.yaml        # 基础向量存储模板
 ├── 服务层
 │   ├── VectorTemplateService              # 模板管理服务
+│   ├── TableVectorizer                    # 表格数据智能分析
 │   └── VectorTemplateAPI                  # API接口层
 └── 存储层
     ├── Milvus适配器
@@ -31,6 +34,11 @@
 - **技术文档模板** (`technical_document_template`)
 - **学术论文模板** (`academic_paper_template`)
 
+#### 政府服务专业模板（新增）
+- **通用政府服务模板** (`government_service_template`) - 适用于标准政府服务事项
+- **不动产登记专业模板** (`real_estate_registration_template`) - 针对抵押权登记等复杂业务
+- **社会保障服务模板** (`social_security_template`) - 针对社保卡申领等民生服务
+
 #### 通用场景模板
 - **通用文档模板** (`general_document_template`)
 - **问答知识库模板** (`qa_knowledge_template`)
@@ -39,352 +47,260 @@
 - **客服FAQ模板** (`customer_service_template`)
 - **产品说明书模板** (`product_manual_template`)
 
-## 模板配置详解
+## 政府服务事项差异化处理方案
 
-### 1. 元数据字段定义
+### 1. 智能服务类型识别
 
-每个模板都定义了专门的元数据字段，以政策文档为例：
-
-```yaml
-policy_document_fields:
-  - name: "doc_id"           # 文档唯一标识符
-  - name: "title"            # 政策文档标题
-  - name: "source_url"       # 原始文档URL
-  - name: "publish_date"     # 发布日期
-  - name: "effective_date"   # 生效日期  
-  - name: "topic"            # 政策主题分类
-  - name: "category"         # 政策类别
-  - name: "agency"           # 发布机构
-  - name: "region"           # 适用地域
-  - name: "doc_type"         # 文档类型
-  - name: "chunk_id"         # 文档块ID
-```
-
-### 2. 向量化配置
-
-```yaml
-vectorization_config:
-  embedding_model: "text-embedding-ada-002"    # 嵌入模型
-  chunk_size: 1000                             # 切片大小
-  chunk_overlap: 200                           # 切片重叠
-  chunk_strategy: "semantic"                   # 切分策略
-  language: "zh"                               # 语言
-```
-
-### 3. 索引配置
-
-```yaml
-index_config:
-  vector_index:
-    type: "HNSW"                               # 索引类型
-    metric: "cosine"                           # 距离度量
-    parameters:
-      M: 16                                    # HNSW参数
-      efConstruction: 200
-  metadata_indexes:
-    - fields: ["topic", "category"]            # 组合索引
-      type: "composite"
-    - fields: ["publish_date"]                 # 时间索引
-      type: "btree"
-```
-
-### 4. 搜索优化配置
-
-```yaml
-search_config:
-  default_top_k: 10                           # 默认返回数量
-  similarity_threshold: 0.7                   # 相似度阈值
-  rerank_enabled: true                        # 重排序
-  hybrid_search:
-    enabled: true                             # 混合搜索
-    keyword_weight: 0.3                       # 关键词权重
-    vector_weight: 0.7                        # 向量权重
-```
-
-## 向量数据库后端适配
-
-### 1. Milvus配置
-
-```yaml
-milvus:
-  policy_document:
-    collection_name: "policy_documents"
-    partition_config:
-      enabled: true
-      partition_key: "agency"                 # 按发布机构分区
-      auto_partition: true
-    sharding_config:
-      shard_num: 2
-      replicas: 1
-```
-
-### 2. PostgreSQL+pgvector配置
-
-```yaml
-pgvector:
-  policy_document:
-    table_name: "policy_document_vectors"
-    index_type: "ivfflat"
-    index_parameters:
-      lists: 100
-    partitioning:
-      enabled: true
-      partition_key: "agency"
-      partition_type: "hash"
-```
-
-### 3. Elasticsearch配置
-
-```yaml
-elasticsearch:
-  policy_document:
-    index_name: "policy_documents"
-    settings:
-      number_of_shards: 3
-      number_of_replicas: 1
-    analysis:
-      analyzer:
-        policy_analyzer:
-          type: "custom"
-          tokenizer: "ik_smart"
-          filter: ["lowercase", "stop"]
-```
-
-## API接口设计
-
-### 1. 模板管理接口
-
-```http
-GET /api/frontend/knowledge/vector-templates/templates
-# 获取所有可用模板
-
-GET /api/frontend/knowledge/vector-templates/templates/{template_id}
-# 获取指定模板配置
-
-POST /api/frontend/knowledge/vector-templates/templates/recommend
-# 推荐适合的模板
-
-POST /api/frontend/knowledge/vector-templates/templates/apply
-# 应用模板到知识库
-
-GET /api/frontend/knowledge/vector-templates/templates/{template_id}/metadata-schema
-# 获取模板元数据Schema
-
-POST /api/frontend/knowledge/vector-templates/templates/check-compatibility
-# 检查模板兼容性
-
-GET /api/frontend/knowledge/vector-templates/backends
-# 获取支持的向量数据库后端
-```
-
-### 2. 知识库创建流程
+针对您展示的两个不同类型的政府服务表格，系统提供智能识别功能：
 
 ```python
-# 1. 获取模板推荐
-recommendations = await recommend_vector_templates({
-    "content_type": "document",
-    "industry": "government", 
-    "use_case": "policy_search",
-    "document_count": 1000
-})
-
-# 2. 选择模板并检查兼容性
-compatibility = await check_template_compatibility({
-    "template_id": "policy_document_template",
-    "backend_type": "milvus",
-    "document_count": 1000
-})
-
-# 3. 应用模板到知识库
-result = await apply_vector_template({
-    "kb_id": "kb_12345",
-    "template_id": "policy_document_template", 
-    "backend_type": "milvus",
-    "custom_config": {}
-})
+# 服务类型自动分类
+service_patterns = {
+    "real_estate_registration": ["不动产", "房屋", "抵押", "登记"],
+    "social_security": ["社会保障", "社保", "医保", "保险"],
+    "business_registration": ["工商", "企业", "营业执照"],
+    # ... 更多类型
+}
 ```
 
-## 模板推荐算法
+### 2. 动态字段组合系统
 
-### 1. 推荐评分机制
+#### 基础字段组合
+```yaml
+government_service_fields:
+  basic_fields: ["service_id", "service_name", "service_department"]
+  citizen_focused: ["service_conditions", "required_materials", "contact_info"]
+  fee_focused: ["fee_type", "fee_standard", "fee_basis"]
+  process_focused: ["process_steps", "legal_deadline", "service_channels"]
+```
+
+#### 专业领域扩展字段
+```yaml
+# 不动产登记专用字段
+real_estate_registration_fields:
+  - registration_type: "登记类型"
+  - property_type: "不动产类型"
+  - fee_calculation_rules: "收费计算规则"
+  - policy_references: "政策依据文件列表"
+  - special_conditions: "特殊办理条件"
+
+# 社会保障专用字段  
+social_security_fields:
+  - benefit_type: "保障类型"
+  - eligibility_criteria: "申领条件"
+  - benefit_amount: "保障金额"
+  - coverage_period: "保障期限"
+```
+
+### 3. 复杂收费信息处理
+
+针对您展示的抵押权登记表格中复杂的收费结构，我们提供专门的处理策略：
+
+#### 简单收费（如预购商品房）
+```python
+fee_info = {
+    "is_free": False,
+    "fee_type": "按件收费",
+    "fee_description": "简单收费说明"
+}
+```
+
+#### 复杂收费（如抵押权登记）
+```python
+fee_info = {
+    "is_free": False,
+    "fee_type": "按标准收费",
+    "fee_standard": "详细收费标准说明",
+    "fee_basis": "财政部、国家发展改革委相关文件",
+    "fee_calculation_rules": "具体计算方法",
+    "policy_references": ["《财政收费文件》", "发改价格[2019]45号"]
+}
+```
+
+### 4. 智能模板推荐算法
 
 ```python
-def calculate_recommendation_score(template, criteria):
+def recommend_template(content_type, industry, service_type, complexity):
     score = 0
     
     # 行业匹配 (40分)
-    if template.industry == criteria.industry:
-        score += 40
-    elif template.industry == "general":
-        score += 10
+    if industry == "government": score += 40
     
-    # 内容类型匹配 (30分)
-    if criteria.content_type in template.scenario:
-        score += 30
+    # 服务类型匹配 (25分)
+    if service_type == "real_estate": 
+        recommend "real_estate_registration_template"
+        score += 25
+    elif service_type == "social_security":
+        recommend "social_security_template" 
+        score += 25
     
-    # 使用场景匹配 (20分)
-    if criteria.use_case in template.scenario:
-        score += 20
+    # 复杂度匹配 (15分)
+    if complexity == "complex" and has_policy_references:
+        score += 15
         
-    # 规模适配 (10分)
-    if criteria.document_count:
-        score += calculate_scale_score(template, criteria.document_count)
-    
-    return score
+    return sorted_recommendations
 ```
 
-### 2. 性能预估
+## 模板配置详解
 
-系统会根据模板配置和预期数据量估算性能指标：
+### 1. 不动产登记专业模板
 
-- **搜索延迟**: low/medium/high
-- **索引速度**: slow/medium/fast  
-- **内存使用**: low/medium/high
-- **准确性**: medium/high/very_high
+```yaml
+real_estate_registration_template:
+  name: "不动产登记专业向量化模板"
+  description: "适用于不动产登记、抵押权登记等复杂不动产业务"
+  
+  metadata_schema:
+    fields: "real_estate_registration_fields"
+    required_fields: ["service_id", "service_name", "registration_type"]
+    searchable_fields: ["service_name", "registration_type", "fee_calculation_rules"]
+    
+  vectorization_config:
+    chunk_size: 1000
+    chunk_strategy: "legal_document_oriented"
+    legal_document_processing: true
+    policy_reference_extraction: true
+    
+  search_config:
+    legal_precision: true
+    policy_context_aware: true
+```
+
+### 2. 社会保障服务模板
+
+```yaml
+social_security_template:
+  name: "社会保障服务向量化模板" 
+  description: "适用于社保卡申领等民生服务"
+  
+  vectorization_config:
+    chunk_size: 700
+    chunk_strategy: "citizen_service_oriented"
+    citizen_friendly_processing: true
+    
+  search_config:
+    citizen_intent_optimization: true
+    accessibility_enhanced: true
+```
+
+## API接口功能
+
+### 1. 智能表格分析接口
+
+```http
+POST /knowledge/vector-templates/analyze-table
+{
+  "table_data": {
+    "事项名称": "一般抵押权登记首次登记",
+    "权力部门": "六盘水市自然资源局",
+    "收费": "复杂收费信息..."
+  }
+}
+```
+
+**返回：**
+- 自动识别服务类型
+- 推荐最适合的模板
+- 提供字段组合建议
+- 分析复杂度和特殊处理需求
+
+### 2. 动态字段组合接口
+
+```http
+POST /knowledge/vector-templates/field-combinations
+{
+  "template_id": "real_estate_registration_template",
+  "scenario": "fee_analysis"
+}
+```
+
+**返回：**
+- 针对收费分析优化的字段组合
+- 搜索优化建议
+- 性能调优建议
+
+### 3. 智能政府服务分析接口
+
+```http
+POST /knowledge/vector-templates/government-service/smart-analysis
+{
+  "table_data": {...},
+  "service_name": "一般抵押权登记首次登记"
+}
+```
+
+**返回：**
+- 服务类型分类
+- 复杂度评估
+- 特殊处理建议
+- 字段优化方案
 
 ## 使用示例
 
-### 1. 政策文档知识库创建
+### 1. 处理预购商品房登记表格
 
 ```python
-# 推荐模板
-recommendations = await template_service.recommend_template(
-    content_type="policy",
-    industry="government",
-    document_count=5000
-)
+# 自动识别为简单政府服务
+analysis_result = analyze_table({
+    "事项名称": "预购商品房、保障性住房预告登记",
+    "办理形式": "快速申请",
+    "收费": "是否收费"
+})
 
-# 应用政策文档模板
-await template_service.apply_template_to_knowledge_base(
-    kb_id="policy_kb_001",
-    template_id="policy_document_template",
-    backend_type=VectorBackendType.MILVUS
-)
+# 推荐：government_service_template
+# 字段组合：基础字段 + 简单收费字段
 ```
 
-### 2. 通用企业知识库创建
+### 2. 处理抵押权登记表格
 
 ```python
-# 应用企业知识库模板
-await template_service.apply_template_to_knowledge_base(
-    kb_id="enterprise_kb_001", 
-    template_id="enterprise_knowledge_template",
-    backend_type=VectorBackendType.PGVECTOR,
-    custom_config={
-        "chunk_size": 1500,
-        "department_filter": ["IT", "HR", "Finance"]
-    }
-)
+# 自动识别为复杂不动产登记
+analysis_result = analyze_table({
+    "事项名称": "一般抵押权登记首次登记",
+    "收费": "收费依据和描述: 《财政部 国家发展改革委...》",
+    "收费标准": "详细的政策文件引用..."
+})
+
+# 推荐：real_estate_registration_template  
+# 字段组合：专业字段 + 复杂收费字段 + 政策引用字段
 ```
 
-## 扩展能力
+## 技术优势
 
-### 1. 自定义模板
+### 1. 自适应字段配置
+- 根据服务类型动态选择字段组合
+- 支持复杂收费信息的结构化存储
+- 政策文件引用的专门处理
 
-用户可以基于现有模板创建自定义模板：
+### 2. 智能内容处理
+- 法律文档导向的chunk策略
+- 政策引用自动提取
+- 市民友好的搜索优化
 
-```yaml
-custom_template:
-  name: "自定义医疗模板"
-  base_template: "medical_document_template"
-  custom_fields:
-    - name: "hospital_level"
-      data_type: "VARCHAR"
-      description: "医院等级"
-  vectorization_overrides:
-    chunk_size: 800
-    language: "zh"
-```
-
-### 2. 模板版本管理
-
-支持模板的版本管理和升级：
-
-- 版本控制
-- 向后兼容
-- 平滑升级
-- 回滚机制
-
-## 性能优化
-
-### 1. 批处理配置
-
-```yaml
-performance_configs:
-  batch_processing:
-    policy_document:
-      batch_size: 100
-      parallel_workers: 4
-      memory_limit_mb: 1024
-```
-
-### 2. 缓存策略
-
-- 模板配置缓存
-- 查询结果缓存  
-- 元数据索引缓存
-
-### 3. 监控指标
-
-```yaml
-monitoring_configs:
-  metrics:
-    - name: "vector_search_latency"
-      type: "histogram"
-    - name: "vector_index_size" 
-      type: "gauge"
-    - name: "search_accuracy"
-      type: "gauge"
-```
-
-## 安全配置
-
-### 1. 数据脱敏
-
-```yaml
-security_configs:
-  data_masking:
-    medical_document:
-      enabled: true
-      fields_to_mask: ["patient_id"]
-      masking_strategy: "hash"
-```
-
-### 2. 访问控制
-
-```yaml
-access_control:
-  enterprise_knowledge:
-    public_access: false
-    requires_authentication: true
-    role_based_access: true
-```
+### 3. 性能优化
+- 针对不同复杂度的索引策略
+- 分区存储支持
+- 混合搜索优化
 
 ## 部署建议
 
-### 1. 开发环境
-- 使用通用文档模板
-- PostgreSQL+pgvector后端
-- 简化配置
+### 1. 政府服务场景部署
+```yaml
+# 推荐配置
+backend: "milvus"  # 支持复杂查询
+templates: 
+  - "government_service_template" 
+  - "real_estate_registration_template"
+  - "social_security_template"
+features:
+  - smart_table_analysis
+  - dynamic_field_combination  
+  - policy_reference_extraction
+```
 
-### 2. 生产环境  
-- 根据业务场景选择专业模板
-- Milvus后端（大规模）
-- 完整监控和安全配置
+### 2. 性能调优建议
+- 复杂服务事项使用HNSW索引
+- 启用分区功能处理大量数据
+- 收费信息单独索引优化检索
 
-### 3. 性能调优
-- 根据数据量调整索引参数
-- 开启分区功能
-- 配置缓存策略
-
-## 总结
-
-这套向量化模板方案提供了：
-
-1. **场景化适配**：针对不同行业和场景的专门优化
-2. **灵活配置**：支持多种向量数据库后端和自定义配置
-3. **智能推荐**：基于使用场景的模板推荐算法
-4. **性能优化**：针对不同规模和场景的性能调优
-5. **易于扩展**：支持自定义模板和版本管理
-
-通过这套方案，用户可以轻松创建适合自己业务场景的知识库，获得最佳的向量化处理效果和检索性能。 
+通过这套智能化的向量模板系统，可以有效处理不同政府服务事项的字段和格式差异，为用户提供最优的向量化配置方案。 

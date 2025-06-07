@@ -528,8 +528,28 @@ class ConfigMapping:
                 "category": "模型配置",
                 "value_type": "string",
                 "description": "默认LLM模型",
-                "default_value": "gpt-4",
-                "is_system": False,
+                "default_value": "gpt-3.5-turbo",
+                "is_system": True,
+                "is_sensitive": False,
+                "validation_rules": {"required": True, "min_length": 1}
+            },
+            "DEFAULT_MODEL_PROVIDER": {
+                "config_key": "llm.default_provider",
+                "category": "模型配置",
+                "value_type": "string",
+                "description": "默认模型提供商",
+                "default_value": "openai",
+                "is_system": True,
+                "is_sensitive": False,
+                "validation_rules": {"required": True, "enum": ["openai", "zhipu", "anthropic", "ollama", "local"]}
+            },
+            "DEFAULT_MODEL_DESCRIPTION": {
+                "config_key": "llm.default_model.description",
+                "category": "模型配置",
+                "value_type": "string",
+                "description": "默认模型描述信息",
+                "default_value": "系统内置工具使用的默认LLM模型",
+                "is_system": True,
                 "is_sensitive": False
             },
             "EMBEDDING_MODEL": {

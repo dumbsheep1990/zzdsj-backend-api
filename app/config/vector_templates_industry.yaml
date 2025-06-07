@@ -545,6 +545,249 @@ metadata_field_templates:
       description: "服务渠道：电话、邮件、在线等"
       index: true
 
+  # 政务服务办事指南元数据字段
+  government_service_fields:
+    - name: "service_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "服务事项ID"
+      index: true
+    - name: "service_name"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: false
+      description: "事项名称"
+      index: true
+    - name: "service_code"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "事项编码"
+      index: true
+    - name: "service_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "事项类型：公共服务、行政许可、行政确认等"
+      index: true
+    - name: "service_department"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "服务部门"
+      index: true
+    - name: "service_level"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "服务层级：国家级、省级、市级、县级"
+      index: true
+    - name: "target_audience"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "服务对象：公民、法人、其他组织"
+      index: true
+    - name: "legal_deadline"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "法定时限"
+    - name: "actual_deadline"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "承诺时限/办理时限"
+    - name: "service_channels"
+      data_type: "JSONB"
+      nullable: true
+      description: "办理渠道：线上、线下、自助等"
+    - name: "service_windows"
+      data_type: "JSONB"
+      nullable: true
+      description: "办理窗口信息"
+    - name: "service_hours"
+      data_type: "TEXT"
+      nullable: true
+      description: "办理时间"
+    - name: "service_conditions"
+      data_type: "TEXT"
+      nullable: true
+      description: "办理条件"
+    - name: "required_materials"
+      data_type: "JSONB"
+      nullable: true
+      description: "申请材料清单"
+    - name: "process_steps"
+      data_type: "JSONB"
+      nullable: true
+      description: "办理流程步骤"
+    - name: "fee_info"
+      data_type: "JSONB"
+      nullable: true
+      description: "收费信息：包含标准、依据、说明等"
+    - name: "fee_type"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "收费类型：免费、收费、按标准收费"
+      index: true
+    - name: "is_free"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否免费"
+    - name: "fee_standard"
+      data_type: "TEXT"
+      nullable: true
+      description: "收费标准详细说明"
+    - name: "fee_basis"
+      data_type: "TEXT"
+      nullable: true
+      description: "收费依据文件"
+    - name: "contact_info"
+      data_type: "JSONB"
+      nullable: true
+      description: "咨询联系方式"
+    - name: "complaint_channels"
+      data_type: "JSONB"
+      nullable: true
+      description: "监督投诉渠道"
+    - name: "inquiry_methods"
+      data_type: "JSONB"
+      nullable: true
+      description: "办理查询方式"
+    - name: "geographic_scope"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "适用地域范围"
+      index: true
+    - name: "online_url"
+      data_type: "VARCHAR"
+      max_length: 500
+      nullable: true
+      description: "在线办理地址"
+    - name: "service_status"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "服务状态：正常、暂停、取消"
+      index: true
+    - name: "update_date"
+      data_type: "TIMESTAMP"
+      nullable: true
+      description: "信息更新时间"
+      index: true
+    - name: "chunk_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "内容块类型：基本信息、办理条件、流程、材料等"
+      index: true
+    - name: "service_category"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "服务分类：房产登记、工商注册、社保服务等"
+      index: true
+    - name: "complexity_level"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "复杂度：简单、中等、复杂"
+      index: true
+    - name: "processing_method"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "办理形式：即办、快速申请、网上支付等"
+      index: true
+    - name: "liaison_organization"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "联办机构"
+    - name: "agency_delegation"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否可代办事项"
+    - name: "proxy_service"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否有中介服务"
+    - name: "nearby_processing"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否就近办理事项"
+    - name: "credit_commitment"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否信用承诺事项"
+
+  # 不动产登记专用字段（针对抵押权登记等复杂场景）
+  real_estate_registration_fields:
+    - name: "registration_type"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "登记类型：首次登记、转移登记、变更登记、注销登记等"
+      index: true
+    - name: "property_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "不动产类型：国有建设用地、房屋、林地等"
+      index: true
+    - name: "registration_scope"
+      data_type: "TEXT"
+      nullable: true
+      description: "登记范围说明"
+    - name: "fee_calculation_rules"
+      data_type: "TEXT"
+      nullable: true
+      description: "收费计算规则"
+    - name: "policy_references"
+      data_type: "JSONB"
+      nullable: true
+      description: "政策依据文件列表"
+    - name: "special_conditions"
+      data_type: "TEXT"
+      nullable: true
+      description: "特殊办理条件"
+    - name: "document_templates"
+      data_type: "JSONB"
+      nullable: true
+      description: "申请表格模板"
+
+  # 社会保障服务专用字段
+  social_security_fields:
+    - name: "benefit_type"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "保障类型：医疗保险、养老保险、失业保险等"
+      index: true
+    - name: "eligibility_criteria"
+      data_type: "TEXT"
+      nullable: true
+      description: "申领条件"
+    - name: "benefit_amount"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "保障金额"
+    - name: "coverage_period"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "保障期限"
+    - name: "application_frequency"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "申请频次限制"
+
   # 产品说明书元数据字段
   product_manual_fields:
     - name: "product_id"
@@ -1038,6 +1281,147 @@ industry_templates:
       rerank_enabled: true
       technical_precision: true  # 技术精度优化
 
+  # 政务服务办事指南向量化模板（通用版本）
+  government_service_template:
+    name: "政务服务办事指南向量化模板"
+    description: "适用于政务服务事项、办事指南等结构化服务数据的向量化处理"
+    industry: "government"
+    scenario: "government_services"
+    
+    metadata_schema:
+      fields: "government_service_fields"
+      required_fields: ["service_id", "service_name", "chunk_type"]
+      searchable_fields: ["service_name", "service_department", "service_conditions", "required_materials"]
+      filterable_fields: ["service_type", "service_department", "service_level", "target_audience", "is_free", "service_status", "geographic_scope", "service_category", "complexity_level"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 800
+      chunk_overlap: 150
+      chunk_strategy: "service_oriented"
+      language: "zh"
+      structured_data_processing: true  # 结构化数据处理
+      table_aware: true                 # 表格识别
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["service_type", "service_level"]
+          type: "composite"
+        - fields: ["service_department"]
+          type: "hash"
+        - fields: ["target_audience"]
+          type: "hash"
+        - fields: ["is_free"]
+          type: "hash"
+        - fields: ["service_status"]
+          type: "hash"
+        - fields: ["geographic_scope"]
+          type: "hash"
+        - fields: ["service_category"]
+          type: "hash"
+        - fields: ["update_date"]
+          type: "btree"
+    
+    search_config:
+      default_top_k: 5
+      similarity_threshold: 0.75
+      rerank_enabled: true
+      hybrid_search:
+        enabled: true
+        keyword_weight: 0.4
+        vector_weight: 0.6
+      service_oriented_ranking: true     # 服务导向排序
+      location_aware: true               # 地域感知
+
+  # 不动产登记专业模板（针对复杂登记业务）
+  real_estate_registration_template:
+    name: "不动产登记专业向量化模板"
+    description: "适用于不动产登记、抵押权登记等复杂不动产业务的专业化处理"
+    industry: "government"
+    scenario: "real_estate_registration"
+    
+    metadata_schema:
+      fields: "real_estate_registration_fields"
+      required_fields: ["service_id", "service_name", "registration_type"]
+      searchable_fields: ["service_name", "registration_type", "property_type", "fee_calculation_rules", "special_conditions"]
+      filterable_fields: ["registration_type", "property_type", "service_department", "complexity_level", "is_free"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 1000
+      chunk_overlap: 200
+      chunk_strategy: "legal_document_oriented"
+      language: "zh"
+      legal_document_processing: true    # 法律文档处理
+      policy_reference_extraction: true # 政策引用提取
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 20
+          efConstruction: 300
+      metadata_indexes:
+        - fields: ["registration_type", "property_type"]
+          type: "composite"
+        - fields: ["service_department"]
+          type: "hash"
+    
+    search_config:
+      default_top_k: 8
+      similarity_threshold: 0.7
+      rerank_enabled: true
+      legal_precision: true              # 法律精确度优化
+      policy_context_aware: true         # 政策上下文感知
+
+  # 社会保障服务模板
+  social_security_template:
+    name: "社会保障服务向量化模板"
+    description: "适用于社会保障卡申领、各类保险服务等民生服务的向量化处理"
+    industry: "government"
+    scenario: "social_security"
+    
+    metadata_schema:
+      fields: "social_security_fields"
+      required_fields: ["service_id", "service_name", "benefit_type"]
+      searchable_fields: ["service_name", "benefit_type", "eligibility_criteria", "required_materials"]
+      filterable_fields: ["benefit_type", "service_department", "target_audience", "is_free", "geographic_scope"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 700
+      chunk_overlap: 120
+      chunk_strategy: "citizen_service_oriented"
+      language: "zh"
+      citizen_friendly_processing: true  # 民生服务导向处理
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["benefit_type", "target_audience"]
+          type: "composite"
+        - fields: ["service_department"]
+          type: "hash"
+    
+    search_config:
+      default_top_k: 6
+      similarity_threshold: 0.75
+      rerank_enabled: true
+      citizen_intent_optimization: true  # 市民意图优化
+      accessibility_enhanced: true       # 可访问性增强
+
 # 向量数据库特定配置
 backend_specific_configs:
   # Milvus配置
@@ -1115,6 +1499,36 @@ backend_specific_configs:
       partition_config:
         enabled: true
         partition_key: "product_name"
+        auto_partition: true
+      sharding_config:
+        shard_num: 1
+        replicas: 1
+    
+    government_service:
+      collection_name: "government_services"
+      partition_config:
+        enabled: true
+        partition_key: "service_level"
+        auto_partition: true
+      sharding_config:
+        shard_num: 2
+        replicas: 1
+    
+    real_estate_registration:
+      collection_name: "real_estate_registrations"
+      partition_config:
+        enabled: true
+        partition_key: "registration_type"
+        auto_partition: true
+      sharding_config:
+        shard_num: 2
+        replicas: 1
+    
+    social_security:
+      collection_name: "social_security_services"
+      partition_config:
+        enabled: true
+        partition_key: "benefit_type"
         auto_partition: true
       sharding_config:
         shard_num: 1
@@ -1197,6 +1611,38 @@ backend_specific_configs:
       partitioning:
         enabled: true
         partition_key: "product_name"
+        partition_type: "hash"
+    
+    government_service:
+      table_name: "government_service_vectors"
+      index_type: "hnsw"
+      index_parameters:
+        m: 16
+        ef_construction: 200
+      partitioning:
+        enabled: true
+        partition_key: "service_level"
+        partition_type: "hash"
+    
+    real_estate_registration:
+      table_name: "real_estate_registration_vectors"
+      index_type: "hnsw"
+      index_parameters:
+        m: 20
+        ef_construction: 300
+      partitioning:
+        enabled: true
+        partition_key: "registration_type"
+        partition_type: "hash"
+    
+    social_security:
+      table_name: "social_security_vectors"
+      index_type: "ivfflat"
+      index_parameters:
+        lists: 100
+      partitioning:
+        enabled: true
+        partition_key: "benefit_type"
         partition_type: "hash"
 
   # Elasticsearch配置
@@ -1298,6 +1744,45 @@ backend_specific_configs:
             type: "custom"
             tokenizer: "standard"
             filter: ["lowercase", "stop"]
+    
+    government_service:
+      index_name: "government_services"
+      settings:
+        number_of_shards: 2
+        number_of_replicas: 1
+        refresh_interval: "5s"
+      analysis:
+        analyzer:
+          government_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase"]
+    
+    real_estate_registration:
+      index_name: "real_estate_registrations"
+      settings:
+        number_of_shards: 2
+        number_of_replicas: 1
+        refresh_interval: "10s"
+      analysis:
+        analyzer:
+          legal_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase", "stop"]
+    
+    social_security:
+      index_name: "social_security_services"
+      settings:
+        number_of_shards: 1
+        number_of_replicas: 1
+        refresh_interval: "5s"
+      analysis:
+        analyzer:
+          citizen_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase"]
 
 # 性能优化配置
 performance_configs:

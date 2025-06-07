@@ -259,6 +259,55 @@ class Settings(BaseSettings):
         return v
     
     # ===============================================================================
+    # 图数据库配置 (知识图谱功能)
+    # ===============================================================================
+    
+    # 图数据库类型配置
+    GRAPH_DATABASE_TYPE: str = Field(default="arangodb", description="图数据库类型")
+    GRAPH_DATABASE_ENABLED: bool = Field(default=True, description="图数据库启用状态")
+    
+    # ArangoDB配置
+    ARANGO_HOSTS: str = Field(default="http://localhost:8529", description="ArangoDB主机列表")
+    ARANGO_USERNAME: str = Field(default="root", description="ArangoDB用户名")
+    ARANGO_PASSWORD: str = Field(default="password", description="ArangoDB密码")
+    ARANGO_DB_PREFIX: str = Field(default="kg_tenant_", description="ArangoDB数据库前缀")
+    ARANGO_GRAPH_NAME: str = Field(default="knowledge_graph", description="ArangoDB图名称")
+    ARANGO_USE_NATIVE: bool = Field(default=True, description="ArangoDB使用原生算法")
+    ARANGO_ENABLE_NETWORKX: bool = Field(default=True, description="ArangoDB启用NetworkX增强")
+    ARANGO_BATCH_SIZE: int = Field(default=1000, description="ArangoDB批量处理大小")
+    ARANGO_POOL_SIZE: int = Field(default=10, description="ArangoDB连接池大小")
+    ARANGO_QUERY_TIMEOUT: int = Field(default=30, description="ArangoDB查询超时时间(秒)")
+    
+    # PostgreSQL + AGE配置
+    GRAPH_DATABASE_URL: Optional[str] = Field(default=None, description="图数据库连接URL")
+    PG_SCHEMA_PREFIX: str = Field(default="kg_tenant_", description="PostgreSQL Schema前缀")
+    PG_GRAPH_NAME: str = Field(default="knowledge_graph", description="PostgreSQL图名称")
+    
+    # NetworkX配置
+    NETWORKX_CACHE: bool = Field(default=True, description="NetworkX缓存启用")
+    NETWORKX_CACHE_TIMEOUT: int = Field(default=3600, description="NetworkX缓存超时时间(秒)")
+    NETWORKX_MAX_CACHE: int = Field(default=100, description="NetworkX最大缓存数")
+    
+    # 租户隔离配置
+    TENANT_SHARDING_STRATEGY: str = Field(default="user_group", description="租户分片策略")
+    
+    @validator('GRAPH_DATABASE_URL', pre=True, always=True)
+    def assemble_graph_db_url(cls, v, values):
+        if isinstance(v, str):
+            return v
+        # 如果是PostgreSQL+AGE方案，使用主数据库URL
+        if values.get('GRAPH_DATABASE_TYPE') == 'postgresql_age':
+            return values.get('DATABASE_URL')
+        return None
+    
+    @validator('GRAPH_DATABASE_ENABLED', pre=True, always=True)
+    def check_graph_database_enabled(cls, v, values):
+        # 在最小化模式下可选择禁用图数据库
+        if values.get('DEPLOYMENT_MODE') == 'minimal':
+            return v  # 保持用户配置
+        return v
+    
+    # ===============================================================================
     # 服务发现和配置中心 (完整版功能)
     # ===============================================================================
     

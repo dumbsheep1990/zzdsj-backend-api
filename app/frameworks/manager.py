@@ -86,7 +86,7 @@ class FrameworkManager:
     
     def _register_agno(self):
         """注册Agno框架及其能力"""
-        from app.frameworks.agents import agent
+        from app.frameworks.agno import agent
         
         # 注册框架
         self._framework_registry[FrameworkType.AGNO] = {
