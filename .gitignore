@@ -4,4 +4,5 @@
 .\app\MVP\.env.example
 .\app\MVP\.env.*
 .\app\MVP\logs\app.log
-.\log*
+.\log**
+.\app\MVP\logs\app.log
