@@ -3,3 +3,5 @@
 .\app\MVP\.env.local
 .\app\MVP\.env.example
 .\app\MVP\.env.*
+.\app\MVP\logs\app.log
+.\log*
