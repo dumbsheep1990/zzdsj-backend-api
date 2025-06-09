@@ -4,11 +4,13 @@ API依赖注入
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from jose import JWTError, jwt
 import logging
 
-from app.config import get_settings, get_db
+from app.config import get_settings
+from app.config.database import get_async_db
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,7 @@ class CurrentUser:
 
 async def get_current_user(
         credentials: HTTPAuthorizationCredentials = Depends(security),
-        db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_async_db)
 ) -> CurrentUser:
     """获取当前登录用户"""
     token = credentials.credentials
@@ -41,17 +43,30 @@ async def get_current_user(
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM]
         )
-        user_id: int = payload.get("sub")
+        user_id_str = payload.get("sub")
 
-        if user_id is None:
+        if user_id_str is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="无效的认证凭证",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        # 将字符串转换为整数
+        try:
+            user_id = int(user_id_str)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的用户ID",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         # 查询用户信息
-        user = db.query(User).filter(User.id == user_id).first()
+        stmt = select(User).where(User.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -75,7 +90,7 @@ async def get_current_user(
 
 async def get_optional_current_user(
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-        db: Session = Depends(get_db)
+        db: AsyncSession = Depends(get_async_db)
 ) -> Optional[CurrentUser]:
     """获取可选的当前用户（用于公开接口）"""
     if not credentials:
@@ -109,17 +124,17 @@ def get_pagination(
 
 
 # 数据库事务管理
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 
 
-@contextmanager
-def transaction(db: Session):
-    """数据库事务上下文管理器"""
+@asynccontextmanager
+async def async_transaction(db: AsyncSession):
+    """异步数据库事务上下文管理器"""
     try:
         yield db
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise e
     finally:
-        db.close()
+        await db.close()

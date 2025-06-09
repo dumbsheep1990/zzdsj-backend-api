@@ -3,7 +3,7 @@
 """
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from app.schemas.assistants.base import BaseRequest, BaseResponse, PaginatedResponse
 
 

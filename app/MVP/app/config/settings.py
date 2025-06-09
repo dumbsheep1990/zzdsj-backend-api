@@ -1,8 +1,9 @@
 """
 应用配置管理
 """
-from pydantic import BaseSettings, Field
-from typing import List, Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict 
+from pydantic import Field, field_validator
+from typing import List, Optional, Union
 import os
 from functools import lru_cache
 
@@ -22,7 +23,14 @@ class Settings(BaseSettings):
 
     # API配置
     API_V1_PREFIX: str = "/api/v1"
-    CORS_ORIGINS: List[str] = Field(["*"], env="CORS_ORIGINS")
+    CORS_ORIGINS: str = Field("*", env="CORS_ORIGINS")
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """将CORS_ORIGINS字符串转换为列表"""
+        if self.CORS_ORIGINS == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(',')]
 
     # 认证配置
     SECRET_KEY: str = Field(..., env="SECRET_KEY")
@@ -31,7 +39,8 @@ class Settings(BaseSettings):
 
     # AI模型配置
     OPENAI_API_KEY: Optional[str] = Field(None, env="OPENAI_API_KEY")
-    ANTHROPIC_API_KEY: Optional[str] = Field(None, env="ANTHROPIC_API_KEY")
+    DEEPSEEK_API_KEY: Optional[str] = Field(None, env="DEEPSEEK_API_KEY")
+    DEEPSEEK_API_BASE: str = Field("https://api.deepseek.com/v1", env="DEEPSEEK_API_BASE")
     DEFAULT_AI_MODEL: str = Field("gpt-3.5-turbo", env="DEFAULT_AI_MODEL")
 
     # 助手配置
@@ -57,10 +66,13 @@ class Settings(BaseSettings):
     # 限流配置
     RATE_LIMIT_PER_MINUTE: int = Field(60, env="RATE_LIMIT_PER_MINUTE")
     RATE_LIMIT_PER_HOUR: int = Field(1000, env="RATE_LIMIT_PER_HOUR")
+    RATE_LIMIT_BY_API_KEY: bool = Field(False, env="RATE_LIMIT_BY_API_KEY")
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=[".env.example", ".env", ".env.local"], 
+        case_sensitive=True,
+        extra='ignore'
+        )
 
 
 @lru_cache()

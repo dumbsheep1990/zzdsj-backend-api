@@ -1,122 +1,91 @@
-version: '3.8'
-
 services:
-  # PostgreSQL数据库
-  postgres:
-    image: postgres:15-alpine
-    container_name: assistant_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: assistant_db
-      POSTGRES_USER: assistant_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_secure_password}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U assistant_user -d assistant_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - assistant_network
-
-  # Redis缓存
-  redis:
-    image: redis:7-alpine
-    container_name: assistant_redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-your_redis_password}
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - assistant_network
-
-  # 应用服务
+  # AI助手应用
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: assistant_app
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://assistant_user:${DB_PASSWORD:-your_secure_password}@postgres:5432/assistant_db
-      REDIS_URL: redis://:${REDIS_PASSWORD:-your_redis_password}@redis:6379/0
-      PYTHONPATH: /app
-    volumes:
-      - ./app:/app/app
-      - ./logs:/app/logs
+    container_name: ai_assistant_app
     ports:
-      - "8000:8000"
+      - "8000:8000"  # 直接暴露应用端口
+    environment:
+      - DATABASE_URL=postgresql://postgres:securepassword123@db:5432/ai_assistant
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=development-secret-key-change-in-production
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8080
+      - DEBUG=false
+      - LOG_LEVEL=INFO
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - assistant_network
-    command: >
-      sh -c "
-        echo 'Waiting for database...' &&
-        python scripts/wait_for_db.py &&
-        echo 'Running migrations...' &&
-        alembic upgrade head &&
-        echo 'Starting application...' &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-      "
-
-  # Nginx反向代理（生产环境）
-  nginx:
-    image: nginx:alpine
-    container_name: assistant_nginx
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/ssl:/etc/nginx/ssl
-      - ./static:/usr/share/nginx/html/static
-    depends_on:
-      - app
+      - ./logs:/app/logs
     networks:
-      - assistant_network
+      - ai_network
 
-  # 数据库管理工具（可选）
-  adminer:
-    image: adminer
-    container_name: assistant_adminer
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
+  # PostgreSQL数据库
+  db:
+    image: postgres:15-alpine
+    container_name: ai_assistant_db
     environment:
-      ADMINER_DEFAULT_SERVER: postgres
-    depends_on:
-      - postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=securepassword123
+      - POSTGRES_DB=ai_assistant
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
     networks:
-      - assistant_network
+      - ai_network
 
-# 网络配置
-networks:
-  assistant_network:
-    driver: bridge
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: ai_assistant_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ai_network
 
-# 数据卷配置
+  # 数据库管理工具（强烈建议保留）
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: ai_assistant_pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - ai_network
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
+
+networks:
+  ai_network:
+    driver: bridge

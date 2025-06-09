@@ -2,9 +2,10 @@
 智能体服务实现
 """
 from typing import List, Optional, Dict, Any, Tuple
-from app.services.assistants.base import BaseService
-from app.repositories.assistants.assistant import AssistantRepository
+from app.services.assistants.base import AsyncBaseService
+from app.repositories.assistants.assistant import AsyncAssistantRepository
 from app.core.assistants.interfaces import IAgentService
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.assistants.exceptions import (
     AssistantNotFoundError,
     ValidationError,
@@ -21,12 +22,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class AgentService(BaseService, IAgentService):
+class AgentService(AsyncBaseService, IAgentService):
     """智能体服务"""
 
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         super().__init__(db)
-        self.assistant_repo = AssistantRepository(db)
+        self.assistant_repo = AsyncAssistantRepository(db)
         self._init_frameworks()
         self._init_tools()
 

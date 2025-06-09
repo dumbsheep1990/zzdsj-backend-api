@@ -2,8 +2,9 @@
 问答服务实现
 """
 from typing import List, Optional, Dict, Any, Tuple
-from app.services.assistants.base import BaseService
-from app.repositories.assistants.qa import QAAssistantRepository, QuestionRepository
+from app.services.assistants.base import AsyncBaseService
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.repositories.assistants.qa import AsyncQAAssistantRepository, AsyncQuestionRepository
 from app.core.assistants.interfaces import IQAService
 from app.core.assistants.exceptions import (
     AssistantNotFoundError,
@@ -25,13 +26,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class QAService(BaseService, IQAService):
+class QAService(AsyncBaseService, IQAService):
     """问答服务"""
 
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         super().__init__(db)
-        self.qa_repo = QAAssistantRepository(db)
-        self.question_repo = QuestionRepository(db)
+        self.qa_repo = AsyncQAAssistantRepository(db)
+        self.question_repo = AsyncQuestionRepository(db)
         self.validator = QAValidator()
 
         # 配置
@@ -63,7 +64,7 @@ class QAService(BaseService, IQAService):
 
         logger.info(f"Created QA assistant {assistant.id} for user {user_id}")
 
-        return QAAssistantResponse.from_orm(assistant)
+        return QAAssistantResponse.model_validate(assistant)
 
     async def get_qa_assistant(
             self,
@@ -81,7 +82,7 @@ class QAService(BaseService, IQAService):
             raise PermissionDeniedError("问答助手")
 
         # 获取统计信息
-        response = QAAssistantResponse.from_orm(assistant)
+        response = QAAssistantResponse.model_validate(assistant)
 
         # 获取问题统计
         questions, total = await self.question_repo.get_by_assistant(assistant_id)
@@ -118,7 +119,7 @@ class QAService(BaseService, IQAService):
         # 转换为响应模型
         responses = []
         for assistant in assistants:
-            response = QAAssistantResponse.from_orm(assistant)
+            response = QAAssistantResponse.model_validate(assistant)
             # 添加统计信息
             questions, _ = await self.question_repo.get_by_assistant(assistant.id)
             response.question_count = len(questions)
@@ -147,12 +148,12 @@ class QAService(BaseService, IQAService):
             self.validator.validate_name(data.name)
 
         # 更新助手
-        update_data = data.dict(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True)
         updated_assistant = await self.qa_repo.update(assistant_id, **update_data)
 
         logger.info(f"Updated QA assistant {assistant_id}")
 
-        return QAAssistantResponse.from_orm(updated_assistant)
+        return QAAssistantResponse.model_validate(updated_assistant)
 
     async def delete_qa_assistant(self, assistant_id: int, user_id: int) -> bool:
         """删除问答助手"""
@@ -202,7 +203,7 @@ class QAService(BaseService, IQAService):
 
         logger.info(f"Created question {created_question.id}")
 
-        return QuestionResponse.from_orm(created_question)
+        return QuestionResponse.model_validate(created_question)
 
     async def answer_question(self, question_id: int) -> str:
         """回答问题"""
@@ -232,7 +233,7 @@ class QAService(BaseService, IQAService):
         if not question:
             raise ValidationError("question_id", "问题不存在")
 
-        response = QuestionResponse.from_orm(question)
+        response = QuestionResponse.model_validate(question)
 
         # 获取文档分段
         if include_segments and hasattr(question, 'document_segments'):
@@ -272,12 +273,12 @@ class QAService(BaseService, IQAService):
             self.validator.validate_category(data.category, self.allowed_categories)
 
         # 更新问题
-        update_data = data.dict(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True)
         updated_question = await self.question_repo.update(question_id, **update_data)
 
         logger.info(f"Updated question {question_id}")
 
-        return QuestionResponse.from_orm(updated_question)
+        return QuestionResponse.model_validate(updated_question)
 
     async def delete_question(self, question_id: int, user_id: int) -> bool:
         """删除问题"""
@@ -313,7 +314,7 @@ class QAService(BaseService, IQAService):
             limit=limit
         )
 
-        return [QuestionResponse.from_orm(q) for q in questions]
+        return [QuestionResponse.model_validate(q) for q in questions]
 
     async def get_popular_questions(
             self,
@@ -326,7 +327,7 @@ class QAService(BaseService, IQAService):
             limit=limit
         )
 
-        return [QuestionResponse.from_orm(q) for q in questions]
+        return [QuestionResponse.model_validate(q) for q in questions]
 
     async def get_statistics(self, assistant_id: int) -> QAStatisticsResponse:
         """获取统计信息"""
@@ -349,7 +350,7 @@ class QAService(BaseService, IQAService):
 
         # 获取最新问题
         recent = sorted(questions, key=lambda x: x.created_at, reverse=True)[:5]
-        recent_responses = [QuestionResponse.from_orm(q) for q in recent]
+        recent_responses = [QuestionResponse.model_validate(q) for q in recent]
 
         return QAStatisticsResponse(
             total_questions=total,

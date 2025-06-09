@@ -3,9 +3,8 @@
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
-from sqlalchemy.orm import Session
-
-from app.config.database import get_db
+from app.config.database import get_async_db
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import get_current_user
 from app.services.assistants.qa import QAService
 from app.schemas.assistants.qa import (
@@ -26,7 +25,7 @@ from app.core.assistants.exceptions import (
 router = APIRouter()
 
 
-def get_qa_service(db: Session = Depends(get_db)) -> QAService:
+def get_qa_service(db: AsyncSession = Depends(get_async_db)) -> QAService:
     return QAService(db)
 
 

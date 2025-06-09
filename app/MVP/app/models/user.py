@@ -3,7 +3,7 @@
 """
 from sqlalchemy import Column, String, Boolean
 from sqlalchemy.orm import relationship
-from app.models.assistants.base import BaseModel
+from .assistants.base import BaseModel
 
 
 class User(BaseModel):

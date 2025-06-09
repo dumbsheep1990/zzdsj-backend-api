@@ -3,6 +3,7 @@
 """
 from typing import Dict, Any, Optional
 import re
+from .exceptions import ValidationError
 
 
 class AssistantValidator:
@@ -94,3 +95,12 @@ class QAValidator:
         """验证分类"""
         if category and category not in allowed_categories:
             raise ValidationError("category", f"不支持的分类: {category}")
+
+    @staticmethod
+    def validate_name(name: str) -> None:
+        """验证名称（QA助手名称）"""
+        if not name or len(name.strip()) == 0:
+            raise ValidationError("name", "名称不能为空")
+
+        if len(name) > 100:
+            raise ValidationError("name", "名称长度不能超过100个字符")

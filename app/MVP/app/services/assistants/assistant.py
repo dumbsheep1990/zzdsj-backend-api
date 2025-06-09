@@ -2,10 +2,11 @@
 助手服务实现
 """
 from typing import List, Optional, Dict, Any, Tuple
-from app.services.assistants.base import BaseService
-from app.repositories.assistants.assistant import AssistantRepository
-from app.repositories.assistants.conversation import ConversationRepository
+from app.services.assistants.base import AsyncBaseService
+from app.repositories.assistants.assistant import AsyncAssistantRepository
+from app.repositories.assistants.conversation import AsyncConversationRepository
 from app.core.assistants.interfaces import IAssistantService
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.assistants.exceptions import (
     AssistantNotFoundError,
     PermissionDeniedError,
@@ -21,53 +22,54 @@ from app.schemas.assistants.assistant import (
 )
 
 
-class AssistantService(BaseService, IAssistantService):
+class AssistantService(AsyncBaseService, IAssistantService):
     """助手服务"""
 
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         super().__init__(db)
-        self.repository = AssistantRepository(db)
-        self.conversation_repo = ConversationRepository(db)
+        self.repository = AsyncAssistantRepository(db)
+        self.conversation_repo = AsyncConversationRepository(db)
         self.validator = AssistantValidator()
 
         # 配置项
         self.max_assistants_per_user = 50
-        self.allowed_models = ["gpt-3.5-turbo", "gpt-4", "claude-3-opus"]
+        self.allowed_models = ["gpt-3.5-turbo", "gpt-4", "deepseek-chat", "deepseek-coder"]
         self.allowed_capabilities = ["text", "code", "math", "creative", "analysis"]
 
     async def create(self, data: AssistantCreateRequest, user_id: int) -> AssistantResponse:
         """创建助手"""
+        async with self.db.begin():
         # 检查用户配额
-        user_assistant_count = await self.repository.count({"owner_id": user_id, "is_active": True})
-        if user_assistant_count >= self.max_assistants_per_user:
-            raise QuotaExceededError("助手", self.max_assistants_per_user)
+            user_assistant_count = await self.repository.count({"owner_id": user_id, "is_active": True})
+            if user_assistant_count >= self.max_assistants_per_user:
+                raise QuotaExceededError("助手", self.max_assistants_per_user)
 
-        # 验证数据
-        self.validator.validate_name(data.name)
-        self.validator.validate_model(data.model, self.allowed_models)
-        if data.capabilities:
-            self.validator.validate_capabilities(data.capabilities, self.allowed_capabilities)
-        if data.config:
-            self.validator.validate_config(data.config)
+            # 验证数据
+            self.validator.validate_name(data.name)
+            self.validator.validate_model(data.model, self.allowed_models)
+            if data.capabilities:
+                self.validator.validate_capabilities(data.capabilities, self.allowed_capabilities)
+            if data.config:
+                self.validator.validate_config(data.config)
 
-        # 创建助手
-        assistant = await self.repository.create(
-            name=data.name,
-            description=data.description,
-            model=data.model,
-            system_prompt=data.system_prompt,
-            capabilities=data.capabilities or [],
-            category=data.category,
-            tags=data.tags or [],
-            avatar_url=data.avatar_url,
-            is_public=data.is_public,
-            config=data.config or {},
-            owner_id=user_id
-        )
+            # 创建助手
+            assistant = await self.repository.create(
+                name=data.name,
+                description=data.description,
+                model=data.model,
+                system_prompt=data.system_prompt,
+                capabilities=data.capabilities or [],
+                category=data.category,
+                tags=data.tags or [],
+                avatar_url=data.avatar_url,
+                is_public=data.is_public,
+                config=data.config or {},
+                owner_id=user_id
+            )
 
-        self.logger.info(f"Created assistant {assistant.id} for user {user_id}")
+            self.logger.info(f"Created assistant {assistant.id} for user {user_id}")
 
-        return AssistantResponse.from_orm(assistant)
+            return AssistantResponse.model_validate(assistant)
 
     async def get_by_id(self, assistant_id: int, user_id: Optional[int] = None) -> AssistantResponse:
         """获取助手详情"""
@@ -81,7 +83,7 @@ class AssistantService(BaseService, IAssistantService):
             raise PermissionDeniedError("助手")
 
         # 获取额外信息
-        response = AssistantResponse.from_orm(assistant)
+        response = AssistantResponse.model_validate(assistant)
 
         # 获取关联的知识库
         knowledge_base_ids = await self.repository.get_knowledge_bases(assistant_id)
@@ -115,7 +117,7 @@ class AssistantService(BaseService, IAssistantService):
         )
 
         # 转换为响应模型
-        items = [AssistantResponse.from_orm(a) for a in assistants]
+        items = [AssistantResponse.model_validate(a) for a in assistants]
 
         return AssistantListResponse(
             items=items,
@@ -145,12 +147,12 @@ class AssistantService(BaseService, IAssistantService):
             self.validator.validate_config(data.config)
 
         # 更新助手
-        update_data = data.dict(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True)
         updated_assistant = await self.repository.update(assistant_id, **update_data)
 
         self.logger.info(f"Updated assistant {assistant_id}")
 
-        return AssistantResponse.from_orm(updated_assistant)
+        return AssistantResponse.model_validate(updated_assistant)
 
     async def delete(self, assistant_id: int, user_id: int) -> bool:
         """删除助手（软删除）"""

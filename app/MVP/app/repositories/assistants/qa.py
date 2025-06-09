@@ -2,22 +2,26 @@
 问答仓储实现
 """
 from typing import List, Optional, Dict, Any, Tuple
-from sqlalchemy import and_, or_, func
-from app.repositories.assistants.base import BaseRepository
+from sqlalchemy import desc, select, and_, or_, func, update, delete
+from sqlalchemy.ext.asyncio import AsyncSession
+from .base import AsyncBaseRepository
 from app.models.assistants.qa import QAAssistant, Question, QuestionDocumentSegment
 
 
-class QAAssistantRepository(BaseRepository[QAAssistant]):
-    """问答助手仓储"""
+class AsyncQAAssistantRepository(AsyncBaseRepository[QAAssistant]):
+    """异步问答助手仓储"""
 
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         super().__init__(db, QAAssistant)
 
     async def get_by_status(self, status: str, skip: int = 0, limit: int = 100) -> List[QAAssistant]:
         """根据状态获取助手列表"""
-        return self.db.query(QAAssistant).filter(
+        stmt = select(QAAssistant).where(
             QAAssistant.status == status
-        ).offset(skip).limit(limit).all()
+        ).offset(skip).limit(limit)
+        
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
 
     async def get_user_qa_assistants(
             self,
@@ -26,23 +30,30 @@ class QAAssistantRepository(BaseRepository[QAAssistant]):
             limit: int = 100
     ) -> Tuple[List[QAAssistant], int]:
         """获取用户的问答助手"""
-        query = self.db.query(QAAssistant).filter(
+        stmt = select(QAAssistant).where(
             or_(
                 QAAssistant.owner_id == user_id,
                 QAAssistant.is_public == True
             )
         )
 
-        total = query.count()
-        assistants = query.offset(skip).limit(limit).all()
+        # 获取总数
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_result = await self.db.execute(count_stmt)
+        total = count_result.scalar()
+        
+        # 获取分页结果
+        stmt = stmt.offset(skip).limit(limit)
+        result = await self.db.execute(stmt)
+        assistants = result.scalars().all()
 
         return assistants, total
 
 
-class QuestionRepository(BaseRepository[Question]):
-    """问题仓储"""
+class AsyncQuestionRepository(AsyncBaseRepository[Question]):
+    """异步问题仓储"""
 
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         super().__init__(db, Question)
 
     async def get_by_assistant(
@@ -53,26 +64,31 @@ class QuestionRepository(BaseRepository[Question]):
             limit: int = 100
     ) -> Tuple[List[Question], int]:
         """获取助手的问题列表"""
-        query = self.db.query(Question).filter(
-            Question.assistant_id == assistant_id
-        )
+        stmt = select(Question).where(Question.assistant_id == assistant_id)
 
         if category:
-            query = query.filter(Question.category == category)
+            stmt = stmt.where(Question.category == category)
 
-        total = query.count()
-        questions = query.offset(skip).limit(limit).all()
+        # 获取总数
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_result = await self.db.execute(count_stmt)
+        total = count_result.scalar()
+        
+        # 获取分页结果
+        stmt = stmt.offset(skip).limit(limit)
+        result = await self.db.execute(stmt)
+        questions = result.scalars().all()
 
         return questions, total
 
     async def increment_views(self, question_id: int) -> None:
         """增加浏览次数"""
-        self.db.query(Question).filter(
+        stmt = update(Question).where(
             Question.id == question_id
-        ).update(
-            {Question.views_count: Question.views_count + 1}
-        )
-        self.db.commit()
+        ).values(views_count=Question.views_count + 1)
+        
+        await self.db.execute(stmt)
+        await self.db.commit()
 
     async def search_questions(
             self,
@@ -83,13 +99,18 @@ class QuestionRepository(BaseRepository[Question]):
     ) -> List[Question]:
         """搜索问题"""
         search_pattern = f"%{query}%"
-        return self.db.query(Question).filter(
-            Question.assistant_id == assistant_id,
-            or_(
-                Question.question.ilike(search_pattern),
-                Question.answer.ilike(search_pattern)
+        stmt = select(Question).where(
+            and_(
+                Question.assistant_id == assistant_id,
+                or_(
+                    Question.question.ilike(search_pattern),
+                    Question.answer.ilike(search_pattern)
+                )
             )
-        ).offset(skip).limit(limit).all()
+        ).offset(skip).limit(limit)
+        
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
 
     async def get_popular_questions(
             self,
@@ -97,9 +118,12 @@ class QuestionRepository(BaseRepository[Question]):
             limit: int = 10
     ) -> List[Question]:
         """获取热门问题"""
-        return self.db.query(Question).filter(
+        stmt = select(Question).where(
             Question.assistant_id == assistant_id
-        ).order_by(desc(Question.views_count)).limit(limit).all()
+        ).order_by(desc(Question.views_count)).limit(limit)
+        
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
 
     async def update_document_segments(
             self,
@@ -109,9 +133,10 @@ class QuestionRepository(BaseRepository[Question]):
         """更新问题的文档分段"""
         try:
             # 删除现有关联
-            self.db.query(QuestionDocumentSegment).filter(
+            delete_stmt = delete(QuestionDocumentSegment).where(
                 QuestionDocumentSegment.question_id == question_id
-            ).delete()
+            )
+            await self.db.execute(delete_stmt)
 
             # 添加新关联
             for segment_id in segment_ids:
@@ -121,9 +146,9 @@ class QuestionRepository(BaseRepository[Question]):
                 )
                 self.db.add(link)
 
-            self.db.commit()
+            await self.db.commit()
             return True
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             self.logger.error(f"Failed to update document segments: {str(e)}")
             return False

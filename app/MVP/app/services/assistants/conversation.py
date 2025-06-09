@@ -2,10 +2,11 @@
 对话服务实现
 """
 from typing import List, Optional, Dict, Any
-from datetime import datetime
-from app.services.assistants.base import BaseService
-from app.repositories.assistants.conversation import ConversationRepository, MessageRepository
-from app.repositories.assistants.assistant import AssistantRepository
+from datetime import UTC, datetime
+from app.services.assistants.base import AsyncBaseService
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.repositories.assistants.conversation import AsyncConversationRepository, AsyncMessageRepository
+from app.repositories.assistants.assistant import AsyncAssistantRepository
 from app.core.assistants.interfaces import IConversationService
 from app.core.assistants.exceptions import (
     ConversationNotFoundError,
@@ -22,14 +23,14 @@ from app.schemas.assistants.conversation import (
 )
 
 
-class ConversationService(BaseService, IConversationService):
+class ConversationService(AsyncBaseService, IConversationService):
     """对话服务"""
 
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         super().__init__(db)
-        self.conversation_repo = ConversationRepository(db)
-        self.message_repo = MessageRepository(db)
-        self.assistant_repo = AssistantRepository(db)
+        self.conversation_repo = AsyncConversationRepository(db)
+        self.message_repo = AsyncMessageRepository(db)
+        self.assistant_repo = AsyncAssistantRepository(db)
         self.validator = ConversationValidator()
 
     async def create_conversation(
@@ -51,7 +52,7 @@ class ConversationService(BaseService, IConversationService):
         if title:
             self.validator.validate_title(title)
         else:
-            title = f"对话 - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            title = f"对话 - {datetime.now(UTC).strftime('%Y-%m-%d %H:%M')}"
 
         # 创建对话
         conversation = await self.conversation_repo.create(
@@ -63,7 +64,7 @@ class ConversationService(BaseService, IConversationService):
 
         self.logger.info(f"Created conversation {conversation.id} for user {user_id}")
 
-        return ConversationResponse.from_orm(conversation)
+        return ConversationResponse.model_validate(conversation)
 
     async def send_message(
             self,
@@ -111,7 +112,7 @@ class ConversationService(BaseService, IConversationService):
 
         self.logger.info(f"Sent message in conversation {conversation_id}")
 
-        return MessageResponse.from_orm(assistant_message)
+        return MessageResponse.model_validate(assistant_message)
 
     async def get_messages(
             self,
@@ -128,7 +129,7 @@ class ConversationService(BaseService, IConversationService):
         # 获取消息
         messages = await self.message_repo.get_latest_messages(conversation_id, limit)
 
-        return [MessageResponse.from_orm(msg) for msg in messages]
+        return [MessageResponse.model_validate(msg) for msg in messages]
 
     async def get_user_conversations(
             self,
@@ -145,7 +146,7 @@ class ConversationService(BaseService, IConversationService):
             limit=limit
         )
 
-        return [ConversationResponse.from_orm(conv) for conv in conversations]
+        return [ConversationResponse.model_validate(conv) for conv in conversations]
 
     async def delete_conversation(self, conversation_id: int, user_id: int) -> bool:
         """删除对话"""

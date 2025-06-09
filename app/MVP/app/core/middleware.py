@@ -1,14 +1,18 @@
 """
 自定义中间件
 """
-from fastapi import Request, Response
+import asyncio
+from fastapi import Request, Response, Header, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from collections import defaultdict
 from typing import Callable
 import time
 import logging
 import uuid
-from datetime import datetime
+import contextlib
+from datetime import UTC, datetime
 
 from app.config import get_settings
 from app.core.assistants.exceptions import BaseAssistantError
@@ -21,36 +25,54 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """请求日志中间件"""
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # 生成请求ID
-        request_id = str(uuid.uuid4())
+        # 获取或生成请求ID (支持从Header传入)
+        request_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
         request.state.request_id = request_id
 
-        # 记录请求开始
-        start_time = time.time()
-        logger.info(
-            f"Request started: {request.method} {request.url.path} "
-            f"[ID: {request_id}]"
-        )
+        # 结构化日志
+        log_data = {
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "ip": request.client.host if request.client else None,
+            "user_agent": request.headers.get('user-agent')
+        }
 
-        # 处理请求
-        response = await call_next(request)
+        # 使用上下文管理器确保异常时也能记录
+        with self._log_request_context(log_data):
+            # 添加高精度计时器
+            with self._measure_time() as timer:
+                response = await call_next(request)
+                process_time = timer()
 
-        # 计算处理时间
-        process_time = time.time() - start_time
+            # 添加响应头
+            response.headers.update({
+                "X-Request-ID": request_id,
+                "X-Process-Time": f"{process_time:.4f}",
+                "X-Server-Timestamp": datetime.now(UTC).isoformat()
+            })
 
-        # 添加响应头
-        response.headers["X-Request-ID"] = request_id
-        response.headers["X-Process-Time"] = str(process_time)
+            return response
 
-        # 记录请求完成
-        logger.info(
-            f"Request completed: {request.method} {request.url.path} "
-            f"[ID: {request_id}] "
-            f"Status: {response.status_code} "
-            f"Time: {process_time:.3f}s"
-        )
+    @contextlib.contextmanager
+    def _log_request_context(self, log_data: dict):
+        """请求日志上下文"""
+        logger.info("Request started", extra={"data": log_data})
+        try:
+            yield
+        except Exception as e:
+            log_data.update({"error": str(e), "status": "failed"})
+            logger.error("Request failed", extra={"data": log_data})
+            raise
+        else:
+            log_data["status"] = "completed"
+            logger.info("Request completed", extra={"data": log_data})
 
-        return response
+    @contextlib.contextmanager
+    def _measure_time(self):
+        """高精度计时器"""
+        start = time.perf_counter()
+        yield lambda: time.perf_counter() - start
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -58,80 +80,134 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app):
         super().__init__(app)
-        self.rate_limits = {}  # 简单的内存存储，生产环境应使用Redis
+        self.rate_limits = defaultdict(dict)
+        self._lock = asyncio.Lock()
+        self._last_cleanup = time.monotonic()
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # 获取客户端标识（这里使用IP，实际可能需要用户ID）
-        client_id = request.client.host if request.client else "unknown"
+        # 可配置的客户端标识
+        client_id = self._get_client_id(request)
+        window_key = self._get_window_key()
 
-        # 获取当前时间窗口
-        current_minute = datetime.now().strftime("%Y-%m-%d-%H-%M")
-        key = f"{client_id}:{current_minute}"
+        async with self._lock:  # 防止竞态条件
+            # 定期清理（非每次请求都检查）
+            if time.monotonic() - self._last_cleanup > 300:  # 5分钟清理一次
+                self._cleanup_expired()
+                self._last_cleanup = time.monotonic()
 
-        # 检查限流
-        if key not in self.rate_limits:
-            self.rate_limits[key] = 0
+            # 计数
+            current = self.rate_limits[window_key].get(client_id, 0) + 1
+            self.rate_limits[window_key][client_id] = current
 
-        self.rate_limits[key] += 1
-
-        if self.rate_limits[key] > settings.RATE_LIMIT_PER_MINUTE:
-            return JSONResponse(
-                status_code=429,
-                content={
-                    "success": False,
-                    "message": "请求过于频繁，请稍后再试",
-                    "error": "RATE_LIMIT_EXCEEDED"
-                }
-            )
-
-        # 清理过期的限流记录（简单实现）
-        if len(self.rate_limits) > 10000:
-            self.rate_limits.clear()
+            # 检查限流
+            if current > settings.RATE_LIMIT_PER_MINUTE:
+                return self._rate_limit_response(request)
 
         response = await call_next(request)
         return response
 
+    def _get_client_id(self, request: Request) -> str:
+        """可扩展的客户端标识"""
+        if settings.RATE_LIMIT_BY_API_KEY:
+            return request.headers.get('X-API-Key', 'unknown')
+        return request.client.host if request.client else 'unknown'
 
+    def _get_window_key(self) -> int:
+        """时间窗口键（每分钟一个窗口）"""
+        return int(time.time() // 60)
+
+    def _cleanup_expired(self):
+        """清理过期窗口（保留最近5个窗口）"""
+        current_window = self._get_window_key()
+        expired = [k for k in self.rate_limits if k < current_window - 5]
+        for k in expired:
+            self.rate_limits.pop(k, None)
+
+    def _rate_limit_response(self, request: Request) -> JSONResponse:
+        """标准化的限流响应"""
+        retry_after = 60 - (time.time() % 60)
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={
+                "success": False,
+                "message": "请求过于频繁",
+                "code": "rate_limit_exceeded",
+                "retry_after": retry_after
+            },
+            headers={"Retry-After": str(int(retry_after))}
+        )
+    
+    
 class ErrorHandlerMiddleware(BaseHTTPMiddleware):
     """错误处理中间件"""
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         try:
-            response = await call_next(request)
-            return response
+            return await call_next(request)
+        
+        except RequestValidationError as e:
+            return self._handle_validation_error(e, request)
+            
         except BaseAssistantError as e:
-            # 处理自定义异常
-            logger.error(f"Business error: {e.code} - {e.message}")
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "message": e.message,
-                    "error": e.code,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-            )
+            return self._handle_business_error(e, request)
+            
         except Exception as e:
-            # 处理未预期的异常
-            request_id = getattr(request.state, "request_id", "unknown")
-            logger.error(
-                f"Unexpected error [ID: {request_id}]: {str(e)}",
-                exc_info=True
-            )
+            return self._handle_unexpected_error(e, request)
 
-            # 生产环境不应暴露详细错误信息
-            if settings.DEBUG:
-                error_detail = str(e)
-            else:
-                error_detail = "内部服务器错误"
+    def _handle_validation_error(self, e: RequestValidationError, request: Request) -> JSONResponse:
+        """处理请求验证错误"""
+        logger.warning(
+            "Validation error",
+            extra={
+                "error": str(e),
+                "request_id": getattr(request.state, "request_id", None),
+                "path": request.url.path
+            }
+        )
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "message": "请求参数无效",
+                "errors": e.errors(),
+                "code": "validation_error"
+            }
+        )
 
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "message": "服务器处理请求时发生错误",
-                    "error": error_detail,
-                    "request_id": request_id,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-            )
+    def _handle_business_error(self, e: BaseAssistantError, request: Request) -> JSONResponse:
+        """处理业务异常"""
+        logger.error(
+            f"Business error: {e.code}",
+            extra={
+                "error": e.message,
+                "code": e.code,
+                "request_id": getattr(request.state, "request_id", None)
+            }
+        )
+        return JSONResponse(
+            status_code=e.status_code or 400,
+            content=e.to_dict()
+        )
+
+    def _handle_unexpected_error(self, e: Exception, request: Request) -> JSONResponse:
+        """处理未预期异常"""
+        request_id = getattr(request.state, "request_id", "unknown")
+        logger.critical(
+            f"Unexpected error [{request_id}]: {str(e)}",
+            exc_info=True,
+            extra={
+                "request_id": request_id,
+                "path": request.url.path,
+                "method": request.method
+            }
+        )
+        
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": "内部服务器错误",
+                "request_id": request_id,
+                "code": "internal_error"
+            }
+        )

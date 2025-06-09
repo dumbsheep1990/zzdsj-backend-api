@@ -3,17 +3,18 @@
 """
 from abc import ABC, abstractmethod
 from typing import TypeVar, Generic, Optional, List, Dict, Any, Tuple
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select, update, delete, func
 import logging
 
 T = TypeVar('T')
 
 
-class BaseRepository(ABC, Generic[T]):
-    """基础仓储抽象类"""
+class AsyncBaseRepository(ABC, Generic[T]):
+    """异步基础仓储抽象类"""
 
-    def __init__(self, db: Session, model_class: type):
+    def __init__(self, db: AsyncSession, model_class: type):
         self.db = db
         self.model_class = model_class
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -23,24 +24,27 @@ class BaseRepository(ABC, Generic[T]):
         try:
             instance = self.model_class(**kwargs)
             self.db.add(instance)
-            self.db.commit()
-            self.db.refresh(instance)
+            await self.db.commit()
+            await self.db.refresh(instance)
             self.logger.info(f"Created {self.model_class.__name__} with id: {instance.id}")
             return instance
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             self.logger.error(f"Failed to create {self.model_class.__name__}: {str(e)}")
             raise
 
     async def get_by_id(self, id: int) -> Optional[T]:
         """根据ID获取实体"""
-        return self.db.query(self.model_class).filter(
-            self.model_class.id == id
-        ).first()
+        stmt = select(self.model_class).where(self.model_class.id == id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+            
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> List[T]:
         """获取所有实体"""
-        return self.db.query(self.model_class).offset(skip).limit(limit).all()
+        stmt = select(self.model_class).offset(skip).limit(limit)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
 
     async def update(self, id: int, **kwargs) -> Optional[T]:
         """更新实体"""
@@ -53,11 +57,11 @@ class BaseRepository(ABC, Generic[T]):
                 if hasattr(instance, key):
                     setattr(instance, key, value)
 
-            self.db.commit()
-            self.db.refresh(instance)
+            await self.db.commit()
+            await self.db.refresh(instance)
             return instance
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()
             self.logger.error(f"Failed to update {self.model_class.__name__}: {str(e)}")
             raise
 
@@ -69,19 +73,20 @@ class BaseRepository(ABC, Generic[T]):
 
         try:
             self.db.delete(instance)
-            self.db.commit()
+            await self.db.commit()
             return True
         except Exception as e:
-            self.db.rollback()
+            await self.db.rollback()  
             self.logger.error(f"Failed to delete {self.model_class.__name__}: {str(e)}")
             raise
 
     async def count(self, filters: Optional[Dict[str, Any]] = None) -> int:
         """统计数量"""
-        query = self.db.query(self.model_class)
+        stmt = select(func.count(self.model_class.id))
         if filters:
-            query = self._apply_filters(query, filters)
-        return query.count()
+            stmt = self._apply_filters(stmt, filters)
+        result = await self.db.execute(stmt)
+        return result.scalar()
 
     def _apply_filters(self, query, filters: Dict[str, Any]):
         """应用过滤条件"""

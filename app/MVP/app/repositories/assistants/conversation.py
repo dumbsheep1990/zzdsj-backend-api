@@ -2,16 +2,17 @@
 对话仓储实现
 """
 from typing import List, Optional, Dict, Any
-from datetime import datetime
-from sqlalchemy import and_, desc
-from app.repositories.assistants.base import BaseRepository
+from datetime import datetime, UTC
+from sqlalchemy import and_, desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from .base import AsyncBaseRepository
 from app.models.assistants.conversation import Conversation, Message
 
 
-class ConversationRepository(BaseRepository[Conversation]):
-    """对话仓储"""
+class AsyncConversationRepository(AsyncBaseRepository[Conversation]):
+    """异步对话仓储"""
 
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         super().__init__(db, Conversation)
 
     async def get_user_conversations(
@@ -22,31 +23,35 @@ class ConversationRepository(BaseRepository[Conversation]):
             limit: int = 100
     ) -> List[Conversation]:
         """获取用户的对话列表"""
-        query = self.db.query(Conversation).filter(
-            Conversation.user_id == user_id
-        )
-
+        stmt = select(Conversation).where(Conversation.user_id == user_id)
+        
         if assistant_id:
-            query = query.filter(Conversation.assistant_id == assistant_id)
-
-        return query.order_by(desc(Conversation.updated_at)).offset(skip).limit(limit).all()
+            stmt = stmt.where(Conversation.assistant_id == assistant_id)
+        
+        stmt = stmt.order_by(desc(Conversation.updated_at)).offset(skip).limit(limit)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
 
     async def get_by_id_and_user(self, id: int, user_id: int) -> Optional[Conversation]:
         """获取用户的指定对话"""
-        return self.db.query(Conversation).filter(
-            Conversation.id == id,
-            Conversation.user_id == user_id
-        ).first()
+        stmt = select(Conversation).where(
+            and_(
+                Conversation.id == id,
+                Conversation.user_id == user_id
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def update_last_activity(self, id: int) -> None:
         """更新最后活动时间"""
-        await self.update(id, updated_at=datetime.utcnow())
+        await self.update(id, updated_at=datetime.now(UTC))
 
 
-class MessageRepository(BaseRepository[Message]):
-    """消息仓储"""
+class AsyncMessageRepository(AsyncBaseRepository[Message]):
+    """异步消息仓储"""
 
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         super().__init__(db, Message)
 
     async def get_conversation_messages(
@@ -56,9 +61,12 @@ class MessageRepository(BaseRepository[Message]):
             limit: int = 50
     ) -> List[Message]:
         """获取对话的消息列表"""
-        return self.db.query(Message).filter(
+        stmt = select(Message).where(
             Message.conversation_id == conversation_id
-        ).order_by(Message.created_at).offset(skip).limit(limit).all()
+        ).order_by(Message.created_at).offset(skip).limit(limit)
+        
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
 
     async def get_latest_messages(
             self,
@@ -66,16 +74,20 @@ class MessageRepository(BaseRepository[Message]):
             limit: int = 10
     ) -> List[Message]:
         """获取最新的消息"""
-        messages = self.db.query(Message).filter(
+        stmt = select(Message).where(
             Message.conversation_id == conversation_id
-        ).order_by(desc(Message.created_at)).limit(limit).all()
+        ).order_by(desc(Message.created_at)).limit(limit)
+        
+        result = await self.db.execute(stmt)
+        messages = result.scalars().all()
 
         # 反转顺序，使其按时间正序
-        messages.reverse()
-        return messages
+        return list(reversed(messages))
 
     async def count_conversation_messages(self, conversation_id: int) -> int:
         """统计对话消息数"""
-        return self.db.query(Message).filter(
+        stmt = select(func.count(Message.id)).where(
             Message.conversation_id == conversation_id
-        ).count()
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar()

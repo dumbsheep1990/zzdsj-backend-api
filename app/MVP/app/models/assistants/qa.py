@@ -3,12 +3,12 @@
 """
 from sqlalchemy import Column, String, Integer, ForeignKey, JSON, Text, Table, Boolean
 from sqlalchemy.orm import relationship
-from app.models.assistants.base import BaseModel
+from .base import BaseModel, Base
 
 # 问题与文档分段的关联表
 question_document_segment = Table(
     'question_document_segment',
-    BaseModel.metadata,
+    Base.metadata,
     Column('question_id', Integer, ForeignKey('questions.id'), primary_key=True),
     Column('document_segment_id', Integer, ForeignKey('document_segments.id'), primary_key=True)
 )
@@ -53,7 +53,7 @@ class Question(BaseModel):
     views_count = Column(Integer, default=0)
 
     # 元数据
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
 
     # 创建者
     created_by = Column(Integer, ForeignKey('users.id'))
@@ -78,10 +78,10 @@ class DocumentSegment(BaseModel):
     position = Column(Integer, nullable=False)
 
     # 元数据
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default=lambda: {})
 
     # 关系
-    document = relationship("Document")
+    document = relationship("Document", back_populates="segments")
     questions = relationship(
         "Question",
         secondary=question_document_segment,

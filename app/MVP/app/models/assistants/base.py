@@ -3,7 +3,10 @@
 """
 from sqlalchemy import Column, Integer, DateTime, Boolean
 from sqlalchemy.sql import func
-from app.config.database import Base
+from sqlalchemy.ext.declarative import declarative_base
+
+# 在这里定义Base，而不是从config导入
+Base = declarative_base()
 
 
 class TimestampMixin:

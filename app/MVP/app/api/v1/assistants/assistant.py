@@ -3,9 +3,9 @@ AI助手接口
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config.database import get_db
+from app.config.database import get_async_db
 from app.api.dependencies import get_current_user
 from app.services.assistants.assistant import AssistantService
 from app.services.assistants.conversation import ConversationService
@@ -27,6 +27,7 @@ from app.schemas.assistants.conversation import (
 from app.schemas.assistants.base import APIResponse
 from app.core.assistants.exceptions import (
     AssistantNotFoundError,
+    ConversationNotFoundError,
     PermissionDeniedError,
     ValidationError,
     QuotaExceededError
@@ -36,11 +37,11 @@ router = APIRouter()
 
 
 # 依赖注入
-def get_assistant_service(db: Session = Depends(get_db)) -> AssistantService:
+def get_assistant_service(db: AsyncSession = Depends(get_async_db)) -> AssistantService:
     return AssistantService(db)
 
 
-def get_conversation_service(db: Session = Depends(get_db)) -> ConversationService:
+def get_conversation_service(db: AsyncSession = Depends(get_async_db)) -> ConversationService:
     return ConversationService(db)
 
 
@@ -56,7 +57,7 @@ async def create_assistant(
     创建AI助手
 
     - **name**: 助手名称
-    - **model**: AI模型 (gpt-3.5-turbo, gpt-4, claude-3-opus)
+    - **model**: AI模型 (gpt-3.5-turbo, gpt-4, deepseek-chat, deepseek-coder)
     - **capabilities**: 能力列表 (text, code, math, creative, analysis)
     """
     try:

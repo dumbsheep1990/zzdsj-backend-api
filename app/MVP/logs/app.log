@@ -1,0 +1,550 @@
+2025-06-09 01:59:03,189 - app - INFO - Starting AI Assistant Platform (Local) v1.0.0
+2025-06-09 01:59:06,270 - app.core.middleware - INFO - Request started
+2025-06-09 01:59:06,273 - app.core.middleware - ERROR - Request failed
+2025-06-09 01:59:11,356 - app.core.middleware - INFO - Request started
+2025-06-09 01:59:11,358 - app.core.middleware - ERROR - Request failed
+2025-06-09 01:59:16,448 - app.core.middleware - INFO - Request started
+2025-06-09 01:59:16,449 - app.core.middleware - ERROR - Request failed
+2025-06-09 01:59:46,526 - app.core.middleware - INFO - Request started
+2025-06-09 01:59:46,528 - app.core.middleware - ERROR - Request failed
+2025-06-09 01:59:53,596 - app.core.middleware - INFO - Request started
+2025-06-09 01:59:53,598 - app.core.middleware - ERROR - Request failed
+2025-06-09 02:00:16,717 - app.core.middleware - INFO - Request started
+2025-06-09 02:00:16,718 - app.core.middleware - ERROR - Request failed
+2025-06-09 02:00:46,781 - app.core.middleware - INFO - Request started
+2025-06-09 02:00:46,783 - app.core.middleware - ERROR - Request failed
+2025-06-09 02:00:50,372 - app - INFO - Shutting down application
+2025-06-09 02:02:12,217 - app - INFO - Starting AI Assistant Platform (Local) v1.0.0
+2025-06-09 02:02:15,480 - app.core.middleware - INFO - Request started
+2025-06-09 02:02:15,483 - app.core.middleware - INFO - Request completed
+2025-06-09 02:02:45,553 - app.core.middleware - INFO - Request started
+2025-06-09 02:02:45,560 - app.core.middleware - INFO - Request completed
+2025-06-09 02:02:53,522 - app.core.middleware - INFO - Request started
+2025-06-09 02:02:53,524 - app.core.middleware - INFO - Request completed
+2025-06-09 02:03:03,261 - app.core.middleware - INFO - Request started
+2025-06-09 02:03:03,264 - app.core.middleware - INFO - Request completed
+2025-06-09 02:03:15,618 - app.core.middleware - INFO - Request started
+2025-06-09 02:03:15,621 - app.core.middleware - INFO - Request completed
+2025-06-09 02:03:45,694 - app.core.middleware - INFO - Request started
+2025-06-09 02:03:45,700 - app.core.middleware - INFO - Request completed
+2025-06-09 02:04:00,208 - app.core.middleware - INFO - Request started
+2025-06-09 02:04:00,231 - app.core.middleware - INFO - Request completed
+2025-06-09 02:04:00,878 - app.core.middleware - INFO - Request started
+2025-06-09 02:04:00,886 - app.core.middleware - INFO - Request completed
+2025-06-09 02:04:11,189 - app.core.middleware - INFO - Request started
+2025-06-09 02:04:11,197 - app.core.middleware - INFO - Request completed
+2025-06-09 02:04:12,761 - app.core.middleware - INFO - Request started
+2025-06-09 02:04:12,813 - app.core.middleware - INFO - Request completed
+2025-06-09 02:04:15,764 - app.core.middleware - INFO - Request started
+2025-06-09 02:04:15,767 - app.core.middleware - INFO - Request completed
+2025-06-09 02:04:45,851 - app.core.middleware - INFO - Request started
+2025-06-09 02:04:45,855 - app.core.middleware - INFO - Request completed
+2025-06-09 02:04:56,959 - app.core.middleware - INFO - Request started
+2025-06-09 02:04:56,962 - app.core.middleware - INFO - Request completed
+2025-06-09 02:04:58,154 - app.core.middleware - INFO - Request started
+2025-06-09 02:04:58,157 - app.core.middleware - INFO - Request completed
+2025-06-09 02:05:15,944 - app.core.middleware - INFO - Request started
+2025-06-09 02:05:15,948 - app.core.middleware - INFO - Request completed
+2025-06-09 02:05:46,071 - app.core.middleware - INFO - Request started
+2025-06-09 02:05:46,078 - app.core.middleware - INFO - Request completed
+2025-06-09 02:06:16,148 - app.core.middleware - INFO - Request started
+2025-06-09 02:06:16,150 - app.core.middleware - INFO - Request completed
+2025-06-09 02:06:46,223 - app.core.middleware - INFO - Request started
+2025-06-09 02:06:46,226 - app.core.middleware - INFO - Request completed
+2025-06-09 02:07:16,287 - app.core.middleware - INFO - Request started
+2025-06-09 02:07:16,290 - app.core.middleware - INFO - Request completed
+2025-06-09 02:07:46,347 - app.core.middleware - INFO - Request started
+2025-06-09 02:07:46,349 - app.core.middleware - INFO - Request completed
+2025-06-09 02:08:16,406 - app.core.middleware - INFO - Request started
+2025-06-09 02:08:16,408 - app.core.middleware - INFO - Request completed
+2025-06-09 02:08:46,480 - app.core.middleware - INFO - Request started
+2025-06-09 02:08:46,482 - app.core.middleware - INFO - Request completed
+2025-06-09 02:09:16,543 - app.core.middleware - INFO - Request started
+2025-06-09 02:09:16,545 - app.core.middleware - INFO - Request completed
+2025-06-09 02:09:24,782 - app.core.middleware - INFO - Request started
+2025-06-09 02:09:24,786 - app.core.middleware - INFO - Request completed
+2025-06-09 02:09:46,612 - app.core.middleware - INFO - Request started
+2025-06-09 02:09:46,615 - app.core.middleware - INFO - Request completed
+2025-06-09 02:09:51,309 - app.core.middleware - INFO - Request started
+2025-06-09 02:09:51,400 - app.core.middleware - INFO - Request completed
+2025-06-09 02:09:52,213 - app.core.middleware - INFO - Request started
+2025-06-09 02:09:52,219 - app.core.middleware - INFO - Request completed
+2025-06-09 02:10:16,705 - app.core.middleware - INFO - Request started
+2025-06-09 02:10:16,709 - app.core.middleware - INFO - Request completed
+2025-06-09 02:10:17,251 - app.core.middleware - INFO - Request started
+2025-06-09 02:10:17,255 - app.core.middleware - INFO - Request completed
+2025-06-09 02:10:47,030 - app.core.middleware - INFO - Request started
+2025-06-09 02:10:47,037 - app.core.middleware - INFO - Request completed
+2025-06-09 02:11:17,123 - app.core.middleware - INFO - Request started
+2025-06-09 02:11:17,127 - app.core.middleware - INFO - Request completed
+2025-06-09 02:11:47,205 - app.core.middleware - INFO - Request started
+2025-06-09 02:11:47,209 - app.core.middleware - INFO - Request completed
+2025-06-09 02:12:17,277 - app.core.middleware - INFO - Request started
+2025-06-09 02:12:17,279 - app.core.middleware - INFO - Request completed
+2025-06-09 02:12:47,453 - app.core.middleware - INFO - Request started
+2025-06-09 02:12:47,456 - app.core.middleware - INFO - Request completed
+2025-06-09 02:13:11,124 - app - INFO - Shutting down application
+2025-06-09 02:13:55,432 - app - INFO - Starting AI Assistant Platform (Local) v1.0.0
+2025-06-09 02:13:57,789 - app.core.middleware - INFO - Request started
+2025-06-09 02:13:57,791 - app.core.middleware - INFO - Request completed
+2025-06-09 02:14:27,888 - app.core.middleware - INFO - Request started
+2025-06-09 02:14:27,890 - app.core.middleware - INFO - Request completed
+2025-06-09 02:14:57,963 - app.core.middleware - INFO - Request started
+2025-06-09 02:14:57,969 - app.core.middleware - INFO - Request completed
+2025-06-09 02:15:28,025 - app.core.middleware - INFO - Request started
+2025-06-09 02:15:28,027 - app.core.middleware - INFO - Request completed
+2025-06-09 02:15:58,096 - app.core.middleware - INFO - Request started
+2025-06-09 02:15:58,100 - app.core.middleware - INFO - Request completed
+2025-06-09 02:16:28,167 - app.core.middleware - INFO - Request started
+2025-06-09 02:16:28,171 - app.core.middleware - INFO - Request completed
+2025-06-09 02:16:38,482 - app.core.middleware - INFO - Request started
+2025-06-09 02:16:38,646 - app.core.middleware - CRITICAL - Unexpected error [a3714479-92b1-4ed9-ad84-59f0c0463308]: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedFunctionError'>: operator does not exist: integer = character varying
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+[SQL: SELECT users.email, users.username, users.hashed_password, users.is_active, users.is_superuser, users.id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::VARCHAR]
+[parameters: ('1',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 533, in _prepare_and_execute
+    prepared_stmt, attributes = await adapt_connection._prepare(
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 784, in _prepare
+    prepared_stmt = await self._connection.prepare(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/asyncpg/connection.py", line 636, in prepare
+    return await self._prepare(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/asyncpg/connection.py", line 654, in _prepare
+    stmt = await self._get_statement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/asyncpg/connection.py", line 433, in _get_statement
+    statement = await self._protocol.prepare(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 166, in prepare
+asyncpg.exceptions.UndefinedFunctionError: operator does not exist: integer = character varying
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 591, in execute
+    self._adapt_connection.await_(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 125, in await_only
+    return current.driver.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 185, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 569, in _prepare_and_execute
+    self._handle_exception(error)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 520, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 808, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.ProgrammingError: <class 'asyncpg.exceptions.UndefinedFunctionError'>: operator does not exist: integer = character varying
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/app/core/middleware.py", line 146, in dispatch
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/usr/local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/usr/local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/fastapi/routing.py", line 264, in app
+    solved_result = await solve_dependencies(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/fastapi/dependencies/utils.py", line 592, in solve_dependencies
+    solved = await call(**sub_values)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/api/dependencies.py", line 57, in get_current_user
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/session.py", line 455, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 190, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 591, in execute
+    self._adapt_connection.await_(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 125, in await_only
+    return current.driver.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 185, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 569, in _prepare_and_execute
+    self._handle_exception(error)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 520, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 808, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.ProgrammingError: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedFunctionError'>: operator does not exist: integer = character varying
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+[SQL: SELECT users.email, users.username, users.hashed_password, users.is_active, users.is_superuser, users.id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::VARCHAR]
+[parameters: ('1',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-06-09 02:16:38,673 - app.core.middleware - INFO - Request completed
+2025-06-09 02:16:53,371 - app.core.middleware - INFO - Request started
+2025-06-09 02:16:53,384 - app.core.middleware - CRITICAL - Unexpected error [82c4750d-2c47-4ca7-b246-5419eabf6c2f]: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedFunctionError'>: operator does not exist: integer = character varying
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+[SQL: SELECT users.email, users.username, users.hashed_password, users.is_active, users.is_superuser, users.id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::VARCHAR]
+[parameters: ('1',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 533, in _prepare_and_execute
+    prepared_stmt, attributes = await adapt_connection._prepare(
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 784, in _prepare
+    prepared_stmt = await self._connection.prepare(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/asyncpg/connection.py", line 636, in prepare
+    return await self._prepare(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/asyncpg/connection.py", line 654, in _prepare
+    stmt = await self._get_statement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/asyncpg/connection.py", line 433, in _get_statement
+    statement = await self._protocol.prepare(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 166, in prepare
+asyncpg.exceptions.UndefinedFunctionError: operator does not exist: integer = character varying
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 591, in execute
+    self._adapt_connection.await_(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 125, in await_only
+    return current.driver.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 185, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 569, in _prepare_and_execute
+    self._handle_exception(error)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 520, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 808, in _handle_exception
+    raise translated_error from error
+sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.ProgrammingError: <class 'asyncpg.exceptions.UndefinedFunctionError'>: operator does not exist: integer = character varying
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/app/core/middleware.py", line 146, in dispatch
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py", line 84, in call_next
+    raise app_exc
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py", line 70, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/cors.py", line 83, in __call__
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/usr/local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/usr/local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/usr/local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/fastapi/routing.py", line 264, in app
+    solved_result = await solve_dependencies(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/fastapi/dependencies/utils.py", line 592, in solve_dependencies
+    solved = await call(**sub_values)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/api/dependencies.py", line 57, in get_current_user
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/session.py", line 455, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 190, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2308, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2190, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1639, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2343, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 922, in do_execute
+    cursor.execute(statement, parameters)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 591, in execute
+    self._adapt_connection.await_(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 125, in await_only
+    return current.driver.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 185, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 569, in _prepare_and_execute
+    self._handle_exception(error)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 520, in _handle_exception
+    self._adapt_connection._handle_exception(error)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 808, in _handle_exception
+    raise translated_error from error
+sqlalchemy.exc.ProgrammingError: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedFunctionError'>: operator does not exist: integer = character varying
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+[SQL: SELECT users.email, users.username, users.hashed_password, users.is_active, users.is_superuser, users.id, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = $1::VARCHAR]
+[parameters: ('1',)]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-06-09 02:16:53,390 - app.core.middleware - INFO - Request completed
+2025-06-09 02:16:58,228 - app.core.middleware - INFO - Request started
+2025-06-09 02:16:58,231 - app.core.middleware - INFO - Request completed
+2025-06-09 02:17:28,316 - app.core.middleware - INFO - Request started
+2025-06-09 02:17:28,319 - app.core.middleware - INFO - Request completed
+2025-06-09 02:17:39,805 - app - INFO - Shutting down application
+2025-06-09 02:18:24,549 - app - INFO - Starting AI Assistant Platform (Local) v1.0.0
+2025-06-09 02:18:27,284 - app.core.middleware - INFO - Request started
+2025-06-09 02:18:27,288 - app.core.middleware - INFO - Request completed
+2025-06-09 02:18:45,414 - app.core.middleware - INFO - Request started
+2025-06-09 02:18:45,540 - app.core.middleware - INFO - Request completed
+2025-06-09 02:18:57,390 - app.core.middleware - INFO - Request started
+2025-06-09 02:18:57,394 - app.core.middleware - INFO - Request completed
+2025-06-09 02:18:57,621 - app.core.middleware - INFO - Request started
+2025-06-09 02:18:57,638 - app.core.middleware - INFO - Request completed
+2025-06-09 02:19:14,545 - app.core.middleware - INFO - Request started
+2025-06-09 02:19:14,557 - app.core.middleware - INFO - Request completed
+2025-06-09 02:19:27,467 - app.core.middleware - INFO - Request started
+2025-06-09 02:19:27,469 - app.core.middleware - INFO - Request completed
+2025-06-09 02:19:57,542 - app.core.middleware - INFO - Request started
+2025-06-09 02:19:57,546 - app.core.middleware - INFO - Request completed
+2025-06-09 02:20:27,633 - app.core.middleware - INFO - Request started
+2025-06-09 02:20:27,635 - app.core.middleware - INFO - Request completed
+2025-06-09 02:20:57,695 - app.core.middleware - INFO - Request started
+2025-06-09 02:20:57,697 - app.core.middleware - INFO - Request completed
+2025-06-09 02:21:27,783 - app.core.middleware - INFO - Request started
+2025-06-09 02:21:27,786 - app.core.middleware - INFO - Request completed
+2025-06-09 02:21:57,849 - app.core.middleware - INFO - Request started
+2025-06-09 02:21:57,851 - app.core.middleware - INFO - Request completed
+2025-06-09 02:22:27,940 - app.core.middleware - INFO - Request started
+2025-06-09 02:22:27,943 - app.core.middleware - INFO - Request completed
+2025-06-09 02:22:58,004 - app.core.middleware - INFO - Request started
+2025-06-09 02:22:58,007 - app.core.middleware - INFO - Request completed
+2025-06-09 02:23:28,084 - app.core.middleware - INFO - Request started
+2025-06-09 02:23:28,087 - app.core.middleware - INFO - Request completed
+2025-06-09 02:23:58,154 - app.core.middleware - INFO - Request started
+2025-06-09 02:23:58,157 - app.core.middleware - INFO - Request completed
+2025-06-09 02:24:28,231 - app.core.middleware - INFO - Request started
+2025-06-09 02:24:28,233 - app.core.middleware - INFO - Request completed
+2025-06-09 02:24:58,290 - app.core.middleware - INFO - Request started
+2025-06-09 02:24:58,293 - app.core.middleware - INFO - Request completed
+2025-06-09 02:25:28,364 - app.core.middleware - INFO - Request started
+2025-06-09 02:25:28,367 - app.core.middleware - INFO - Request completed
+2025-06-09 02:25:58,458 - app.core.middleware - INFO - Request started
+2025-06-09 02:25:58,464 - app.core.middleware - INFO - Request completed
+2025-06-09 02:26:28,522 - app.core.middleware - INFO - Request started
+2025-06-09 02:26:28,525 - app.core.middleware - INFO - Request completed
+2025-06-09 02:26:58,599 - app.core.middleware - INFO - Request started
+2025-06-09 02:26:58,603 - app.core.middleware - INFO - Request completed
+2025-06-09 02:27:28,667 - app.core.middleware - INFO - Request started
+2025-06-09 02:27:28,669 - app.core.middleware - INFO - Request completed
+2025-06-09 02:27:58,745 - app.core.middleware - INFO - Request started
+2025-06-09 02:27:58,748 - app.core.middleware - INFO - Request completed
+2025-06-09 02:28:28,828 - app.core.middleware - INFO - Request started
+2025-06-09 02:28:28,831 - app.core.middleware - INFO - Request completed
+2025-06-09 02:28:58,898 - app.core.middleware - INFO - Request started
+2025-06-09 02:28:58,921 - app.core.middleware - INFO - Request completed
+2025-06-09 02:29:29,195 - app.core.middleware - INFO - Request started
+2025-06-09 02:29:29,198 - app.core.middleware - INFO - Request completed
+2025-06-09 02:29:59,273 - app.core.middleware - INFO - Request started
+2025-06-09 02:29:59,276 - app.core.middleware - INFO - Request completed
+2025-06-09 02:30:25,027 - app.core.middleware - INFO - Request started
+2025-06-09 02:30:25,049 - app.core.middleware - INFO - Request completed
+2025-06-09 02:30:29,382 - app.core.middleware - INFO - Request started
+2025-06-09 02:30:29,390 - app.core.middleware - INFO - Request completed
+2025-06-09 02:30:59,474 - app.core.middleware - INFO - Request started
+2025-06-09 02:30:59,476 - app.core.middleware - INFO - Request completed
+2025-06-09 02:31:29,544 - app.core.middleware - INFO - Request started
+2025-06-09 02:31:29,548 - app.core.middleware - INFO - Request completed
+2025-06-09 02:31:59,610 - app.core.middleware - INFO - Request started
+2025-06-09 02:31:59,612 - app.core.middleware - INFO - Request completed
+2025-06-09 02:32:29,673 - app.core.middleware - INFO - Request started
+2025-06-09 02:32:29,676 - app.core.middleware - INFO - Request completed
+2025-06-09 02:32:59,738 - app.core.middleware - INFO - Request started
+2025-06-09 02:32:59,740 - app.core.middleware - INFO - Request completed
+2025-06-09 02:33:16,185 - app.core.middleware - INFO - Request started
+2025-06-09 02:33:16,202 - app.core.middleware - INFO - Request completed
+2025-06-09 02:33:29,832 - app.core.middleware - INFO - Request started
+2025-06-09 02:33:29,835 - app.core.middleware - INFO - Request completed
+2025-06-09 02:33:59,914 - app.core.middleware - INFO - Request started
+2025-06-09 02:33:59,916 - app.core.middleware - INFO - Request completed
+2025-06-09 02:34:29,989 - app.core.middleware - INFO - Request started
+2025-06-09 02:34:29,992 - app.core.middleware - INFO - Request completed
+2025-06-09 02:35:00,068 - app.core.middleware - INFO - Request started
+2025-06-09 02:35:00,072 - app.core.middleware - INFO - Request completed
+2025-06-09 02:35:30,137 - app.core.middleware - INFO - Request started
+2025-06-09 02:35:30,140 - app.core.middleware - INFO - Request completed
+2025-06-09 02:36:00,203 - app.core.middleware - INFO - Request started
+2025-06-09 02:36:00,205 - app.core.middleware - INFO - Request completed
+2025-06-09 02:36:30,269 - app.core.middleware - INFO - Request started
+2025-06-09 02:36:30,271 - app.core.middleware - INFO - Request completed
+2025-06-09 02:37:00,337 - app.core.middleware - INFO - Request started
+2025-06-09 02:37:00,340 - app.core.middleware - INFO - Request completed
+2025-06-09 02:37:30,413 - app.core.middleware - INFO - Request started
+2025-06-09 02:37:30,415 - app.core.middleware - INFO - Request completed
+2025-06-09 02:38:00,470 - app.core.middleware - INFO - Request started
+2025-06-09 02:38:00,472 - app.core.middleware - INFO - Request completed
+2025-06-09 02:38:30,567 - app.core.middleware - INFO - Request started
+2025-06-09 02:38:30,569 - app.core.middleware - INFO - Request completed
+2025-06-09 02:39:00,635 - app.core.middleware - INFO - Request started
+2025-06-09 02:39:00,637 - app.core.middleware - INFO - Request completed
+2025-06-09 02:39:30,699 - app.core.middleware - INFO - Request started
+2025-06-09 02:39:30,701 - app.core.middleware - INFO - Request completed
+2025-06-09 02:40:00,774 - app.core.middleware - INFO - Request started
+2025-06-09 02:40:00,777 - app.core.middleware - INFO - Request completed
+2025-06-09 02:40:30,848 - app.core.middleware - INFO - Request started
+2025-06-09 02:40:30,851 - app.core.middleware - INFO - Request completed
+2025-06-09 02:41:00,922 - app.core.middleware - INFO - Request started
+2025-06-09 02:41:00,926 - app.core.middleware - INFO - Request completed
+2025-06-09 02:41:30,979 - app.core.middleware - INFO - Request started
+2025-06-09 02:41:30,982 - app.core.middleware - INFO - Request completed
+2025-06-09 02:42:01,055 - app.core.middleware - INFO - Request started
+2025-06-09 02:42:01,057 - app.core.middleware - INFO - Request completed
+2025-06-09 02:42:31,125 - app.core.middleware - INFO - Request started
+2025-06-09 02:42:31,127 - app.core.middleware - INFO - Request completed
+2025-06-09 02:43:01,184 - app.core.middleware - INFO - Request started
+2025-06-09 02:43:01,187 - app.core.middleware - INFO - Request completed
+2025-06-09 02:43:31,252 - app.core.middleware - INFO - Request started
+2025-06-09 02:43:31,254 - app.core.middleware - INFO - Request completed
+2025-06-09 02:44:01,306 - app.core.middleware - INFO - Request started
+2025-06-09 02:44:01,309 - app.core.middleware - INFO - Request completed
+2025-06-09 02:44:31,383 - app.core.middleware - INFO - Request started
+2025-06-09 02:44:31,385 - app.core.middleware - INFO - Request completed
+2025-06-09 02:45:01,446 - app.core.middleware - INFO - Request started
+2025-06-09 02:45:01,449 - app.core.middleware - INFO - Request completed
+2025-06-09 02:45:31,533 - app.core.middleware - INFO - Request started
+2025-06-09 02:45:31,536 - app.core.middleware - INFO - Request completed
+2025-06-09 02:46:01,601 - app.core.middleware - INFO - Request started
+2025-06-09 02:46:01,603 - app.core.middleware - INFO - Request completed
+2025-06-09 02:46:31,659 - app.core.middleware - INFO - Request started
+2025-06-09 02:46:31,661 - app.core.middleware - INFO - Request completed
+2025-06-09 02:47:01,725 - app.core.middleware - INFO - Request started
+2025-06-09 02:47:01,727 - app.core.middleware - INFO - Request completed
+2025-06-09 02:47:31,789 - app.core.middleware - INFO - Request started
+2025-06-09 02:47:31,791 - app.core.middleware - INFO - Request completed
+2025-06-09 02:48:01,857 - app.core.middleware - INFO - Request started
+2025-06-09 02:48:01,859 - app.core.middleware - INFO - Request completed
+2025-06-09 02:48:31,931 - app.core.middleware - INFO - Request started
+2025-06-09 02:48:31,933 - app.core.middleware - INFO - Request completed
+2025-06-09 02:49:01,993 - app.core.middleware - INFO - Request started
+2025-06-09 02:49:01,997 - app.core.middleware - INFO - Request completed
+2025-06-09 02:49:32,055 - app.core.middleware - INFO - Request started
+2025-06-09 02:49:32,058 - app.core.middleware - INFO - Request completed
+2025-06-09 02:50:02,132 - app.core.middleware - INFO - Request started
+2025-06-09 02:50:02,138 - app.core.middleware - INFO - Request completed
+2025-06-09 02:50:32,202 - app.core.middleware - INFO - Request started
+2025-06-09 02:50:32,204 - app.core.middleware - INFO - Request completed
+2025-06-09 02:51:02,270 - app.core.middleware - INFO - Request started
+2025-06-09 02:51:02,272 - app.core.middleware - INFO - Request completed
+2025-06-09 02:51:32,330 - app.core.middleware - INFO - Request started
+2025-06-09 02:51:32,333 - app.core.middleware - INFO - Request completed
+2025-06-09 02:52:02,403 - app.core.middleware - INFO - Request started
+2025-06-09 02:52:02,405 - app.core.middleware - INFO - Request completed
+2025-06-09 02:52:32,460 - app.core.middleware - INFO - Request started
+2025-06-09 02:52:32,462 - app.core.middleware - INFO - Request completed
+2025-06-09 02:53:02,531 - app.core.middleware - INFO - Request started
+2025-06-09 02:53:02,534 - app.core.middleware - INFO - Request completed
+2025-06-09 02:53:32,611 - app.core.middleware - INFO - Request started
+2025-06-09 02:53:32,614 - app.core.middleware - INFO - Request completed
+2025-06-09 02:54:02,683 - app.core.middleware - INFO - Request started
+2025-06-09 02:54:02,686 - app.core.middleware - INFO - Request completed
+2025-06-09 02:54:32,763 - app.core.middleware - INFO - Request started

@@ -1,16 +1,16 @@
 """
-基础服务类
+基础服务类 - 异步版本
 """
 from abc import ABC
-from typing import Optional
+from typing import Any, Optional
 import logging
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
-class BaseService(ABC):
-    """基础服务抽象类"""
+class AsyncBaseService(ABC):
+    """异步基础服务抽象类"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -21,9 +21,9 @@ class BaseService(ABC):
         if resource_owner_id != user_id:
             raise PermissionDeniedError(resource_name)
 
-    def _validate_exists(self, resource: Optional[any], resource_name: str = "资源") -> None:
+    def _validate_exists(self, resource: Optional[Any], resource_name: str = "资源") -> None:
         """验证资源存在"""
         from app.core.assistants.exceptions import AssistantNotFoundError
 
         if not resource:
-            raise AssistantNotFoundError(0)  # 实际使用时应传入具体ID
+            raise AssistantNotFoundError(0)

@@ -98,7 +98,10 @@ from typing import List, Dict, Any
 from app.utils.config_manager import get_config
 from pydantic_settings import BaseSettings
 from pydantic import Field
+<<<<<<< HEAD
 
+=======
+>>>>>>> 68ce374f6ab00c83caa937b9fcfc15804d968c7a
 
 class Settings:
     # 服务信息

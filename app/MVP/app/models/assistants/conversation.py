@@ -4,7 +4,7 @@
 from sqlalchemy import Column, String, Integer, ForeignKey, JSON, Text, Enum
 from sqlalchemy.orm import relationship
 import enum
-from app.models.assistants.base import BaseModel
+from .base import BaseModel
 
 
 class MessageRole(enum.Enum):
@@ -24,7 +24,7 @@ class Conversation(BaseModel):
     title = Column(String(200), nullable=False)
 
     # 元数据
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
 
     # 关系
     assistant = relationship("Assistant", back_populates="conversations")
@@ -42,7 +42,7 @@ class Message(BaseModel):
     content = Column(Text, nullable=False)
 
     # 元数据
-    metadata = Column(JSON, default={})
+    meta_data = Column(JSON, default={})
 
     # 关系
     conversation = relationship("Conversation", back_populates="messages")

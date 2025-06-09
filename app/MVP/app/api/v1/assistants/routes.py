@@ -2,7 +2,7 @@
 助手模块路由注册
 """
 from fastapi import APIRouter
-from app.api.v1.assistants import assistant, agent, qa
+from . import assistant, agent, qa
 
 
 def register_assistant_routes() -> APIRouter:

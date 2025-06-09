@@ -3,9 +3,8 @@
 """
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-
-from app.config.database import get_db
+from app.config.database import get_async_db
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import get_current_user
 from app.services.assistants.agent import AgentService
 from app.schemas.assistants.agent import (
@@ -16,12 +15,12 @@ from app.schemas.assistants.agent import (
     ToolListResponse
 )
 from app.schemas.assistants.base import APIResponse
-from app.core.assistants.exceptions import ValidationError, ExternalServiceError
+from app.core.assistants.exceptions import AssistantNotFoundError, PermissionDeniedError, ValidationError, ExternalServiceError
 
 router = APIRouter()
 
 
-def get_agent_service(db: Session = Depends(get_db)) -> AgentService:
+def get_agent_service(db: AsyncSession = Depends(get_async_db)) -> AgentService:
     return AgentService(db)
 
 

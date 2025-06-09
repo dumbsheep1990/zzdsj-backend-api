@@ -26,7 +26,7 @@ class TestAssistantService:
         return AssistantCreateRequest(
             name="测试助手",
             description="这是一个测试助手",
-            model="gpt-3.5-turbo",
+            model="deepseek-chat",
             system_prompt="你是一个有帮助的助手",
             capabilities=["text", "code"],
             category="通用",
@@ -145,7 +145,7 @@ class TestAssistantService:
         for data in assistants_data:
             assistant_data = AssistantCreateRequest(
                 name=data["name"],
-                model="gpt-3.5-turbo",
+                model="deepseek-chat",
                 category=data["category"],
                 is_public=data["is_public"]
             )

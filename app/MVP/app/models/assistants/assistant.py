@@ -3,13 +3,12 @@
 """
 from sqlalchemy import Column, String, Text, Boolean, Integer, ForeignKey, JSON, Table
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ARRAY
-from app.models.assistants.base import BaseModel
+from .base import BaseModel, Base
 
 # 助手与知识库的关联表
 assistant_knowledge_base = Table(
     'assistant_knowledge_base',
-    BaseModel.metadata,
+    Base.metadata,
     Column('assistant_id', Integer, ForeignKey('assistants.id'), primary_key=True),
     Column('knowledge_base_id', Integer, ForeignKey('knowledge_bases.id'), primary_key=True)
 )
@@ -26,11 +25,11 @@ class Assistant(BaseModel):
     system_prompt = Column(Text)
 
     # 配置信息
-    capabilities = Column(ARRAY(String), default=[])
+    capabilities = Column(JSON, default=lambda: [])
     category = Column(String(50), index=True)
-    tags = Column(ARRAY(String), default=[])
+    tags = Column(JSON, default=lambda: [])
     avatar_url = Column(String(500))
-    config = Column(JSON, default={})
+    config = Column(JSON, default=lambda: {})
 
     # 权限信息
     owner_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
@@ -54,7 +53,7 @@ class AssistantKnowledgeBase(BaseModel):
     assistant_id = Column(Integer, ForeignKey('assistants.id'), nullable=False)
     knowledge_base_id = Column(Integer, ForeignKey('knowledge_bases.id'), nullable=False)
     priority = Column(Integer, default=0)
-    config = Column(JSON, default={})
+    config = Column(JSON, default=lambda: {})
 
     # 关系
     assistant = relationship("Assistant")

@@ -1,18 +1,16 @@
 """
 数据库配置
 """
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import QueuePool
-from typing import Generator
-from app.config.settings import get_settings
+from typing import AsyncGenerator, Generator
+from .settings import get_settings
 
 settings = get_settings()
 
 # 创建数据库引擎
-engine = create_engine(
-    settings.DATABASE_URL,
+async_engine = create_async_engine(
+    settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"),
     poolclass=QueuePool,
     pool_size=settings.DATABASE_POOL_SIZE,
     max_overflow=settings.DATABASE_MAX_OVERFLOW,
@@ -20,17 +18,18 @@ engine = create_engine(
     echo=settings.DEBUG  # 调试模式下打印SQL
 )
 
-# 创建会话工厂
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# 创建异步会话工厂
+AsyncSessionLocal = async_sessionmaker(
+    async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
 
-# 基础模型类
-Base = declarative_base()
 
-
-def get_db() -> Generator[Session, None, None]:
-    """获取数据库会话依赖"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
+    """获取异步数据库会话依赖"""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

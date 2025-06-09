@@ -5,9 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.config import get_settings, logger
-from app.api.v1.assistants.routes import register_assistant_routes
-from app.core.middleware import (
+from .config import get_settings, logger
+from .api.v1.assistants.routes import register_assistant_routes
+from .core.middleware import (
     RequestLoggingMiddleware,
     RateLimitMiddleware,
     ErrorHandlerMiddleware
@@ -43,7 +43,7 @@ app = FastAPI(
 # 配置CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
