@@ -1,0 +1,47 @@
+{
+  "test_summary": {
+    "total_tests": 7,
+    "passed": 7,
+    "failed": 0,
+    "success_rate": "100.0%",
+    "duration": "0.02s"
+  },
+  "test_results": {
+    "config_manager": {
+      "status": "✅ PASS",
+      "tests_passed": 2,
+      "details": "配置管理器功能正常"
+    },
+    "strategy_selector": {
+      "status": "✅ PASS",
+      "tests_passed": 3,
+      "details": "策略选择器正常，当前策略: hybrid"
+    },
+    "data_sync_service": {
+      "status": "✅ PASS",
+      "tests_passed": 2,
+      "details": "数据同步服务正常，成功率: 95.0%"
+    },
+    "error_handler": {
+      "status": "✅ PASS",
+      "tests_passed": 2,
+      "details": "错误处理器正常，总错误数: 10"
+    },
+    "performance_optimizer": {
+      "status": "✅ PASS",
+      "tests_passed": 2,
+      "details": "性能优化器正常，缓存加速比: 10.8x"
+    },
+    "integrated_functionality": {
+      "status": "✅ PASS",
+      "tests_passed": 3,
+      "details": "集成功能正常，选择策略: hybrid"
+    },
+    "performance_benchmarks": {
+      "status": "✅ PASS",
+      "concurrent_throughput": "921.9 QPS",
+      "details": "性能基准测试完成"
+    }
+  },
+  "timestamp": "2025-06-08 19:45:44"
+}

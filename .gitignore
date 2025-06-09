@@ -1,3 +1,4 @@
+
 .\docs
 .env
 .\app\MVP\.env.local
@@ -6,3 +7,7 @@
 .\app\MVP\logs\app.log
 .\log**
 .\app\MVP\logs\app.log
+
+.\docs
+.cursorrules
+

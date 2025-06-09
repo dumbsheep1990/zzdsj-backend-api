@@ -1,0 +1,167 @@
+version: '3.8'
+
+# 智政知识库 - 最小化配置
+# 仅包含基础必需服务，适用于开发环境和基础功能测试
+# 使用本地文件系统存储用户文件，不依赖MinIO
+
+services:
+  # ===== 基础存储服务 (必需) =====
+  
+  # PostgreSQL - 基础关系数据库
+  postgres:
+    image: postgres:15
+    container_name: zzdsj-postgres-minimal
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: knowledge_qa
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Elasticsearch - 文档分片和混合检索引擎 (基础必需)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: zzdsj-elasticsearch-minimal
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=zzdsj-minimal-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"  # 降低内存使用
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ===== 基础缓存服务 =====
+  
+  # Redis - 缓存和会话存储
+  redis:
+    image: redis:7.0
+    container_name: zzdsj-redis-minimal
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ===== 异步任务处理 (简化版) =====
+  
+  # RabbitMQ - 消息队列 (轻量配置)
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: zzdsj-rabbitmq-minimal
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Celery Worker - 基础异步任务处理器
+  celery-worker:
+    build: .
+    container_name: zzdsj-celery-worker-minimal
+    command: celery -A app.worker worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app
+      - celery_logs:/app/logs
+      - file_storage:/app/data/uploads  # 本地文件存储挂载
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+      - elasticsearch  # 基础必需依赖
+    environment:
+      # 数据库配置
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_qa
+      
+      # 任务队列配置
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+      
+      # 基础必需存储配置
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_HYBRID_SEARCH=true
+      - ELASTICSEARCH_HYBRID_WEIGHT=0.7
+      - ELASTICSEARCH_INDEX=document_index
+      
+      # 用户文件存储配置 (本地文件系统)
+      - FILE_STORAGE_TYPE=local
+      - FILE_STORAGE_PATH=/app/data/uploads
+      - FILE_STORAGE_BASE_URL=http://localhost:8000/files
+      
+      # 最小化模式标识
+      - DEPLOYMENT_MODE=minimal
+      - MILVUS_ENABLED=false  # 在最小化模式下禁用Milvus
+    restart: always
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.worker", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  # 基础存储卷
+  postgres_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  
+  # 用户文件存储卷 (本地文件系统)
+  file_storage:
+    driver: local
+  
+  # 缓存存储卷
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  
+  # 应用日志存储卷
+  celery_logs:
+    driver: local
+
+networks:
+  default:
+    name: zzdsj-minimal-network
+    driver: bridge 

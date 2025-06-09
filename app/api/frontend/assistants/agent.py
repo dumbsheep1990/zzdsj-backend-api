@@ -2,6 +2,7 @@
 智能体服务API: 提供智能体任务处理和工具调用的接口
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -13,8 +14,9 @@ from app.api.frontend.dependencies import ResponseFormatter
 
 router = APIRouter()
 
-# 初始化智能体管理器
+# 初始化智能体管理器和日志
 agent_manager = AgentManager()
+logger = logging.getLogger(__name__)
 
 class TaskRequest(BaseModel):
     """任务请求模型"""
@@ -42,8 +44,19 @@ async def process_task(request: TaskRequest, db: AsyncSession = Depends(get_db))
     # 加载指定工具
     tools = []
     if request.tool_ids:
-        # TODO: 从数据库或配置中加载指定工具
-        pass
+        try:
+            # 从工具管理器获取工具实例
+            for tool_id in request.tool_ids:
+                tool = await agent_manager.get_tool_by_id(tool_id)
+                if tool:
+                    tools.append(tool)
+                else:
+                    # 记录警告但不中断执行
+                    logger.warning(f"找不到工具ID: {tool_id}")
+        except Exception as e:
+            logger.error(f"加载工具时发生错误: {str(e)}")
+            # 如果工具加载失败，使用空工具列表继续执行
+            tools = []
         
     try:
         # 处理任务

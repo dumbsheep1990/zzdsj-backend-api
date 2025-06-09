@@ -5,14 +5,14 @@
 
 from .mcp_manager import MCPIntegrationManager
 from .llamaindex_manager import LlamaIndexIntegrationManager
-from .lightrag_manager import LightRAGIntegrationManager
+from .ai_knowledge_graph_manager import AIKnowledgeGraphManager
 from .owl_manager import OwlIntegrationManager
 from .framework_manager import FrameworkIntegrationManager
 
 __all__ = [
     "MCPIntegrationManager",
     "LlamaIndexIntegrationManager",
-    "LightRAGIntegrationManager", 
+    "AIKnowledgeGraphManager", 
     "OwlIntegrationManager",
     "FrameworkIntegrationManager"
 ] 

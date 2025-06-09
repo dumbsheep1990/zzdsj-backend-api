@@ -9,7 +9,7 @@ import uuid
 import logging
 from datetime import datetime
 
-from app.repositories.tool import ToolRepository
+from app.repositories.tool_repository import ToolRepository
 
 logger = logging.getLogger(__name__)
 

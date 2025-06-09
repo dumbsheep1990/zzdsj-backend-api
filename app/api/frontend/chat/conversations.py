@@ -195,8 +195,25 @@ async def create_conversation(
         
         # 如果有初始消息，添加到对话中
         if request.initial_message:
-            # 这里可以调用chat接口发送初始消息
-            pass
+            try:
+                # 创建初始消息
+                initial_message_data = {
+                    "conversation_id": conversation.id,
+                    "role": "user",
+                    "content": request.initial_message,
+                    "metadata": {
+                        "is_initial": True,
+                        "created_by": context.user.id
+                    }
+                }
+                
+                # 保存初始消息到数据库
+                await chat_service.add_message(initial_message_data)
+                
+                logger.info(f"已添加初始消息到对话 {conversation.id}")
+            except Exception as e:
+                logger.warning(f"添加初始消息失败: {str(e)}")
+                # 初始消息失败不影响对话创建
         
         # 构建响应数据
         response_data = {

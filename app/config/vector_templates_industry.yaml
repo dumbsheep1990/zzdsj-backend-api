@@ -1,0 +1,1857 @@
+# 行业特定向量化模板配置
+# 为不同场景和行业提供专门的向量化模板
+# 支持政策文档、法律文档、医疗文档、技术文档等场景
+
+# 元数据字段模板定义
+metadata_field_templates:
+  # 政策文档元数据字段
+  policy_document_fields:
+    - name: "doc_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "文档唯一标识符"
+      index: true
+    - name: "title"
+      data_type: "VARCHAR"
+      max_length: 500
+      nullable: false
+      description: "政策文档标题"
+      index: true
+    - name: "source_url"
+      data_type: "VARCHAR"
+      max_length: 1000
+      nullable: true
+      description: "原始政策文档URL"
+    - name: "publish_date"
+      data_type: "TIMESTAMP"
+      nullable: true
+      description: "发布日期"
+      index: true
+    - name: "effective_date"
+      data_type: "TIMESTAMP"
+      nullable: true
+      description: "生效日期"
+      index: true
+    - name: "topic"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "政策主题分类"
+      index: true
+    - name: "category"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "政策类别"
+      index: true
+    - name: "agency"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "发布机构"
+      index: true
+    - name: "keywords"
+      data_type: "JSONB"
+      nullable: true
+      description: "关键词列表"
+    - name: "region"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "适用地域"
+      index: true
+    - name: "doc_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "文档类型：通知、办法、规定等"
+      index: true
+    - name: "summary"
+      data_type: "TEXT"
+      nullable: true
+      description: "政策摘要"
+    - name: "chunk_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "文档块标识"
+      index: true
+
+  # 法律文档元数据字段
+  legal_document_fields:
+    - name: "doc_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "法律文档ID"
+      index: true
+    - name: "case_number"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "案件编号"
+      index: true
+    - name: "court_name"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "审理法院"
+      index: true
+    - name: "judgment_date"
+      data_type: "TIMESTAMP"
+      nullable: true
+      description: "判决日期"
+      index: true
+    - name: "legal_area"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "法律领域：民法、刑法、商法等"
+      index: true
+    - name: "case_type"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "案件类型"
+      index: true
+    - name: "parties"
+      data_type: "JSONB"
+      nullable: true
+      description: "当事人信息"
+    - name: "legal_provisions"
+      data_type: "JSONB"
+      nullable: true
+      description: "适用法条"
+    - name: "case_result"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "审理结果"
+      index: true
+
+  # 医疗文档元数据字段
+  medical_document_fields:
+    - name: "doc_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "医疗文档ID"
+      index: true
+    - name: "patient_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "患者ID（脱敏）"
+      index: true
+    - name: "medical_specialty"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "医疗专科"
+      index: true
+    - name: "diagnosis_code"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "诊断编码（ICD-10）"
+      index: true
+    - name: "symptoms"
+      data_type: "JSONB"
+      nullable: true
+      description: "症状描述"
+    - name: "treatments"
+      data_type: "JSONB"
+      nullable: true
+      description: "治疗方案"
+    - name: "medications"
+      data_type: "JSONB"
+      nullable: true
+      description: "用药信息"
+    - name: "doc_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "文档类型：病历、检查报告、处方等"
+      index: true
+    - name: "hospital_name"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "医院名称"
+      index: true
+
+  # 技术文档元数据字段
+  technical_document_fields:
+    - name: "doc_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "技术文档ID"
+      index: true
+    - name: "product_name"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "产品名称"
+      index: true
+    - name: "version"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "版本号"
+      index: true
+    - name: "technology_stack"
+      data_type: "JSONB"
+      nullable: true
+      description: "技术栈"
+    - name: "programming_language"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "编程语言"
+      index: true
+    - name: "framework"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "开发框架"
+      index: true
+    - name: "difficulty_level"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "难度等级：beginner、intermediate、advanced"
+      index: true
+    - name: "api_endpoints"
+      data_type: "JSONB"
+      nullable: true
+      description: "API端点信息"
+    - name: "code_examples"
+      data_type: "JSONB"
+      nullable: true
+      description: "代码示例"
+
+  # 学术论文元数据字段
+  academic_paper_fields:
+    - name: "doc_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "论文ID"
+      index: true
+    - name: "doi"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "DOI标识符"
+      index: true
+    - name: "authors"
+      data_type: "JSONB"
+      nullable: true
+      description: "作者信息"
+    - name: "journal_name"
+      data_type: "VARCHAR"
+      max_length: 300
+      nullable: true
+      description: "期刊名称"
+      index: true
+    - name: "publication_year"
+      data_type: "INTEGER"
+      nullable: true
+      description: "发表年份"
+      index: true
+    - name: "research_field"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "研究领域"
+      index: true
+    - name: "research_methods"
+      data_type: "JSONB"
+      nullable: true
+      description: "研究方法"
+    - name: "citation_count"
+      data_type: "INTEGER"
+      nullable: true
+      description: "引用次数"
+    - name: "impact_factor"
+      data_type: "FLOAT"
+      nullable: true
+      description: "影响因子"
+
+  # 通用文档元数据字段
+  general_document_fields:
+    - name: "doc_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "文档ID"
+      index: true
+    - name: "title"
+      data_type: "VARCHAR"
+      max_length: 500
+      nullable: false
+      description: "文档标题"
+      index: true
+    - name: "author"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "作者"
+      index: true
+    - name: "category"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "文档分类"
+      index: true
+    - name: "tags"
+      data_type: "JSONB"
+      nullable: true
+      description: "标签列表"
+    - name: "language"
+      data_type: "VARCHAR"
+      max_length: 10
+      nullable: true
+      description: "文档语言"
+      index: true
+    - name: "source"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "文档来源"
+      index: true
+    - name: "file_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "文件类型"
+      index: true
+    - name: "word_count"
+      data_type: "INTEGER"
+      nullable: true
+      description: "字数统计"
+    - name: "chunk_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "文档块ID"
+      index: true
+
+  # 问答知识库元数据字段
+  qa_knowledge_fields:
+    - name: "qa_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "问答ID"
+      index: true
+    - name: "question"
+      data_type: "TEXT"
+      nullable: false
+      description: "问题内容"
+    - name: "answer"
+      data_type: "TEXT"
+      nullable: false
+      description: "答案内容"
+    - name: "category"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "问题分类"
+      index: true
+    - name: "difficulty_level"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "难度等级"
+      index: true
+    - name: "confidence_score"
+      data_type: "FLOAT"
+      nullable: true
+      description: "答案置信度"
+    - name: "usage_count"
+      data_type: "INTEGER"
+      nullable: true
+      description: "使用次数"
+    - name: "last_updated"
+      data_type: "TIMESTAMP"
+      nullable: true
+      description: "最后更新时间"
+    - name: "related_questions"
+      data_type: "JSONB"
+      nullable: true
+      description: "相关问题"
+
+  # 企业知识库元数据字段
+  enterprise_knowledge_fields:
+    - name: "doc_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "文档ID"
+      index: true
+    - name: "department"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "所属部门"
+      index: true
+    - name: "business_area"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "业务领域"
+      index: true
+    - name: "document_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "文档类型：流程、制度、规范等"
+      index: true
+    - name: "approval_status"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "审批状态"
+      index: true
+    - name: "effective_date"
+      data_type: "TIMESTAMP"
+      nullable: true
+      description: "生效日期"
+      index: true
+    - name: "expiry_date"
+      data_type: "TIMESTAMP"
+      nullable: true
+      description: "过期日期"
+      index: true
+    - name: "owner"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "文档负责人"
+      index: true
+    - name: "access_level"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "访问级别：public、internal、confidential"
+      index: true
+    - name: "priority"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "重要程度"
+      index: true
+
+  # 教育培训元数据字段
+  education_training_fields:
+    - name: "content_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "内容ID"
+      index: true
+    - name: "course_name"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "课程名称"
+      index: true
+    - name: "chapter"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "章节"
+      index: true
+    - name: "lesson_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "课程类型：视频、文档、练习等"
+      index: true
+    - name: "skill_level"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "技能水平：初级、中级、高级"
+      index: true
+    - name: "learning_objectives"
+      data_type: "JSONB"
+      nullable: true
+      description: "学习目标"
+    - name: "prerequisites"
+      data_type: "JSONB"
+      nullable: true
+      description: "前置要求"
+    - name: "duration_minutes"
+      data_type: "INTEGER"
+      nullable: true
+      description: "学习时长（分钟）"
+    - name: "instructor"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "讲师"
+      index: true
+
+  # 客服FAQ元数据字段
+  customer_service_fields:
+    - name: "faq_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "FAQ ID"
+      index: true
+    - name: "question_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "问题类型"
+      index: true
+    - name: "product_category"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "产品类别"
+      index: true
+    - name: "urgency_level"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "紧急程度"
+      index: true
+    - name: "resolution_time"
+      data_type: "INTEGER"
+      nullable: true
+      description: "解决时间（分钟）"
+    - name: "satisfaction_score"
+      data_type: "FLOAT"
+      nullable: true
+      description: "满意度评分"
+    - name: "escalation_required"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否需要升级"
+    - name: "related_products"
+      data_type: "JSONB"
+      nullable: true
+      description: "相关产品"
+    - name: "channel"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "服务渠道：电话、邮件、在线等"
+      index: true
+
+  # 政务服务办事指南元数据字段
+  government_service_fields:
+    - name: "service_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "服务事项ID"
+      index: true
+    - name: "service_name"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: false
+      description: "事项名称"
+      index: true
+    - name: "service_code"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "事项编码"
+      index: true
+    - name: "service_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "事项类型：公共服务、行政许可、行政确认等"
+      index: true
+    - name: "service_department"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "服务部门"
+      index: true
+    - name: "service_level"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "服务层级：国家级、省级、市级、县级"
+      index: true
+    - name: "target_audience"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "服务对象：公民、法人、其他组织"
+      index: true
+    - name: "legal_deadline"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "法定时限"
+    - name: "actual_deadline"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "承诺时限/办理时限"
+    - name: "service_channels"
+      data_type: "JSONB"
+      nullable: true
+      description: "办理渠道：线上、线下、自助等"
+    - name: "service_windows"
+      data_type: "JSONB"
+      nullable: true
+      description: "办理窗口信息"
+    - name: "service_hours"
+      data_type: "TEXT"
+      nullable: true
+      description: "办理时间"
+    - name: "service_conditions"
+      data_type: "TEXT"
+      nullable: true
+      description: "办理条件"
+    - name: "required_materials"
+      data_type: "JSONB"
+      nullable: true
+      description: "申请材料清单"
+    - name: "process_steps"
+      data_type: "JSONB"
+      nullable: true
+      description: "办理流程步骤"
+    - name: "fee_info"
+      data_type: "JSONB"
+      nullable: true
+      description: "收费信息：包含标准、依据、说明等"
+    - name: "fee_type"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "收费类型：免费、收费、按标准收费"
+      index: true
+    - name: "is_free"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否免费"
+    - name: "fee_standard"
+      data_type: "TEXT"
+      nullable: true
+      description: "收费标准详细说明"
+    - name: "fee_basis"
+      data_type: "TEXT"
+      nullable: true
+      description: "收费依据文件"
+    - name: "contact_info"
+      data_type: "JSONB"
+      nullable: true
+      description: "咨询联系方式"
+    - name: "complaint_channels"
+      data_type: "JSONB"
+      nullable: true
+      description: "监督投诉渠道"
+    - name: "inquiry_methods"
+      data_type: "JSONB"
+      nullable: true
+      description: "办理查询方式"
+    - name: "geographic_scope"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "适用地域范围"
+      index: true
+    - name: "online_url"
+      data_type: "VARCHAR"
+      max_length: 500
+      nullable: true
+      description: "在线办理地址"
+    - name: "service_status"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "服务状态：正常、暂停、取消"
+      index: true
+    - name: "update_date"
+      data_type: "TIMESTAMP"
+      nullable: true
+      description: "信息更新时间"
+      index: true
+    - name: "chunk_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "内容块类型：基本信息、办理条件、流程、材料等"
+      index: true
+    - name: "service_category"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "服务分类：房产登记、工商注册、社保服务等"
+      index: true
+    - name: "complexity_level"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "复杂度：简单、中等、复杂"
+      index: true
+    - name: "processing_method"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "办理形式：即办、快速申请、网上支付等"
+      index: true
+    - name: "liaison_organization"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: true
+      description: "联办机构"
+    - name: "agency_delegation"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否可代办事项"
+    - name: "proxy_service"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否有中介服务"
+    - name: "nearby_processing"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否就近办理事项"
+    - name: "credit_commitment"
+      data_type: "BOOLEAN"
+      nullable: true
+      description: "是否信用承诺事项"
+
+  # 不动产登记专用字段（针对抵押权登记等复杂场景）
+  real_estate_registration_fields:
+    - name: "registration_type"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "登记类型：首次登记、转移登记、变更登记、注销登记等"
+      index: true
+    - name: "property_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "不动产类型：国有建设用地、房屋、林地等"
+      index: true
+    - name: "registration_scope"
+      data_type: "TEXT"
+      nullable: true
+      description: "登记范围说明"
+    - name: "fee_calculation_rules"
+      data_type: "TEXT"
+      nullable: true
+      description: "收费计算规则"
+    - name: "policy_references"
+      data_type: "JSONB"
+      nullable: true
+      description: "政策依据文件列表"
+    - name: "special_conditions"
+      data_type: "TEXT"
+      nullable: true
+      description: "特殊办理条件"
+    - name: "document_templates"
+      data_type: "JSONB"
+      nullable: true
+      description: "申请表格模板"
+
+  # 社会保障服务专用字段
+  social_security_fields:
+    - name: "benefit_type"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "保障类型：医疗保险、养老保险、失业保险等"
+      index: true
+    - name: "eligibility_criteria"
+      data_type: "TEXT"
+      nullable: true
+      description: "申领条件"
+    - name: "benefit_amount"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "保障金额"
+    - name: "coverage_period"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "保障期限"
+    - name: "application_frequency"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "申请频次限制"
+
+  # 产品说明书元数据字段
+  product_manual_fields:
+    - name: "product_id"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: false
+      description: "产品ID"
+      index: true
+    - name: "product_name"
+      data_type: "VARCHAR"
+      max_length: 200
+      nullable: false
+      description: "产品名称"
+      index: true
+    - name: "model_number"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "型号"
+      index: true
+    - name: "manual_section"
+      data_type: "VARCHAR"
+      max_length: 100
+      nullable: true
+      description: "说明书章节"
+      index: true
+    - name: "instruction_type"
+      data_type: "VARCHAR"
+      max_length: 50
+      nullable: true
+      description: "说明类型：安装、使用、维护、故障排除"
+      index: true
+    - name: "safety_level"
+      data_type: "VARCHAR"
+      max_length: 20
+      nullable: true
+      description: "安全等级"
+      index: true
+    - name: "warranty_info"
+      data_type: "JSONB"
+      nullable: true
+      description: "保修信息"
+    - name: "compatibility"
+      data_type: "JSONB"
+      nullable: true
+      description: "兼容性信息"
+    - name: "specifications"
+      data_type: "JSONB"
+      nullable: true
+      description: "技术规格"
+
+# 行业特定向量化模板
+industry_templates:
+  # 政策文档向量化模板
+  policy_document_template:
+    name: "政策文档向量化模板"
+    description: "适用于政策法规文档的向量化处理"
+    industry: "government"
+    scenario: "policy_documents"
+    
+    # 元数据配置
+    metadata_schema:
+      fields: "policy_document_fields"
+      required_fields: ["doc_id", "title", "chunk_id"]
+      searchable_fields: ["title", "topic", "category", "agency", "region", "doc_type"]
+      filterable_fields: ["publish_date", "effective_date", "topic", "category", "agency", "region", "doc_type"]
+    
+    # 向量化配置
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 1000
+      chunk_overlap: 200
+      chunk_strategy: "semantic"
+      language: "zh"
+    
+    # 索引配置
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["topic", "category"]
+          type: "composite"
+        - fields: ["publish_date"]
+          type: "btree"
+        - fields: ["agency"]
+          type: "hash"
+    
+    # 搜索优化配置
+    search_config:
+      default_top_k: 10
+      similarity_threshold: 0.7
+      rerank_enabled: true
+      hybrid_search:
+        enabled: true
+        keyword_weight: 0.3
+        vector_weight: 0.7
+
+  # 法律文档向量化模板
+  legal_document_template:
+    name: "法律文档向量化模板"
+    description: "适用于法律案例和法条的向量化处理"
+    industry: "legal"
+    scenario: "legal_documents"
+    
+    metadata_schema:
+      fields: "legal_document_fields"
+      required_fields: ["doc_id", "chunk_id"]
+      searchable_fields: ["case_number", "court_name", "legal_area", "case_type"]
+      filterable_fields: ["judgment_date", "legal_area", "case_type", "case_result"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 1500
+      chunk_overlap: 300
+      chunk_strategy: "legal_clause"
+      language: "zh"
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 32
+          efConstruction: 400
+      metadata_indexes:
+        - fields: ["legal_area", "case_type"]
+          type: "composite"
+        - fields: ["judgment_date"]
+          type: "btree"
+
+  # 医疗文档向量化模板
+  medical_document_template:
+    name: "医疗文档向量化模板"
+    description: "适用于医疗记录和诊断报告的向量化处理"
+    industry: "healthcare"
+    scenario: "medical_documents"
+    
+    metadata_schema:
+      fields: "medical_document_fields"
+      required_fields: ["doc_id", "chunk_id"]
+      searchable_fields: ["medical_specialty", "diagnosis_code", "doc_type"]
+      filterable_fields: ["medical_specialty", "diagnosis_code", "doc_type"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 800
+      chunk_overlap: 150
+      chunk_strategy: "medical_section"
+      language: "zh"
+      privacy_mode: true  # 启用隐私保护模式
+    
+    index_config:
+      vector_index:
+        type: "IVF_FLAT"
+        metric: "cosine"
+        parameters:
+          nlist: 1024
+      metadata_indexes:
+        - fields: ["medical_specialty"]
+          type: "hash"
+        - fields: ["diagnosis_code"]
+          type: "hash"
+
+  # 技术文档向量化模板
+  technical_document_template:
+    name: "技术文档向量化模板"
+    description: "适用于API文档、技术教程等技术类文档"
+    industry: "technology"
+    scenario: "technical_documents"
+    
+    metadata_schema:
+      fields: "technical_document_fields"
+      required_fields: ["doc_id", "chunk_id"]
+      searchable_fields: ["product_name", "programming_language", "framework"]
+      filterable_fields: ["programming_language", "framework", "difficulty_level", "version"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 1200
+      chunk_overlap: 250
+      chunk_strategy: "code_aware"
+      language: "en"
+      code_processing: true  # 启用代码处理
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["programming_language", "framework"]
+          type: "composite"
+        - fields: ["difficulty_level"]
+          type: "hash"
+
+  # 学术论文向量化模板
+  academic_paper_template:
+    name: "学术论文向量化模板"
+    description: "适用于学术论文和研究报告的向量化处理"
+    industry: "academic"
+    scenario: "academic_papers"
+    
+    metadata_schema:
+      fields: "academic_paper_fields"
+      required_fields: ["doc_id", "chunk_id"]
+      searchable_fields: ["doi", "journal_name", "research_field", "authors"]
+      filterable_fields: ["publication_year", "research_field", "journal_name"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 1500
+      chunk_overlap: 300
+      chunk_strategy: "academic_section"
+      language: "en"
+      citation_processing: true  # 启用引用处理
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 32
+          efConstruction: 400
+      metadata_indexes:
+        - fields: ["research_field"]
+          type: "hash"
+        - fields: ["publication_year"]
+          type: "btree"
+        - fields: ["impact_factor"]
+          type: "btree"
+
+  # 通用文档向量化模板
+  general_document_template:
+    name: "通用文档向量化模板"
+    description: "适用于一般性文档的向量化处理"
+    industry: "general"
+    scenario: "general_documents"
+    
+    metadata_schema:
+      fields: "general_document_fields"
+      required_fields: ["doc_id", "title", "chunk_id"]
+      searchable_fields: ["title", "author", "category", "source"]
+      filterable_fields: ["category", "language", "source", "file_type"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 1000
+      chunk_overlap: 200
+      chunk_strategy: "paragraph"
+      language: "auto"
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["category", "language"]
+          type: "composite"
+        - fields: ["author"]
+          type: "hash"
+    
+    search_config:
+      default_top_k: 5
+      similarity_threshold: 0.75
+      rerank_enabled: false
+      hybrid_search:
+        enabled: true
+        keyword_weight: 0.4
+        vector_weight: 0.6
+
+  # 问答知识库向量化模板
+  qa_knowledge_template:
+    name: "问答知识库向量化模板"
+    description: "适用于问答对的向量化处理"
+    industry: "general"
+    scenario: "qa_knowledge"
+    
+    metadata_schema:
+      fields: "qa_knowledge_fields"
+      required_fields: ["qa_id", "question", "answer"]
+      searchable_fields: ["question", "answer", "category"]
+      filterable_fields: ["category", "difficulty_level", "confidence_score"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 500
+      chunk_overlap: 50
+      chunk_strategy: "qa_pair"
+      language: "auto"
+      question_answer_fusion: true  # 问答融合处理
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 32
+          efConstruction: 400
+      metadata_indexes:
+        - fields: ["category"]
+          type: "hash"
+        - fields: ["difficulty_level"]
+          type: "hash"
+        - fields: ["confidence_score"]
+          type: "btree"
+    
+    search_config:
+      default_top_k: 3
+      similarity_threshold: 0.8
+      rerank_enabled: true
+      hybrid_search:
+        enabled: true
+        keyword_weight: 0.2
+        vector_weight: 0.8
+
+  # 企业知识库向量化模板
+  enterprise_knowledge_template:
+    name: "企业知识库向量化模板"
+    description: "适用于企业内部知识管理的向量化处理"
+    industry: "enterprise"
+    scenario: "enterprise_knowledge"
+    
+    metadata_schema:
+      fields: "enterprise_knowledge_fields"
+      required_fields: ["doc_id", "chunk_id"]
+      searchable_fields: ["department", "business_area", "document_type", "owner"]
+      filterable_fields: ["department", "business_area", "document_type", "approval_status", "access_level", "priority"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 1200
+      chunk_overlap: 300
+      chunk_strategy: "semantic"
+      language: "zh"
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["department", "business_area"]
+          type: "composite"
+        - fields: ["document_type"]
+          type: "hash"
+        - fields: ["access_level"]
+          type: "hash"
+        - fields: ["effective_date"]
+          type: "btree"
+    
+    search_config:
+      default_top_k: 8
+      similarity_threshold: 0.7
+      rerank_enabled: true
+      access_control_enabled: true  # 启用访问控制
+
+  # 教育培训向量化模板
+  education_training_template:
+    name: "教育培训向量化模板"
+    description: "适用于教育培训内容的向量化处理"
+    industry: "education"
+    scenario: "education_training"
+    
+    metadata_schema:
+      fields: "education_training_fields"
+      required_fields: ["content_id", "chunk_id"]
+      searchable_fields: ["course_name", "chapter", "instructor"]
+      filterable_fields: ["lesson_type", "skill_level", "course_name", "instructor"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 800
+      chunk_overlap: 200
+      chunk_strategy: "educational_section"
+      language: "auto"
+      learning_focused: true  # 教育导向处理
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["skill_level", "lesson_type"]
+          type: "composite"
+        - fields: ["course_name"]
+          type: "hash"
+        - fields: ["duration_minutes"]
+          type: "btree"
+    
+    search_config:
+      default_top_k: 6
+      similarity_threshold: 0.75
+      rerank_enabled: true
+      progressive_learning: true  # 渐进式学习支持
+
+  # 客服FAQ向量化模板
+  customer_service_template:
+    name: "客服FAQ向量化模板"
+    description: "适用于客户服务FAQ的向量化处理"
+    industry: "customer_service"
+    scenario: "customer_service"
+    
+    metadata_schema:
+      fields: "customer_service_fields"
+      required_fields: ["faq_id", "chunk_id"]
+      searchable_fields: ["question_type", "product_category", "channel"]
+      filterable_fields: ["question_type", "product_category", "urgency_level", "channel"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 600
+      chunk_overlap: 100
+      chunk_strategy: "customer_intent"
+      language: "auto"
+      intent_extraction: true  # 意图提取
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 32
+          efConstruction: 400
+      metadata_indexes:
+        - fields: ["question_type", "urgency_level"]
+          type: "composite"
+        - fields: ["product_category"]
+          type: "hash"
+        - fields: ["satisfaction_score"]
+          type: "btree"
+    
+    search_config:
+      default_top_k: 5
+      similarity_threshold: 0.8
+      rerank_enabled: true
+      real_time_optimization: true  # 实时优化
+
+  # 产品说明书向量化模板
+  product_manual_template:
+    name: "产品说明书向量化模板"
+    description: "适用于产品说明书和技术手册的向量化处理"
+    industry: "manufacturing"
+    scenario: "product_manuals"
+    
+    metadata_schema:
+      fields: "product_manual_fields"
+      required_fields: ["product_id", "product_name", "chunk_id"]
+      searchable_fields: ["product_name", "model_number", "manual_section", "instruction_type"]
+      filterable_fields: ["product_name", "model_number", "instruction_type", "safety_level"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 1000
+      chunk_overlap: 250
+      chunk_strategy: "instruction_based"
+      language: "auto"
+      technical_content: true  # 技术内容处理
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["product_name", "instruction_type"]
+          type: "composite"
+        - fields: ["model_number"]
+          type: "hash"
+        - fields: ["safety_level"]
+          type: "hash"
+    
+    search_config:
+      default_top_k: 7
+      similarity_threshold: 0.75
+      rerank_enabled: true
+      technical_precision: true  # 技术精度优化
+
+  # 政务服务办事指南向量化模板（通用版本）
+  government_service_template:
+    name: "政务服务办事指南向量化模板"
+    description: "适用于政务服务事项、办事指南等结构化服务数据的向量化处理"
+    industry: "government"
+    scenario: "government_services"
+    
+    metadata_schema:
+      fields: "government_service_fields"
+      required_fields: ["service_id", "service_name", "chunk_type"]
+      searchable_fields: ["service_name", "service_department", "service_conditions", "required_materials"]
+      filterable_fields: ["service_type", "service_department", "service_level", "target_audience", "is_free", "service_status", "geographic_scope", "service_category", "complexity_level"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 800
+      chunk_overlap: 150
+      chunk_strategy: "service_oriented"
+      language: "zh"
+      structured_data_processing: true  # 结构化数据处理
+      table_aware: true                 # 表格识别
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["service_type", "service_level"]
+          type: "composite"
+        - fields: ["service_department"]
+          type: "hash"
+        - fields: ["target_audience"]
+          type: "hash"
+        - fields: ["is_free"]
+          type: "hash"
+        - fields: ["service_status"]
+          type: "hash"
+        - fields: ["geographic_scope"]
+          type: "hash"
+        - fields: ["service_category"]
+          type: "hash"
+        - fields: ["update_date"]
+          type: "btree"
+    
+    search_config:
+      default_top_k: 5
+      similarity_threshold: 0.75
+      rerank_enabled: true
+      hybrid_search:
+        enabled: true
+        keyword_weight: 0.4
+        vector_weight: 0.6
+      service_oriented_ranking: true     # 服务导向排序
+      location_aware: true               # 地域感知
+
+  # 不动产登记专业模板（针对复杂登记业务）
+  real_estate_registration_template:
+    name: "不动产登记专业向量化模板"
+    description: "适用于不动产登记、抵押权登记等复杂不动产业务的专业化处理"
+    industry: "government"
+    scenario: "real_estate_registration"
+    
+    metadata_schema:
+      fields: "real_estate_registration_fields"
+      required_fields: ["service_id", "service_name", "registration_type"]
+      searchable_fields: ["service_name", "registration_type", "property_type", "fee_calculation_rules", "special_conditions"]
+      filterable_fields: ["registration_type", "property_type", "service_department", "complexity_level", "is_free"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 1000
+      chunk_overlap: 200
+      chunk_strategy: "legal_document_oriented"
+      language: "zh"
+      legal_document_processing: true    # 法律文档处理
+      policy_reference_extraction: true # 政策引用提取
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 20
+          efConstruction: 300
+      metadata_indexes:
+        - fields: ["registration_type", "property_type"]
+          type: "composite"
+        - fields: ["service_department"]
+          type: "hash"
+    
+    search_config:
+      default_top_k: 8
+      similarity_threshold: 0.7
+      rerank_enabled: true
+      legal_precision: true              # 法律精确度优化
+      policy_context_aware: true         # 政策上下文感知
+
+  # 社会保障服务模板
+  social_security_template:
+    name: "社会保障服务向量化模板"
+    description: "适用于社会保障卡申领、各类保险服务等民生服务的向量化处理"
+    industry: "government"
+    scenario: "social_security"
+    
+    metadata_schema:
+      fields: "social_security_fields"
+      required_fields: ["service_id", "service_name", "benefit_type"]
+      searchable_fields: ["service_name", "benefit_type", "eligibility_criteria", "required_materials"]
+      filterable_fields: ["benefit_type", "service_department", "target_audience", "is_free", "geographic_scope"]
+    
+    vectorization_config:
+      embedding_model: "text-embedding-ada-002"
+      chunk_size: 700
+      chunk_overlap: 120
+      chunk_strategy: "citizen_service_oriented"
+      language: "zh"
+      citizen_friendly_processing: true  # 民生服务导向处理
+    
+    index_config:
+      vector_index:
+        type: "HNSW"
+        metric: "cosine"
+        parameters:
+          M: 16
+          efConstruction: 200
+      metadata_indexes:
+        - fields: ["benefit_type", "target_audience"]
+          type: "composite"
+        - fields: ["service_department"]
+          type: "hash"
+    
+    search_config:
+      default_top_k: 6
+      similarity_threshold: 0.75
+      rerank_enabled: true
+      citizen_intent_optimization: true  # 市民意图优化
+      accessibility_enhanced: true       # 可访问性增强
+
+# 向量数据库特定配置
+backend_specific_configs:
+  # Milvus配置
+  milvus:
+    policy_document:
+      collection_name: "policy_documents"
+      partition_config:
+        enabled: true
+        partition_key: "agency"
+        auto_partition: true
+      sharding_config:
+        shard_num: 2
+        replicas: 1
+    
+    legal_document:
+      collection_name: "legal_documents"
+      partition_config:
+        enabled: true
+        partition_key: "legal_area"
+        auto_partition: true
+      sharding_config:
+        shard_num: 1
+        replicas: 1
+    
+    general_document:
+      collection_name: "general_documents"
+      partition_config:
+        enabled: false
+      sharding_config:
+        shard_num: 1
+        replicas: 1
+    
+    qa_knowledge:
+      collection_name: "qa_knowledge"
+      partition_config:
+        enabled: true
+        partition_key: "category"
+        auto_partition: true
+      sharding_config:
+        shard_num: 2
+        replicas: 1
+    
+    enterprise_knowledge:
+      collection_name: "enterprise_knowledge"
+      partition_config:
+        enabled: true
+        partition_key: "department"
+        auto_partition: true
+      sharding_config:
+        shard_num: 3
+        replicas: 1
+    
+    education_training:
+      collection_name: "education_training"
+      partition_config:
+        enabled: true
+        partition_key: "course_name"
+        auto_partition: true
+      sharding_config:
+        shard_num: 2
+        replicas: 1
+    
+    customer_service:
+      collection_name: "customer_service"
+      partition_config:
+        enabled: true
+        partition_key: "question_type"
+        auto_partition: true
+      sharding_config:
+        shard_num: 2
+        replicas: 1
+    
+    product_manual:
+      collection_name: "product_manuals"
+      partition_config:
+        enabled: true
+        partition_key: "product_name"
+        auto_partition: true
+      sharding_config:
+        shard_num: 1
+        replicas: 1
+    
+    government_service:
+      collection_name: "government_services"
+      partition_config:
+        enabled: true
+        partition_key: "service_level"
+        auto_partition: true
+      sharding_config:
+        shard_num: 2
+        replicas: 1
+    
+    real_estate_registration:
+      collection_name: "real_estate_registrations"
+      partition_config:
+        enabled: true
+        partition_key: "registration_type"
+        auto_partition: true
+      sharding_config:
+        shard_num: 2
+        replicas: 1
+    
+    social_security:
+      collection_name: "social_security_services"
+      partition_config:
+        enabled: true
+        partition_key: "benefit_type"
+        auto_partition: true
+      sharding_config:
+        shard_num: 1
+        replicas: 1
+
+  # PostgreSQL+pgvector配置
+  pgvector:
+    policy_document:
+      table_name: "policy_document_vectors"
+      index_type: "ivfflat"
+      index_parameters:
+        lists: 100
+      partitioning:
+        enabled: true
+        partition_key: "agency"
+        partition_type: "hash"
+    
+    legal_document:
+      table_name: "legal_document_vectors"
+      index_type: "hnsw"
+      index_parameters:
+        m: 16
+        ef_construction: 64
+    
+    general_document:
+      table_name: "general_document_vectors"
+      index_type: "ivfflat"
+      index_parameters:
+        lists: 100
+      partitioning:
+        enabled: false
+    
+    qa_knowledge:
+      table_name: "qa_knowledge_vectors"
+      index_type: "hnsw"
+      index_parameters:
+        m: 32
+        ef_construction: 200
+      partitioning:
+        enabled: true
+        partition_key: "category"
+        partition_type: "hash"
+    
+    enterprise_knowledge:
+      table_name: "enterprise_knowledge_vectors"
+      index_type: "ivfflat"
+      index_parameters:
+        lists: 150
+      partitioning:
+        enabled: true
+        partition_key: "department"
+        partition_type: "hash"
+    
+    education_training:
+      table_name: "education_training_vectors"
+      index_type: "ivfflat"
+      index_parameters:
+        lists: 100
+      partitioning:
+        enabled: true
+        partition_key: "course_name"
+        partition_type: "hash"
+    
+    customer_service:
+      table_name: "customer_service_vectors"
+      index_type: "hnsw"
+      index_parameters:
+        m: 32
+        ef_construction: 300
+      partitioning:
+        enabled: true
+        partition_key: "question_type"
+        partition_type: "hash"
+    
+    product_manual:
+      table_name: "product_manual_vectors"
+      index_type: "ivfflat"
+      index_parameters:
+        lists: 100
+      partitioning:
+        enabled: true
+        partition_key: "product_name"
+        partition_type: "hash"
+    
+    government_service:
+      table_name: "government_service_vectors"
+      index_type: "hnsw"
+      index_parameters:
+        m: 16
+        ef_construction: 200
+      partitioning:
+        enabled: true
+        partition_key: "service_level"
+        partition_type: "hash"
+    
+    real_estate_registration:
+      table_name: "real_estate_registration_vectors"
+      index_type: "hnsw"
+      index_parameters:
+        m: 20
+        ef_construction: 300
+      partitioning:
+        enabled: true
+        partition_key: "registration_type"
+        partition_type: "hash"
+    
+    social_security:
+      table_name: "social_security_vectors"
+      index_type: "ivfflat"
+      index_parameters:
+        lists: 100
+      partitioning:
+        enabled: true
+        partition_key: "benefit_type"
+        partition_type: "hash"
+
+  # Elasticsearch配置
+  elasticsearch:
+    policy_document:
+      index_name: "policy_documents"
+      settings:
+        number_of_shards: 3
+        number_of_replicas: 1
+        refresh_interval: "5s"
+      analysis:
+        analyzer:
+          policy_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase", "stop"]
+    
+    legal_document:
+      index_name: "legal_documents"
+      settings:
+        number_of_shards: 2
+        number_of_replicas: 1
+        refresh_interval: "10s"
+    
+    general_document:
+      index_name: "general_documents"
+      settings:
+        number_of_shards: 1
+        number_of_replicas: 0
+        refresh_interval: "5s"
+      analysis:
+        analyzer:
+          general_analyzer:
+            type: "custom"
+            tokenizer: "standard"
+            filter: ["lowercase", "stop"]
+    
+    qa_knowledge:
+      index_name: "qa_knowledge"
+      settings:
+        number_of_shards: 2
+        number_of_replicas: 1
+        refresh_interval: "5s"
+      analysis:
+        analyzer:
+          qa_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase"]
+    
+    enterprise_knowledge:
+      index_name: "enterprise_knowledge"
+      settings:
+        number_of_shards: 3
+        number_of_replicas: 1
+        refresh_interval: "10s"
+      analysis:
+        analyzer:
+          enterprise_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase", "stop"]
+    
+    education_training:
+      index_name: "education_training"
+      settings:
+        number_of_shards: 2
+        number_of_replicas: 1
+        refresh_interval: "5s"
+      analysis:
+        analyzer:
+          education_analyzer:
+            type: "custom"
+            tokenizer: "standard"
+            filter: ["lowercase", "stop"]
+    
+    customer_service:
+      index_name: "customer_service"
+      settings:
+        number_of_shards: 2
+        number_of_replicas: 1
+        refresh_interval: "1s"
+      analysis:
+        analyzer:
+          customer_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase"]
+    
+    product_manual:
+      index_name: "product_manuals"
+      settings:
+        number_of_shards: 1
+        number_of_replicas: 1
+        refresh_interval: "10s"
+      analysis:
+        analyzer:
+          manual_analyzer:
+            type: "custom"
+            tokenizer: "standard"
+            filter: ["lowercase", "stop"]
+    
+    government_service:
+      index_name: "government_services"
+      settings:
+        number_of_shards: 2
+        number_of_replicas: 1
+        refresh_interval: "5s"
+      analysis:
+        analyzer:
+          government_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase"]
+    
+    real_estate_registration:
+      index_name: "real_estate_registrations"
+      settings:
+        number_of_shards: 2
+        number_of_replicas: 1
+        refresh_interval: "10s"
+      analysis:
+        analyzer:
+          legal_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase", "stop"]
+    
+    social_security:
+      index_name: "social_security_services"
+      settings:
+        number_of_shards: 1
+        number_of_replicas: 1
+        refresh_interval: "5s"
+      analysis:
+        analyzer:
+          citizen_analyzer:
+            type: "custom"
+            tokenizer: "ik_smart"
+            filter: ["lowercase"]
+
+# 性能优化配置
+performance_configs:
+  # 批处理配置
+  batch_processing:
+    policy_document:
+      batch_size: 100
+      parallel_workers: 4
+      memory_limit_mb: 1024
+    
+    legal_document:
+      batch_size: 50
+      parallel_workers: 2
+      memory_limit_mb: 2048
+    
+    medical_document:
+      batch_size: 200
+      parallel_workers: 8
+      memory_limit_mb: 512
+  
+  # 搜索优化配置
+  search_optimization:
+    cache_enabled: true
+    cache_ttl_seconds: 300
+    result_cache_size: 1000
+    query_timeout_seconds: 30
+
+# 安全配置
+security_configs:
+  # 数据脱敏配置
+  data_masking:
+    medical_document:
+      enabled: true
+      fields_to_mask: ["patient_id"]
+      masking_strategy: "hash"
+    
+    legal_document:
+      enabled: true
+      fields_to_mask: ["parties"]
+      masking_strategy: "partial"
+  
+  # 访问控制配置
+  access_control:
+    policy_document:
+      public_access: true
+      requires_authentication: false
+    
+    medical_document:
+      public_access: false
+      requires_authentication: true
+      role_based_access: true
+
+# 监控配置
+monitoring_configs:
+  metrics:
+    - name: "vector_search_latency"
+      type: "histogram"
+      description: "向量搜索延迟"
+    - name: "vector_index_size"
+      type: "gauge"
+      description: "向量索引大小"
+    - name: "search_accuracy"
+      type: "gauge"
+      description: "搜索准确率"
+  
+  alerting:
+    - name: "high_search_latency"
+      condition: "vector_search_latency > 1000ms"
+      action: "send_notification"
+    - name: "low_search_accuracy"
+      condition: "search_accuracy < 0.8"
+      action: "trigger_reindex" 

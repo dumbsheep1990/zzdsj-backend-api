@@ -144,7 +144,8 @@ def get_tool_schema(name: str) -> Optional[Dict[str, Any]]:
             "description": tool_data["description"],
             "parameters": {
                 "type": "object",
-                "properties": {}
+                "properties": {},
+                "required": []
             }
         }
         
@@ -154,37 +155,11 @@ def get_tool_schema(name: str) -> Optional[Dict[str, Any]]:
             if param_name == "self":
                 continue
                 
-            param_schema = {"type": "string"}  # 默认类型
+            param_schema = _parse_parameter_type(param)
             
-            # 如果有类型注解，尝试解析类型
-            if param.annotation != inspect.Parameter.empty:
-                if hasattr(param.annotation, "__origin__") and param.annotation.__origin__ is list:
-                    param_schema = {"type": "array"}
-                    if hasattr(param.annotation, "__args__"):
-                        item_type = param.annotation.__args__[0]
-                        if item_type == str:
-                            param_schema["items"] = {"type": "string"}
-                        elif item_type == int:
-                            param_schema["items"] = {"type": "integer"}
-                        elif item_type == float:
-                            param_schema["items"] = {"type": "number"}
-                        elif item_type == bool:
-                            param_schema["items"] = {"type": "boolean"}
-                elif param.annotation == str:
-                    param_schema = {"type": "string"}
-                elif param.annotation == int:
-                    param_schema = {"type": "integer"}
-                elif param.annotation == float:
-                    param_schema = {"type": "number"}
-                elif param.annotation == bool:
-                    param_schema = {"type": "boolean"}
-                elif issubclass(param.annotation, BaseModel):
-                    # 处理Pydantic模型参数
-                    param_schema = {"type": "object"}
-            
-            # 如果有默认值
-            if param.default != inspect.Parameter.empty:
-                param_schema["default"] = param.default
+            # 如果参数没有默认值，标记为必需
+            if param.default == inspect.Parameter.empty:
+                schema["parameters"]["required"].append(param_name)
             
             schema["parameters"]["properties"][param_name] = param_schema
         
@@ -193,3 +168,94 @@ def get_tool_schema(name: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"生成工具\"{name}\"的Schema时出错: {str(e)}")
         return None
+
+def _parse_parameter_type(param: inspect.Parameter) -> Dict[str, Any]:
+    """
+    解析参数类型，生成对应的JSON Schema
+    
+    参数:
+        param: 函数参数
+        
+    返回:
+        参数的JSON Schema
+    """
+    param_schema = {"type": "string"}  # 默认类型
+    
+    # 如果有类型注解，尝试解析类型
+    if param.annotation != inspect.Parameter.empty:
+        annotation = param.annotation
+        
+        # 处理泛型类型
+        if hasattr(annotation, "__origin__"):
+            origin = annotation.__origin__
+            args = getattr(annotation, "__args__", ())
+            
+            if origin is list or origin is List:
+                param_schema = {"type": "array"}
+                if args:
+                    item_type = args[0]
+                    param_schema["items"] = _get_type_schema(item_type)
+            elif origin is dict or origin is Dict:
+                param_schema = {"type": "object"}
+                if len(args) >= 2:
+                    # 如果值类型已知，添加值类型信息
+                    value_type = args[1]
+                    param_schema["additionalProperties"] = _get_type_schema(value_type)
+            elif origin is Union:
+                # 处理Union类型（如Optional）
+                non_none_types = [arg for arg in args if arg is not type(None)]
+                if len(non_none_types) == 1:
+                    # Optional[T] 等价于 Union[T, None]
+                    param_schema = _get_type_schema(non_none_types[0])
+                else:
+                    # 多种类型的Union，使用anyOf
+                    param_schema = {
+                        "anyOf": [_get_type_schema(arg) for arg in non_none_types]
+                    }
+        else:
+            param_schema = _get_type_schema(annotation)
+    
+    # 如果有默认值，添加到schema中
+    if param.default != inspect.Parameter.empty:
+        if param.default is not None:
+            param_schema["default"] = param.default
+    
+    return param_schema
+
+def _get_type_schema(type_annotation: Any) -> Dict[str, Any]:
+    """
+    根据类型注解生成JSON Schema
+    
+    参数:
+        type_annotation: 类型注解
+        
+    返回:
+        对应的JSON Schema
+    """
+    if type_annotation == str:
+        return {"type": "string"}
+    elif type_annotation == int:
+        return {"type": "integer"}
+    elif type_annotation == float:
+        return {"type": "number"}
+    elif type_annotation == bool:
+        return {"type": "boolean"}
+    elif type_annotation == list:
+        return {"type": "array"}
+    elif type_annotation == dict:
+        return {"type": "object"}
+    elif type_annotation is type(None):
+        return {"type": "null"}
+    elif hasattr(type_annotation, "__bases__") and BaseModel in type_annotation.__bases__:
+        # 处理Pydantic模型
+        try:
+            # 如果是Pydantic模型，尝试获取其schema
+            if hasattr(type_annotation, "model_json_schema"):
+                return type_annotation.model_json_schema()
+            else:
+                return {"type": "object"}
+        except Exception:
+            return {"type": "object"}
+    else:
+        # 未知类型，默认为字符串
+        return {"type": "string"}

@@ -4,7 +4,7 @@
 """
 
 from abc import abstractmethod
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List, Union, AsyncIterator
 from .base import BaseMCPClient, ClientCapability
 
 class ChatMCPClient(BaseMCPClient):
@@ -76,6 +76,3 @@ class ChatMCPClient(BaseMCPClient):
             模型信息列表
         """
         pass
-
-# 用于类型注解
-from typing import AsyncIterator

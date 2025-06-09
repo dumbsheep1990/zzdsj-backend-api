@@ -9,10 +9,21 @@ import json
 import yaml
 import asyncio
 import logging
+
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, field
 from datetime import datetime
+import threading
+import hashlib
+import shutil
+from pathlib import Path
+from typing import Dict, Any, Optional, List, Union, Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +36,29 @@ class ConfigValidationResult:
     warnings: List[str] = field(default_factory=list)
     missing_required: List[str] = field(default_factory=list)
     validation_timestamp: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class ConfigVersion:
+    """配置版本信息"""
+    version: str
+    timestamp: datetime
+    environment: str
+    config_hash: str
+    change_summary: str
+    author: str = "system"
+    backup_path: Optional[str] = None
+
+
+@dataclass
+class ConfigChange:
+    """配置变更记录"""
+    key: str
+    old_value: Any
+    new_value: Any
+    change_type: str  # added, modified, removed
+    timestamp: datetime = field(default_factory=datetime.now)
+
 
 
 class ConfigurationError(Exception):
@@ -512,6 +546,270 @@ class AdvancedConfigManager:
     """高级配置管理器"""
     
     def __init__(self, environment: str = None, project_root: Path = None):
+        self.environment = environment or os.getenv("APP_ENV", "development")
+        self.project_root = project_root or Path(__file__).parent.parent.parent.parent
+        
+        # 初始化组件
+        self.minimal_config = MinimalConfigSet()
+        self.validator = ConfigValidator()
+
+class ConfigFileWatcher(FileSystemEventHandler):
+    """配置文件监控器"""
+    
+    def __init__(self, config_manager, reload_callback: Callable = None):
+        super().__init__()
+        self.config_manager = config_manager
+        self.reload_callback = reload_callback
+        self.last_reload = time.time()
+        self.reload_cooldown = 2  # 2秒冷却期防止频繁重载
+    
+    def on_modified(self, event):
+        """文件修改事件处理"""
+        if event.is_directory:
+            return
+        
+        # 检查是否为配置文件
+        if self._is_config_file(event.src_path):
+            current_time = time.time()
+            if current_time - self.last_reload > self.reload_cooldown:
+                logger.info(f"检测到配置文件变更: {event.src_path}")
+                self._trigger_reload()
+                self.last_reload = current_time
+    
+    def _is_config_file(self, file_path: str) -> bool:
+        """判断是否为配置文件"""
+        config_extensions = ['.env', '.yaml', '.yml', '.json', '.toml']
+        config_files = ['config.yaml', 'config.yml', 'config.json', '.env', '.env.local']
+        
+        file_path = Path(file_path)
+        return (
+            file_path.suffix.lower() in config_extensions or
+            file_path.name in config_files or
+            'config' in file_path.name.lower()
+        )
+    
+    def _trigger_reload(self):
+        """触发配置重载"""
+        try:
+            old_config = self.config_manager.config_cache.copy()
+            new_config = self.config_manager.refresh_configuration()
+            
+            # 检测配置变更
+            changes = self._detect_changes(old_config, new_config)
+            if changes:
+                logger.info(f"配置热重载完成，检测到 {len(changes)} 个变更")
+                
+                # 执行回调
+                if self.reload_callback:
+                    self.reload_callback(changes, new_config)
+            else:
+                logger.debug("配置文件已更新，但内容无变化")
+                
+        except Exception as e:
+            logger.error(f"配置热重载失败: {str(e)}")
+    
+    def _detect_changes(self, old_config: Dict[str, Any], new_config: Dict[str, Any]) -> List[ConfigChange]:
+        """检测配置变更"""
+        changes = []
+        
+        # 检查新增和修改
+        for key, new_value in new_config.items():
+            if key not in old_config:
+                changes.append(ConfigChange(key, None, new_value, "added"))
+            elif old_config[key] != new_value:
+                changes.append(ConfigChange(key, old_config[key], new_value, "modified"))
+        
+        # 检查删除
+        for key in old_config:
+            if key not in new_config:
+                changes.append(ConfigChange(key, old_config[key], None, "removed"))
+        
+        return changes
+
+
+class ConfigVersionManager:
+    """配置版本管理器"""
+    
+    def __init__(self, backup_dir: Path):
+        self.backup_dir = backup_dir
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
+        self.versions_file = self.backup_dir / "versions.json"
+        self.versions: List[ConfigVersion] = self._load_versions()
+    
+    def create_version(self, config: Dict[str, Any], environment: str, 
+                      change_summary: str = "Auto backup", author: str = "system") -> ConfigVersion:
+        """创建配置版本"""
+        config_hash = self._calculate_config_hash(config)
+        version_id = f"v{len(self.versions) + 1}_{int(time.time())}"
+        timestamp = datetime.now()
+        
+        # 创建备份文件
+        backup_filename = f"{version_id}_{environment}_{timestamp.strftime('%Y%m%d_%H%M%S')}.json"
+        backup_path = self.backup_dir / backup_filename
+        
+        with open(backup_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2, default=str)
+        
+        # 创建版本记录
+        version = ConfigVersion(
+            version=version_id,
+            timestamp=timestamp,
+            environment=environment,
+            config_hash=config_hash,
+            change_summary=change_summary,
+            author=author,
+            backup_path=str(backup_path)
+        )
+        
+        self.versions.append(version)
+        self._save_versions()
+        
+        # 清理旧版本（保留最近20个版本）
+        self._cleanup_old_versions()
+        
+        logger.info(f"配置版本创建完成: {version_id}")
+        return version
+    
+    def restore_version(self, version_id: str) -> Optional[Dict[str, Any]]:
+        """恢复指定版本的配置"""
+        version = self._find_version(version_id)
+        if not version or not version.backup_path:
+            logger.error(f"版本 {version_id} 不存在或备份文件丢失")
+            return None
+        
+        try:
+            with open(version.backup_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            logger.info(f"配置版本恢复成功: {version_id}")
+            return config
+            
+        except Exception as e:
+            logger.error(f"恢复版本 {version_id} 失败: {str(e)}")
+            return None
+    
+    def list_versions(self, environment: str = None, limit: int = 10) -> List[ConfigVersion]:
+        """列出配置版本"""
+        versions = self.versions
+        
+        if environment:
+            versions = [v for v in versions if v.environment == environment]
+        
+        # 按时间倒序排列
+        versions.sort(key=lambda v: v.timestamp, reverse=True)
+        
+        return versions[:limit]
+    
+    def get_version_diff(self, version1_id: str, version2_id: str) -> Optional[List[ConfigChange]]:
+        """获取两个版本之间的差异"""
+        config1 = self.restore_version(version1_id)
+        config2 = self.restore_version(version2_id)
+        
+        if not config1 or not config2:
+            return None
+        
+        changes = []
+        
+        # 检查变更
+        all_keys = set(config1.keys()) | set(config2.keys())
+        for key in all_keys:
+            if key not in config1:
+                changes.append(ConfigChange(key, None, config2[key], "added"))
+            elif key not in config2:
+                changes.append(ConfigChange(key, config1[key], None, "removed"))
+            elif config1[key] != config2[key]:
+                changes.append(ConfigChange(key, config1[key], config2[key], "modified"))
+        
+        return changes
+    
+    def _calculate_config_hash(self, config: Dict[str, Any]) -> str:
+        """计算配置哈希值"""
+        config_str = json.dumps(config, sort_keys=True, default=str)
+        return hashlib.md5(config_str.encode()).hexdigest()
+    
+    def _find_version(self, version_id: str) -> Optional[ConfigVersion]:
+        """查找指定版本"""
+        for version in self.versions:
+            if version.version == version_id:
+                return version
+        return None
+    
+    def _load_versions(self) -> List[ConfigVersion]:
+        """加载版本记录"""
+        if not self.versions_file.exists():
+            return []
+        
+        try:
+            with open(self.versions_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            versions = []
+            for item in data:
+                versions.append(ConfigVersion(
+                    version=item['version'],
+                    timestamp=datetime.fromisoformat(item['timestamp']),
+                    environment=item['environment'],
+                    config_hash=item['config_hash'],
+                    change_summary=item['change_summary'],
+                    author=item.get('author', 'system'),
+                    backup_path=item.get('backup_path')
+                ))
+            
+            return versions
+            
+        except Exception as e:
+            logger.error(f"加载版本记录失败: {str(e)}")
+            return []
+    
+    def _save_versions(self):
+        """保存版本记录"""
+        try:
+            data = []
+            for version in self.versions:
+                data.append({
+                    'version': version.version,
+                    'timestamp': version.timestamp.isoformat(),
+                    'environment': version.environment,
+                    'config_hash': version.config_hash,
+                    'change_summary': version.change_summary,
+                    'author': version.author,
+                    'backup_path': version.backup_path
+                })
+            
+            with open(self.versions_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+                
+        except Exception as e:
+            logger.error(f"保存版本记录失败: {str(e)}")
+    
+    def _cleanup_old_versions(self, keep_count: int = 20):
+        """清理旧版本"""
+        if len(self.versions) <= keep_count:
+            return
+        
+        # 按时间排序，删除最老的版本
+        self.versions.sort(key=lambda v: v.timestamp, reverse=True)
+        
+        versions_to_remove = self.versions[keep_count:]
+        for version in versions_to_remove:
+            # 删除备份文件
+            if version.backup_path and Path(version.backup_path).exists():
+                try:
+                    Path(version.backup_path).unlink()
+                    logger.debug(f"删除旧版本备份: {version.backup_path}")
+                except Exception as e:
+                    logger.warning(f"删除备份文件失败: {str(e)}")
+        
+        # 保留最新的版本
+        self.versions = self.versions[:keep_count]
+        self._save_versions()
+
+
+class AdvancedConfigManager:
+    """高级配置管理器"""
+    
+    def __init__(self, environment: str = None, project_root: Path = None, 
+                 enable_hot_reload: bool = True, enable_versioning: bool = True):
         """初始化配置管理器"""
         self.environment = environment or os.getenv("APP_ENV", "development")
         self.project_root = project_root or Path(__file__).parent.parent.parent.parent
@@ -526,7 +824,26 @@ class AdvancedConfigManager:
         # 配置提供者
         self.providers = self._setup_providers()
         
-        logger.info(f"高级配置管理器初始化完成 - 环境: {self.environment}")
+        # 热重载功能
+        self.enable_hot_reload = enable_hot_reload
+        self.file_watcher: Optional[ConfigFileWatcher] = None
+        self.observer: Optional[Observer] = None
+        self.reload_callbacks: List[Callable] = []
+        
+        # 版本管理功能
+        self.enable_versioning = enable_versioning
+        self.version_manager: Optional[ConfigVersionManager] = None
+        if enable_versioning:
+            backup_dir = self.project_root / "config" / "backups"
+            self.version_manager = ConfigVersionManager(backup_dir)
+        
+        # 启动热重载
+        if enable_hot_reload:
+            self._start_hot_reload()
+        
+        logger.info(f"高级配置管理器初始化完成 - 环境: {self.environment}, "
+                   f"热重载: {enable_hot_reload}, 版本管理: {enable_versioning}")
+
     
     def _setup_providers(self) -> List[ConfigProvider]:
         """设置配置提供者"""
@@ -691,17 +1008,210 @@ class AdvancedConfigManager:
         
         return masked_config
 
+    
+    # ==================== 热重载功能 ====================
+    
+    def _start_hot_reload(self):
+        """启动配置文件热重载监控"""
+        try:
+            self.file_watcher = ConfigFileWatcher(self, self._on_config_reload)
+            self.observer = Observer()
+            
+            # 监控项目根目录下的配置文件
+            watch_dirs = [
+                self.project_root,
+                self.project_root / "config",
+                self.project_root / "app" / "config"
+            ]
+            
+            for watch_dir in watch_dirs:
+                if watch_dir.exists():
+                    self.observer.schedule(self.file_watcher, str(watch_dir), recursive=False)
+                    logger.debug(f"添加配置文件监控目录: {watch_dir}")
+            
+            self.observer.start()
+            logger.info("配置文件热重载监控已启动")
+            
+        except Exception as e:
+            logger.error(f"启动配置文件热重载失败: {str(e)}")
+            self.enable_hot_reload = False
+    
+    def stop_hot_reload(self):
+        """停止配置文件热重载监控"""
+        if self.observer:
+            self.observer.stop()
+            self.observer.join()
+            logger.info("配置文件热重载监控已停止")
+    
+    def add_reload_callback(self, callback: Callable[[List[ConfigChange], Dict[str, Any]], None]):
+        """添加配置重载回调函数"""
+        self.reload_callbacks.append(callback)
+    
+    def remove_reload_callback(self, callback: Callable):
+        """移除配置重载回调函数"""
+        if callback in self.reload_callbacks:
+            self.reload_callbacks.remove(callback)
+    
+    def _on_config_reload(self, changes: List[ConfigChange], new_config: Dict[str, Any]):
+        """配置重载事件处理"""
+        # 创建版本备份
+        if self.enable_versioning and self.version_manager:
+            change_summary = f"热重载检测到{len(changes)}个配置变更"
+            self.version_manager.create_version(
+                new_config, 
+                self.environment, 
+                change_summary,
+                "hot_reload"
+            )
+        
+        # 执行用户回调
+        for callback in self.reload_callbacks:
+            try:
+                callback(changes, new_config)
+            except Exception as e:
+                logger.error(f"执行配置重载回调失败: {str(e)}")
+    
+    # ==================== 版本管理功能 ====================
+    
+    def create_config_backup(self, change_summary: str = "Manual backup", 
+                           author: str = "manual") -> Optional[ConfigVersion]:
+        """手动创建配置备份"""
+        if not self.enable_versioning or not self.version_manager:
+            logger.warning("版本管理功能未启用")
+            return None
+        
+        config = self.load_configuration()
+        return self.version_manager.create_version(config, self.environment, change_summary, author)
+    
+    def restore_config_version(self, version_id: str, apply_immediately: bool = True) -> bool:
+        """恢复配置版本"""
+        if not self.enable_versioning or not self.version_manager:
+            logger.warning("版本管理功能未启用")
+            return False
+        
+        restored_config = self.version_manager.restore_version(version_id)
+        if not restored_config:
+            return False
+        
+        if apply_immediately:
+            # 清空缓存，下次加载时使用恢复的配置
+            self.config_cache = restored_config
+            self.cache_timestamp = datetime.now()
+            
+            # 创建恢复版本的备份记录
+            self.version_manager.create_version(
+                restored_config,
+                self.environment,
+                f"恢复版本: {version_id}",
+                "version_restore"
+            )
+        
+        return True
+    
+    def list_config_versions(self, limit: int = 10) -> List[ConfigVersion]:
+        """列出配置版本历史"""
+        if not self.enable_versioning or not self.version_manager:
+            return []
+        
+        return self.version_manager.list_versions(self.environment, limit)
+    
+    def get_config_diff(self, version1_id: str, version2_id: str = None) -> Optional[List[ConfigChange]]:
+        """获取配置版本差异"""
+        if not self.enable_versioning or not self.version_manager:
+            return None
+        
+        if version2_id is None:
+            # 与当前配置比较
+            current_config = self.load_configuration()
+            version1_config = self.version_manager.restore_version(version1_id)
+            
+            if not version1_config:
+                return None
+            
+            changes = []
+            all_keys = set(current_config.keys()) | set(version1_config.keys())
+            
+            for key in all_keys:
+                if key not in version1_config:
+                    changes.append(ConfigChange(key, None, current_config[key], "added"))
+                elif key not in current_config:
+                    changes.append(ConfigChange(key, version1_config[key], None, "removed"))
+                elif version1_config[key] != current_config[key]:
+                    changes.append(ConfigChange(key, version1_config[key], current_config[key], "modified"))
+            
+            return changes
+        else:
+            # 比较两个版本
+            return self.version_manager.get_version_diff(version1_id, version2_id)
+    
+    def export_config_with_version(self, file_path: str, format: str = "json", 
+                                 include_sensitive: bool = False, create_version: bool = True) -> bool:
+        """导出配置并创建版本记录"""
+        # 导出配置
+        success = self.export_configuration(file_path, format, include_sensitive)
+        
+        # 创建版本记录
+        if success and create_version and self.enable_versioning:
+            self.create_config_backup(f"配置导出到 {file_path}", "export")
+        
+        return success
+    
+    # ==================== 增强功能 ====================
+    
+    def get_config_health_status(self) -> Dict[str, Any]:
+        """获取配置健康状态"""
+        config = self.load_configuration()
+        validation_result = self.validate_configuration(config)
+        
+        health_status = {
+            "overall_health": "healthy" if validation_result.is_valid else "unhealthy",
+            "validation_result": validation_result,
+            "cache_status": {
+                "cached": bool(self.config_cache),
+                "cache_age_seconds": (datetime.now() - self.cache_timestamp).total_seconds() if self.cache_timestamp else None,
+                "cache_valid": self._is_cache_valid()
+            },
+            "hot_reload_status": {
+                "enabled": self.enable_hot_reload,
+                "active": self.observer.is_alive() if self.observer else False,
+                "callbacks_count": len(self.reload_callbacks)
+            },
+            "versioning_status": {
+                "enabled": self.enable_versioning,
+                "version_count": len(self.version_manager.versions) if self.version_manager else 0,
+                "latest_version": self.version_manager.versions[-1].version if self.version_manager and self.version_manager.versions else None
+            }
+        }
+        
+        return health_status
+    
+    def __del__(self):
+        """析构函数，确保资源清理"""
+        try:
+            if self.observer and self.observer.is_alive():
+                self.stop_hot_reload()
+        except Exception as e:
+            logger.debug(f"配置管理器资源清理时出现异常: {str(e)}")
+
+
 
 # 全局配置管理器实例
 _global_config_manager: Optional[AdvancedConfigManager] = None
 
 
-def get_config_manager(environment: str = None) -> AdvancedConfigManager:
+
+def get_config_manager(environment: str = None, enable_hot_reload: bool = True, 
+                      enable_versioning: bool = True) -> AdvancedConfigManager:
+
     """获取全局配置管理器实例"""
     global _global_config_manager
     
     if _global_config_manager is None or (environment and _global_config_manager.environment != environment):
-        _global_config_manager = AdvancedConfigManager(environment)
+        _global_config_manager = AdvancedConfigManager(
+            environment, 
+            enable_hot_reload=enable_hot_reload,
+            enable_versioning=enable_versioning
+        )
     
     return _global_config_manager
 
@@ -722,3 +1232,41 @@ def switch_to_environment(environment: str) -> Dict[str, Any]:
     """切换到指定环境"""
     manager = get_config_manager()
     return manager.switch_environment(environment) 
+
+
+
+def create_config_backup(change_summary: str = "Manual backup") -> Optional[ConfigVersion]:
+    """创建配置备份"""
+    manager = get_config_manager()
+    return manager.create_config_backup(change_summary)
+
+
+def restore_config_version(version_id: str) -> bool:
+    """恢复配置版本"""
+    manager = get_config_manager()
+    return manager.restore_config_version(version_id)
+
+
+def list_config_versions(limit: int = 10) -> List[ConfigVersion]:
+    """列出配置版本"""
+    manager = get_config_manager()
+    return manager.list_config_versions(limit)
+
+
+def get_config_health() -> Dict[str, Any]:
+    """获取配置健康状态"""
+    manager = get_config_manager()
+    return manager.get_config_health_status()
+
+
+def add_config_reload_callback(callback: Callable[[List[ConfigChange], Dict[str, Any]], None]):
+    """添加配置重载回调"""
+    manager = get_config_manager()
+    manager.add_reload_callback(callback)
+
+
+def remove_config_reload_callback(callback: Callable):
+    """移除配置重载回调"""
+    manager = get_config_manager()
+    manager.remove_reload_callback(callback) 
+

@@ -36,6 +36,9 @@ class Tool(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
+    # 关联关系 - 延迟导入避免循环引用
+    # configuration_schemas = relationship("ToolConfigurationSchema", back_populates="tool")
+    
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典表示
         

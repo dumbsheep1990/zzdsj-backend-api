@@ -6,45 +6,50 @@ from app.models.tool import Tool
 class ToolRepository:
     """工具仓库"""
     
-    async def create(self, data: Dict[str, Any], db: Session) -> Tool:
+    def __init__(self, db: Session):
+        """初始化工具仓库
+        
+        Args:
+            db: 数据库会话
+        """
+        self.db = db
+    
+    async def create(self, data: Dict[str, Any]) -> Tool:
         """创建工具
         
         Args:
             data: 创建数据
-            db: 数据库会话
             
         Returns:
             Tool: 创建的工具
         """
         tool = Tool(**data)
-        db.add(tool)
-        await db.commit()
-        await db.refresh(tool)
+        self.db.add(tool)
+        await self.db.commit()
+        await self.db.refresh(tool)
         return tool
     
-    async def get_by_id(self, tool_id: int, db: Session) -> Optional[Tool]:
+    async def get_by_id(self, tool_id: int) -> Optional[Tool]:
         """通过ID获取工具
         
         Args:
             tool_id: 工具ID
-            db: 数据库会话
             
         Returns:
             Optional[Tool]: 工具，不存在则返回None
         """
         query = select(Tool).where(Tool.id == tool_id)
-        result = await db.execute(query)
+        result = await self.db.execute(query)
         return result.scalars().first()
     
     async def get_all(
-        self, db: Session, skip: int = 0, limit: int = 100, 
+        self, skip: int = 0, limit: int = 100, 
         creator_id: Optional[int] = None, is_system: Optional[bool] = None,
         category: Optional[str] = None, tool_type: Optional[str] = None
     ) -> List[Tool]:
         """获取所有工具
         
         Args:
-            db: 数据库会话
             skip: 跳过数量
             limit: 限制数量
             creator_id: 创建者ID筛选
@@ -70,23 +75,74 @@ class ToolRepository:
         # 应用分页
         query = query.offset(skip).limit(limit)
         
-        result = await db.execute(query)
+        result = await self.db.execute(query)
+        return result.scalars().all()
+    
+    async def get_by_name(self, name: str) -> Optional[Tool]:
+        """通过名称获取工具
+        
+        Args:
+            name: 工具名称
+            
+        Returns:
+            Optional[Tool]: 工具，不存在则返回None
+        """
+        query = select(Tool).where(Tool.name == name)
+        result = await self.db.execute(query)
+        return result.scalars().first()
+    
+    async def list_with_filters(
+        self, filters: Dict[str, Any], skip: int = 0, limit: int = 100
+    ) -> List[Tool]:
+        """根据过滤条件获取工具列表
+        
+        Args:
+            filters: 过滤条件字典
+            skip: 跳过数量
+            limit: 限制数量
+            
+        Returns:
+            List[Tool]: 符合条件的工具列表
+        """
+        query = select(Tool)
+        
+        # 应用过滤条件
+        for key, value in filters.items():
+            if hasattr(Tool, key):
+                query = query.where(getattr(Tool, key) == value)
+        
+        # 应用分页
+        query = query.offset(skip).limit(limit)
+        
+        result = await self.db.execute(query)
+        return result.scalars().all()
+    
+    async def list_by_toolkit(self, toolkit_name: str) -> List[Tool]:
+        """通过工具包名称获取工具列表
+        
+        Args:
+            toolkit_name: 工具包名称
+            
+        Returns:
+            List[Tool]: 属于该工具包的工具列表
+        """
+        query = select(Tool).where(Tool.category == toolkit_name)
+        result = await self.db.execute(query)
         return result.scalars().all()
     
     async def update(
-        self, tool_id: int, data: Dict[str, Any], db: Session
+        self, tool_id: int, data: Dict[str, Any]
     ) -> Optional[Tool]:
         """更新工具
         
         Args:
             tool_id: 工具ID
             data: 更新数据
-            db: 数据库会话
             
         Returns:
             Optional[Tool]: 更新后的工具，不存在则返回None
         """
-        tool = await self.get_by_id(tool_id, db)
+        tool = await self.get_by_id(tool_id)
         if not tool:
             return None
             
@@ -94,36 +150,34 @@ class ToolRepository:
             if hasattr(tool, key):
                 setattr(tool, key, value)
                 
-        await db.commit()
-        await db.refresh(tool)
+        await self.db.commit()
+        await self.db.refresh(tool)
         return tool
     
-    async def delete(self, tool_id: int, db: Session) -> bool:
+    async def delete(self, tool_id: int) -> bool:
         """删除工具
         
         Args:
             tool_id: 工具ID
-            db: 数据库会话
             
         Returns:
             bool: 是否成功删除
         """
-        tool = await self.get_by_id(tool_id, db)
+        tool = await self.get_by_id(tool_id)
         if not tool:
             return False
             
-        await db.delete(tool)
-        await db.commit()
+        await self.db.delete(tool)
+        await self.db.commit()
         return True
     
     async def search_by_tags(
-        self, tags: List[str], db: Session, skip: int = 0, limit: int = 100
+        self, tags: List[str], skip: int = 0, limit: int = 100
     ) -> List[Tool]:
         """通过标签搜索工具
         
         Args:
             tags: 标签列表
-            db: 数据库会话
             skip: 跳过数量
             limit: 限制数量
             
@@ -136,5 +190,5 @@ class ToolRepository:
         # 应用分页
         query = query.offset(skip).limit(limit)
         
-        result = await db.execute(query)
+        result = await self.db.execute(query)
         return result.scalars().all()
