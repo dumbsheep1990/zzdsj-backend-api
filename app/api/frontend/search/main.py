@@ -2,6 +2,7 @@
 搜索管理 - 前端路由模块
 提供统一的混合检索接口，支持跨知识库搜索、多引擎搜索、自定义参数
 能够自动检测环境并适配最佳检索策略
+集成优化功能，支持高级搜索参数和性能监控
 """
 
 from typing import List, Dict, Any, Optional, Union
@@ -13,6 +14,8 @@ import time
 
 from app.services.hybrid_search_service import get_hybrid_search_service, SearchConfig
 from app.services.unified_knowledge_service import get_unified_knowledge_service
+# 导入优化搜索服务
+from app.services.knowledge.optimized_search_service import get_optimized_search_service
 from app.schemas.search import SearchRequest as SchemaSearchRequest, SearchResponse as SchemaSearchResponse, SearchResultItem, SearchStrategy
 from app.utils.storage_detector import StorageDetector
 from app.utils.core.database import get_db
@@ -37,6 +40,13 @@ class SearchRequest(BaseModel):
     filter_metadata: Optional[Dict[str, Any]] = Field(default=None, description="元数据过滤条件")
     include_content: bool = Field(default=True, description="是否包含文档内容")
     score_threshold: Optional[float] = Field(default=None, description="最低相似度阈值，低于此分数的结果将被过滤")
+    
+    # 优化功能参数
+    enable_optimization: bool = Field(default=False, description="启用搜索优化功能")
+    enable_caching: bool = Field(default=True, description="启用缓存")
+    enable_query_optimization: bool = Field(default=True, description="启用查询优化")
+    enable_smart_strategy: bool = Field(default=True, description="启用智能策略选择")
+    include_performance_stats: bool = Field(default=False, description="包含性能统计信息")
     
     @validator("vector_weight", "text_weight")
     def check_weights(cls, v):
@@ -72,6 +82,10 @@ class SearchResponse(BaseModel):
     search_config: Dict[str, Any]
     strategy_used: str
     engine_used: str
+    
+    # 优化功能字段
+    optimization_enabled: bool = Field(default=False, description="优化功能是否启用")
+    performance_stats: Optional[Dict[str, Any]] = Field(default=None, description="性能统计信息")
 
 @router.post("/", response_model=SearchResponse)
 async def search(
@@ -81,12 +95,20 @@ async def search(
     """
     混合搜索接口，支持跨知识库搜索、混合检索和参数自定义
     具备自动检测环境并选择最佳搜索策略的能力
+    支持优化功能，包括智能缓存、查询优化和性能监控
     """
     try:
         start_time = time.time()
         
-        # 获取服务实例
-        hybrid_search_service = get_hybrid_search_service()
+        # 根据是否启用优化选择服务
+        if request.enable_optimization:
+            search_service = get_optimized_search_service(db, enable_optimization=True)
+            service_type = "optimized"
+        else:
+            # 使用传统搜索服务
+            search_service = get_hybrid_search_service()
+            service_type = "traditional"
+        
         knowledge_service = get_unified_knowledge_service(db)
         
         # 检查知识库存在性
@@ -112,11 +134,12 @@ async def search(
             search_engine=request.search_engine, # 可能为"auto"，由服务决定实际策略
             hybrid_method=request.hybrid_method,
             es_filter=request.filter_metadata,
-            milvus_filter=None  # Milvus过滤表达式需要转换
+            milvus_filter=None,  # Milvus过滤表达式需要转换
+            threshold=request.score_threshold or 0.0
         )
         
         # 执行搜索
-        search_response = await hybrid_search_service.search(search_config)
+        search_response = await search_service.search(search_config)
         
         # 计算耗时
         end_time = time.time()
@@ -147,6 +170,15 @@ async def search(
                 metadata=result.get("metadata", {})
             ))
         
+        # 获取性能统计（如果启用优化且请求包含）
+        performance_stats = None
+        if request.enable_optimization and request.include_performance_stats:
+            if hasattr(search_service, 'get_optimization_status'):
+                try:
+                    performance_stats = await search_service.get_optimization_status()
+                except Exception as e:
+                    logger.warning(f"获取性能统计失败: {str(e)}")
+        
         # 构造响应数据
         response_data = SearchResponse(
             results=search_results,
@@ -159,10 +191,16 @@ async def search(
                 "search_engine": request.search_engine,
                 "hybrid_method": request.hybrid_method,
                 "knowledge_base_ids": request.knowledge_base_ids,
-                "filter_metadata": request.filter_metadata
+                "filter_metadata": request.filter_metadata,
+                "optimization_enabled": request.enable_optimization,
+                "caching_enabled": request.enable_caching,
+                "query_optimization_enabled": request.enable_query_optimization,
+                "smart_strategy_enabled": request.enable_smart_strategy
             },
             strategy_used=search_response.get("strategy_used", request.hybrid_method),
-            engine_used=search_response.get("engine_used", "unknown")
+            engine_used=search_response.get("engine_used", service_type),
+            optimization_enabled=request.enable_optimization,
+            performance_stats=performance_stats
         )
         
         # 格式化并返回响应
@@ -176,6 +214,46 @@ async def search(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"搜索失败: {str(e)}"
+        )
+
+@router.post("/optimized", response_model=SearchResponse)
+async def optimized_search(
+    request: SearchRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    专用优化搜索接口
+    强制启用所有优化功能，包括缓存、智能策略选择等
+    """
+    # 强制启用优化参数
+    request.enable_optimization = True
+    request.enable_caching = True
+    request.enable_query_optimization = True
+    request.enable_smart_strategy = True
+    request.include_performance_stats = True
+    
+    return await search(request, db)
+
+@router.get("/optimization/status", response_model=Dict[str, Any])
+async def get_optimization_status(db: Session = Depends(get_db)):
+    """获取优化系统状态"""
+    try:
+        search_service = get_optimized_search_service(db, enable_optimization=True)
+        
+        if hasattr(search_service, 'get_optimization_status'):
+            status_info = await search_service.get_optimization_status()
+        else:
+            status_info = {"optimization_available": False}
+        
+        return ResponseFormatter.format_success(
+            status_info,
+            message="获取优化状态成功"
+        )
+    except Exception as e:
+        logger.error(f"获取优化状态失败: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取优化状态失败: {str(e)}"
         )
 
 @router.get("/knowledge_bases", response_model=List[Dict[str, Any]])

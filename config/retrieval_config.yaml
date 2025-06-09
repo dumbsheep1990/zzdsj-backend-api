@@ -1,0 +1,241 @@
+# 检索系统优化配置文件
+# 此文件包含所有优化模块的配置参数
+
+# 向量搜索配置
+vector_search:
+  # 基础参数
+  top_k: 20                          # 返回结果数量 (1-100)
+  similarity_threshold: 0.75         # 相似度阈值 (0.0-1.0)
+  engine: "milvus"                   # 向量搜索引擎: milvus/elasticsearch/pgvector
+  index_type: "HNSW"                 # 索引类型: HNSW/IVF_FLAT/IVF_PQ
+  metric_type: "COSINE"              # 距离度量: COSINE/EUCLIDEAN/DOT_PRODUCT
+  timeout: 45                        # 搜索超时时间(秒)
+  
+  # 搜索参数 (引擎特定)
+  search_params:
+    nprobe: 10                       # IVF索引搜索参数
+    ef: 64                           # HNSW索引搜索参数
+    search_k: 100                    # 搜索候选数量
+
+# 关键词搜索配置
+keyword_search:
+  # 基础参数
+  top_k: 15                          # 返回结果数量 (1-100)
+  engine: "elasticsearch"            # 全文搜索引擎: elasticsearch
+  analyzer: "ik_smart"               # 分析器: standard/ik_smart/ik_max_word
+  timeout: 30                        # 搜索超时时间(秒)
+  
+  # 高级参数
+  fuzzy_enabled: true                # 启用模糊搜索
+  fuzzy_distance: 1                  # 模糊搜索距离 (0-3)
+  
+  # 字段权重提升
+  boost_fields:
+    title: 2.0                       # 标题字段权重
+    content: 1.0                     # 内容字段权重
+    keywords: 1.5                    # 关键词字段权重
+
+# 混合搜索配置
+hybrid_search:
+  # 权重配置 (总和必须为1.0)
+  vector_weight: 0.6                 # 向量搜索权重 (0.0-1.0)
+  keyword_weight: 0.4                # 关键词搜索权重 (0.0-1.0)
+  
+  # RRF (Reciprocal Rank Fusion) 参数
+  rrf_k: 60                          # RRF参数k值 (通常20-100)
+  
+  # 结果配置
+  top_k: 15                          # 最终返回结果数量
+  vector_top_k: 30                   # 向量搜索候选数量
+  keyword_top_k: 30                  # 关键词搜索候选数量
+  min_score: 0.3                     # 最小分数阈值 (0.0-1.0)
+
+# 缓存配置
+cache:
+  # 基础配置
+  enabled: true                      # 启用缓存
+  strategy: "hybrid"                 # 缓存策略: lru/lfu/ttl/hybrid
+  max_size: 5000                     # 最大缓存条目数
+  ttl_seconds: 1800                  # TTL时间(秒) - 30分钟
+  
+  # 高级配置
+  enable_compression: true           # 启用数据压缩
+  enable_serialization: true         # 启用序列化
+  
+  # Redis配置 (可选)
+  redis_enabled: false               # 启用Redis缓存
+  redis_url: "redis://localhost:6379/0"  # Redis连接URL
+  
+  # 缓存策略特定配置
+  lru_capacity: 3000                 # LRU缓存容量
+  lfu_capacity: 3000                 # LFU缓存容量
+  lfu_window_size: 10000             # LFU窗口大小
+  ttl_check_interval: 300            # TTL检查间隔(秒)
+  
+  # 混合策略配置
+  hybrid_lru_ratio: 0.6              # LRU部分占比
+  hybrid_ttl_ratio: 0.4              # TTL部分占比
+
+# 性能配置
+performance:
+  # 并发控制
+  max_concurrent_requests: 100       # 最大并发请求数
+  request_timeout: 120               # 请求超时时间(秒)
+  batch_size: 20                     # 批处理大小
+  
+  # 查询优化
+  enable_query_optimization: true    # 启用查询优化
+  query_optimization_level: "advanced"  # 优化级别: none/basic/advanced/aggressive
+  
+  # 结果处理
+  enable_result_deduplication: true  # 启用结果去重
+  
+  # 监控配置
+  monitoring_enabled: true           # 启用性能监控
+  metrics_collection_interval: 60    # 指标收集间隔(秒)
+
+# 系统配置
+system:
+  # 默认搜索类型
+  default_search_type: "hybrid"      # 默认搜索类型: vector/keyword/hybrid
+  
+  # 运行环境
+  environment: "production"          # 运行环境: development/staging/production
+  
+  # 调试配置
+  debug_enabled: false               # 启用调试模式
+  log_level: "INFO"                  # 日志级别: DEBUG/INFO/WARNING/ERROR
+  
+  # 健康检查
+  health_check_interval: 30          # 健康检查间隔(秒)
+  health_check_timeout: 10           # 健康检查超时(秒)
+
+# 数据同步配置
+data_sync:
+  # 基础配置
+  enabled: true                      # 启用数据同步
+  sync_interval: 300                 # 同步间隔(秒) - 5分钟
+  batch_size: 100                    # 同步批次大小
+  max_retries: 3                     # 最大重试次数
+  retry_delay: 5.0                   # 重试延迟(秒)
+  
+  # 同步策略
+  conflict_resolution: "latest_wins"  # 冲突解决策略: source_wins/target_wins/latest_wins/merge/manual
+  
+  # 增量同步
+  enable_incremental_sync: true      # 启用增量同步
+  change_detection_method: "hash"    # 变更检测方法: hash/timestamp/version
+  
+  # 同步目标
+  sync_targets:
+    postgresql_to_elasticsearch: true  # PostgreSQL -> Elasticsearch
+    postgresql_to_milvus: true         # PostgreSQL -> Milvus
+    cross_validation: true             # 交叉验证
+
+# 错误处理配置
+error_handling:
+  # 熔断器配置
+  circuit_breaker:
+    enabled: true                    # 启用熔断器
+    failure_threshold: 5             # 失败阈值
+    recovery_timeout: 60             # 恢复超时(秒)
+    success_threshold: 3             # 半开状态成功阈值
+    timeout: 30                      # 请求超时(秒)
+    monitor_window: 300              # 监控窗口(秒)
+  
+  # 重试配置
+  retry:
+    max_retries: 3                   # 最大重试次数
+    base_delay: 1.0                  # 基础延迟(秒)
+    max_delay: 60.0                  # 最大延迟(秒)
+    exponential_base: 2.0            # 指数退避基数
+    jitter: true                     # 启用抖动
+  
+  # 回退策略
+  fallback:
+    strategy: "graceful_degradation" # 回退策略: immediate/retry_then_fallback/graceful_degradation/fail_fast
+    enable_auto_fallback: true       # 启用自动回退
+    fallback_timeout: 10             # 回退超时(秒)
+
+# 策略选择配置
+strategy_selection:
+  # 引擎评估
+  assessment_interval: 300           # 引擎评估间隔(秒) - 5分钟
+  min_assessment_samples: 10         # 最小评估样本数
+  
+  # 阈值配置
+  degraded_threshold: 0.6            # 降级阈值
+  unavailable_threshold: 0.3         # 不可用阈值
+  
+  # 策略规则
+  strategy_rules:
+    vector_threshold: 0.7            # 向量搜索阈值
+    keyword_threshold: 0.7           # 关键词搜索阈值  
+    hybrid_threshold: 0.8            # 混合搜索阈值
+    fallback_on_failure: true       # 失败时回退
+
+# 监控和告警配置
+monitoring:
+  # 指标配置
+  metrics:
+    response_time_buckets: [10, 50, 100, 500, 1000, 5000]  # 响应时间桶(毫秒)
+    cache_hit_rate_alert_threshold: 0.7                    # 缓存命中率告警阈值
+    error_rate_alert_threshold: 0.05                       # 错误率告警阈值
+    
+  # 告警配置  
+  alerts:
+    enabled: true                    # 启用告警
+    email_notifications: false       # 邮件通知
+    webhook_url: ""                  # Webhook URL
+    alert_cooldown: 300              # 告警冷却时间(秒)
+  
+  # 数据保留
+  retention:
+    metrics_retention_days: 30       # 指标保留天数
+    logs_retention_days: 7           # 日志保留天数
+
+# 安全配置
+security:
+  # 访问控制
+  enable_access_control: true       # 启用访问控制
+  rate_limiting:
+    enabled: true                   # 启用频率限制
+    requests_per_minute: 100        # 每分钟请求数限制
+    burst_limit: 20                 # 突发限制
+  
+  # 数据保护
+  data_encryption:
+    enabled: false                  # 启用数据加密
+    encryption_key: ""              # 加密密钥
+  
+  # 审计日志
+  audit_logging:
+    enabled: true                   # 启用审计日志
+    log_sensitive_data: false       # 记录敏感数据
+
+# 扩展配置
+extensions:
+  # 自定义插件
+  plugins:
+    enabled: false                  # 启用插件系统
+    plugin_directory: "plugins/"    # 插件目录
+    
+  # 实验性功能
+  experimental:
+    enable_ml_strategy_selection: false    # 启用ML策略选择
+    enable_predictive_caching: false       # 启用预测性缓存
+    enable_auto_tuning: false              # 启用自动调优
+
+# 环境变量覆盖说明
+# 以下环境变量可以覆盖对应的配置项:
+# VECTOR_SEARCH_TOP_K -> vector_search.top_k
+# VECTOR_SEARCH_THRESHOLD -> vector_search.similarity_threshold  
+# KEYWORD_SEARCH_TOP_K -> keyword_search.top_k
+# HYBRID_VECTOR_WEIGHT -> hybrid_search.vector_weight
+# HYBRID_KEYWORD_WEIGHT -> hybrid_search.keyword_weight
+# CACHE_ENABLED -> cache.enabled
+# CACHE_MAX_SIZE -> cache.max_size
+# REDIS_URL -> cache.redis_url
+# MAX_CONCURRENT_REQUESTS -> performance.max_concurrent_requests
+# DEFAULT_SEARCH_TYPE -> system.default_search_type
+# DEBUG_ENABLED -> system.debug_enabled 
