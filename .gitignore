@@ -1,2 +1,5 @@
-./docs
+.\docs
 .env
+.\app\MVP\.env.local
+.\app\MVP\.env.example
+.\app\MVP\.env.*
