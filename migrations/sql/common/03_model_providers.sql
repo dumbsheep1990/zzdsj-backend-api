@@ -17,7 +17,8 @@ VALUES (
         {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "type": "chat", "context_window": 128000, "is_default": false},
         {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo", "type": "chat", "context_window": 16385, "is_default": false},
         {"id": "text-embedding-3-large", "name": "Embedding (Large)", "type": "embedding", "context_window": 8191, "is_default": true},
-        {"id": "text-embedding-3-small", "name": "Embedding (Small)", "type": "embedding", "context_window": 8191, "is_default": false}
+        {"id": "text-embedding-3-small", "name": "Embedding (Small)", "type": "embedding", "context_window": 8191, "is_default": false},
+        {"id": "openai-rerank", "name": "OpenAI Rerank", "type": "rerank", "context_window": 8191, "is_default": true}
     ]', 
     CURRENT_TIMESTAMP, 
     CURRENT_TIMESTAMP
@@ -36,7 +37,8 @@ VALUES (
     '[
         {"id": "glm-4", "name": "GLM-4", "type": "chat", "context_window": 128000, "is_default": true},
         {"id": "glm-3-turbo", "name": "GLM-3-Turbo", "type": "chat", "context_window": 128000, "is_default": false},
-        {"id": "embedding-2", "name": "Embedding-2", "type": "embedding", "context_window": 8192, "is_default": true}
+        {"id": "embedding-2", "name": "Embedding-2", "type": "embedding", "context_window": 8192, "is_default": true},
+        {"id": "rerank-8k", "name": "智谱重排序", "type": "rerank", "context_window": 8192, "is_default": true}
     ]', 
     CURRENT_TIMESTAMP, 
     CURRENT_TIMESTAMP
@@ -73,7 +75,8 @@ VALUES (
     '[
         {"id": "ernie-4.0", "name": "文心一言4.0", "type": "chat", "context_window": 24000, "is_default": true},
         {"id": "ernie-3.5", "name": "文心一言3.5", "type": "chat", "context_window": 9600, "is_default": false},
-        {"id": "ernie-embedding-v1", "name": "文心Embedding", "type": "embedding", "context_window": 4096, "is_default": true}
+        {"id": "ernie-embedding-v1", "name": "文心Embedding", "type": "embedding", "context_window": 4096, "is_default": true},
+        {"id": "ernie-rerank", "name": "文心重排序", "type": "rerank", "context_window": 4096, "is_default": true}
     ]', 
     CURRENT_TIMESTAMP, 
     CURRENT_TIMESTAMP
@@ -93,7 +96,8 @@ VALUES (
         {"id": "qwen-turbo", "name": "千问Turbo", "type": "chat", "context_window": 6000, "is_default": false},
         {"id": "qwen-plus", "name": "千问Plus", "type": "chat", "context_window": 32000, "is_default": true},
         {"id": "qwen-max", "name": "千问Max", "type": "chat", "context_window": 8192, "is_default": false},
-        {"id": "text-embedding-v1", "name": "千问Embedding", "type": "embedding", "context_window": 8192, "is_default": true}
+        {"id": "text-embedding-v1", "name": "千问Embedding", "type": "embedding", "context_window": 8192, "is_default": true},
+        {"id": "qwen-rerank", "name": "千问重排序", "type": "rerank", "context_window": 8192, "is_default": true}
     ]', 
     CURRENT_TIMESTAMP, 
     CURRENT_TIMESTAMP
@@ -131,7 +135,9 @@ VALUES (
     '[
         {"id": "llama3", "name": "Llama3", "type": "chat", "context_window": 8192, "is_default": true},
         {"id": "qwen:7b", "name": "Qwen 7B", "type": "chat", "context_window": 8192, "is_default": false},
-        {"id": "llava", "name": "LLaVA", "type": "chat", "context_window": 8192, "is_default": false, "multimodal": true}
+        {"id": "llava", "name": "LLaVA", "type": "chat", "context_window": 8192, "is_default": false, "multimodal": true},
+        {"id": "nomic-embed-text", "name": "Nomic Embedding", "type": "embedding", "context_window": 8192, "is_default": true},
+        {"id": "bge-reranker", "name": "BGE Reranker", "type": "rerank", "context_window": 8192, "is_default": true}
     ]', 
     CURRENT_TIMESTAMP, 
     CURRENT_TIMESTAMP
@@ -150,6 +156,47 @@ VALUES (
     '[
         {"id": "yi:34b", "name": "Yi-34B", "type": "chat", "context_window": 16000, "is_default": true},
         {"id": "gemma:7b", "name": "Gemma 7B", "type": "chat", "context_window": 8192, "is_default": false}
+    ]', 
+    CURRENT_TIMESTAMP, 
+    CURRENT_TIMESTAMP
+);
+
+-- 本地跨编码器模型（专门的重排序提供商）
+INSERT INTO model_providers (id, name, provider_type, base_url, auth_type, is_enabled, is_default, models, created_at, updated_at)
+VALUES (
+    'i9j0k1l2-m3n4-o5p6-q7r8-s9t0u1v2w3x4', 
+    '本地重排序模型', 
+    'local_rerank', 
+    'local://', 
+    'none', 
+    true, 
+    false, 
+    '[
+        {"id": "cross-encoder/ms-marco-MiniLM-L-6-v2", "name": "MiniLM-L6 重排序", "type": "rerank", "context_window": 512, "is_default": true},
+        {"id": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1", "name": "多语言 MiniLM 重排序", "type": "rerank", "context_window": 512, "is_default": false},
+        {"id": "BAAI/bge-reranker-v2-m3", "name": "BGE 重排序 v2", "type": "rerank", "context_window": 8192, "is_default": false},
+        {"id": "BAAI/bge-reranker-large", "name": "BGE 重排序 Large", "type": "rerank", "context_window": 512, "is_default": false}
+    ]', 
+    CURRENT_TIMESTAMP, 
+    CURRENT_TIMESTAMP
+);
+
+-- Cohere（专业重排序服务商）
+INSERT INTO model_providers (id, name, provider_type, base_url, auth_type, is_enabled, is_default, models, created_at, updated_at)
+VALUES (
+    'j0k1l2m3-n4o5-p6q7-r8s9-t0u1v2w3x4y5', 
+    'Cohere', 
+    'cohere', 
+    'https://api.cohere.ai/v1', 
+    'api_key', 
+    true, 
+    false, 
+    '[
+        {"id": "command-r-plus", "name": "Command R+", "type": "chat", "context_window": 128000, "is_default": true},
+        {"id": "command-r", "name": "Command R", "type": "chat", "context_window": 128000, "is_default": false},
+        {"id": "embed-multilingual-v3.0", "name": "Embed Multilingual v3", "type": "embedding", "context_window": 512, "is_default": true},
+        {"id": "rerank-multilingual-v3.0", "name": "Rerank Multilingual v3", "type": "rerank", "context_window": 4096, "is_default": true},
+        {"id": "rerank-english-v3.0", "name": "Rerank English v3", "type": "rerank", "context_window": 4096, "is_default": false}
     ]', 
     CURRENT_TIMESTAMP, 
     CURRENT_TIMESTAMP

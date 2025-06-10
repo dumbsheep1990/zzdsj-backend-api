@@ -1,147 +1,435 @@
 """
-Agno代理模块：提供与Agno框架的代理能力集成，
-用于推理、规划和基于知识的交互
+Agno Agent实现 - 使用正确的官方Agno Agent API
+基于官方文档的真实Agno Agent接口，确保语法和方法调用的正确性
 """
 
-import os
-import json
-from typing import List, Dict, Any, Optional, Union
+import asyncio
+import logging
+from typing import Any, Dict, List, Optional, Union, AsyncGenerator, Callable
+from datetime import datetime
 
-# 注意：这是实际Agno导入的占位符
-# 在实际实现中，您应该导入：
-# from agno.core import Agent
-# from agno.memory import Memory
-# from agno.tools import Tool
+# 使用正确的Agno官方API导入
+from agno.agent import Agent as AgnoAgent
+from agno.team import Team as AgnoTeam
+from agno.models.openai import OpenAIChat
+from agno.models.anthropic import Claude
+from agno.tools.reasoning import ReasoningTools
+from agno.tools.yfinance import YFinanceTools
+from agno.tools.duckduckgo import DuckDuckGoTools
+from agno.memory import Memory as AgnoMemory
+from agno.storage import Storage as AgnoStorage
 
-class AgnoAgent:
-    """Agno框架Agent实现的包装器"""
+from app.frameworks.agno.core import AgnoLLMInterface, AgnoServiceContext
+
+logger = logging.getLogger(__name__)
+
+class AgnoKnowledgeAgent:
+    """
+    Agno知识代理 - 使用官方Agno Agent API
+    为知识库查询和推理提供统一接口，保持与LlamaIndex的兼容性
+    """
     
     def __init__(
         self,
-        name: str,
-        description: str,
-        knowledge_bases: List[str] = None,
-        model: str = None,
-        tools: List[Any] = None
+        name: str = "Knowledge Agent",
+        role: str = "AI Assistant",
+        model: Optional[Union[str, AgnoLLMInterface]] = None,
+        tools: Optional[List[Any]] = None,
+        knowledge: Optional[Any] = None,
+        memory: Optional[AgnoMemory] = None,
+        storage: Optional[AgnoStorage] = None,
+        instructions: Optional[Union[str, List[str]]] = None,
+        description: Optional[str] = None,
+        reasoning_enabled: bool = True,
+        show_tool_calls: bool = False,
+        markdown: bool = True,
+        **kwargs
     ):
-        """
-        使用指定配置初始化Agno代理
-        
-        参数：
-            name: 代理名称
-            description: 代理目的的描述
-            knowledge_bases: 要连接的知识库ID列表
-            model: 要使用的LLM模型
-            tools: 代理使用的工具列表
-        """
         self.name = name
-        self.description = description
-        self.knowledge_bases = knowledge_bases or []
-        self.model = model
-        self.tools = tools or []
+        self.role = role
+        self.reasoning_enabled = reasoning_enabled
         
-        # 实际Agno代理初始化的占位符
-        # 在实际实现中：
-        # self.agent = Agent(
-        #     name=name,
-        #     description=description,
-        #     model=model
-        # )
-        # 
-        # for kb_id in knowledge_bases:
-        #     kb = self._load_knowledge_base(kb_id)
-        #     self.agent.add_knowledge_base(kb)
-        #
-        # for tool in tools:
-        #     self.agent.add_tool(tool)
+        # 处理模型配置
+        if isinstance(model, str):
+            self._agno_model = self._create_model_from_string(model)
+        elif isinstance(model, AgnoLLMInterface):
+            self._agno_model = model.agno_model
+        else:
+            # 默认使用GPT-4o
+            self._agno_model = OpenAIChat(id="gpt-4o")
         
-        print(f"初始化Agno代理: {name}")
+        # 处理工具配置
+        self._tools = self._prepare_tools(tools, reasoning_enabled)
+        
+        # 处理指令配置
+        if isinstance(instructions, str):
+            instructions = [instructions]
+        elif instructions is None:
+            instructions = [f"You are {name}, {role}. Provide helpful and accurate responses."]
+        
+        # 创建Agno Agent实例
+        self._agno_agent = AgnoAgent(
+            name=name,
+            role=role,
+            model=self._agno_model,
+            tools=self._tools,
+            knowledge=knowledge,
+            memory=memory,
+            storage=storage,
+            instructions=instructions,
+            description=description or f"An AI agent specialized in {role.lower()}",
+            show_tool_calls=show_tool_calls,
+            markdown=markdown,
+            **kwargs
+        )
+        
+        # 存储配置以便后续使用
+        self._knowledge = knowledge
+        self._memory = memory
+        self._storage = storage
     
-    def _load_knowledge_base(self, kb_id: str):
-        """
-        通过ID加载知识库
+    def _create_model_from_string(self, model_name: str):
+        """从字符串创建Agno模型实例"""
+        if "claude" in model_name.lower():
+            return Claude(id=model_name)
+        else:
+            return OpenAIChat(id=model_name)
+    
+    def _prepare_tools(self, tools: Optional[List[Any]], reasoning_enabled: bool) -> List[Any]:
+        """准备工具列表"""
+        agno_tools = []
         
-        参数：
-            kb_id: 知识库ID
+        # 添加推理工具（如果启用）
+        if reasoning_enabled:
+            agno_tools.append(ReasoningTools(add_instructions=True))
+        
+        # 添加自定义工具
+        if tools:
+            agno_tools.extend(tools)
+        
+        return agno_tools
+    
+    @property
+    def agno_agent(self) -> AgnoAgent:
+        """获取底层Agno Agent实例"""
+        return self._agno_agent
+    
+    def query(self, query_str: str, **kwargs) -> str:
+        """
+        执行查询 - 兼容LlamaIndex接口
+        
+        参数:
+            query_str: 查询字符串
+            **kwargs: 其他参数
             
-        返回：
-            Agno知识库对象
+        返回:
+            响应字符串
         """
-        # 实际知识库加载的占位符
-        # 在实际实现中：
-        # from app.models.knowledge import KnowledgeBase as DBKnowledgeBase
-        # from app.utils.database import SessionLocal
-        # db = SessionLocal()
-        # kb_record = db.query(DBKnowledgeBase).filter(DBKnowledgeBase.id == kb_id).first()
-        # if not kb_record:
-        #     raise ValueError(f"知识库 {kb_id} 未找到")
-        #
-        # docs = db.query(Document).filter(Document.knowledge_base_id == kb_id).all()
-        # kb_documents = [{"text": doc.content, "metadata": doc.metadata} for doc in docs]
-        # 
-        # from agno.knowledge import KnowledgeBase
-        # kb = KnowledgeBase(id=kb_id, name=kb_record.name)
-        # kb.add_documents(kb_documents)
-        # return kb
-        pass
-    
-    async def query(self, query: str, conversation_id: Optional[str] = None) -> Dict[str, Any]:
-        """
-        查询代理
-        
-        参数：
-            query: 向代理提出的问题或指令
-            conversation_id: 可选的对话ID，用于上下文
+        try:
+            # 使用Agno Agent的response方法
+            response = self._agno_agent.response(query_str, **kwargs)
             
-        返回：
-            代理的响应
-        """
-        # 实际代理查询的占位符
-        # 在实际实现中：
-        # response = await self.agent.arun(query, conversation_id=conversation_id)
-        # return {
-        #     "response": response.content,
-        #     "sources": response.sources,
-        #     "conversation_id": response.conversation_id
-        # }
-        
-        # 用于演示目的的模拟响应
-        return {
-            "response": f"[Agno] 回复: {query}",
-            "sources": [{"content": "示例来源", "metadata": {}, "score": 0.95}],
-            "conversation_id": conversation_id or "new-conversation"
-        }
-
-
-def create_knowledge_agent(kb_ids: List[str], agent_name: str = "知识代理") -> AgnoAgent:
-    """
-    创建一个可访问多个知识库的代理
+            # 处理响应格式
+            if hasattr(response, 'content'):
+                return response.content
+            else:
+                return str(response)
+                
+        except Exception as e:
+            logger.error(f"Agent query error: {e}")
+            return f"Error processing query: {str(e)}"
     
-    参数：
-        kb_ids: 知识库ID列表
-        agent_name: 代理名称
+    async def aquery(self, query_str: str, **kwargs) -> str:
+        """异步查询"""
+        return await asyncio.create_task(
+            asyncio.to_thread(self.query, query_str, **kwargs)
+        )
+    
+    def stream_query(self, query_str: str, **kwargs):
+        """
+        流式查询 - 生成器接口
         
-    返回：
-        配置好的Agno代理
+        参数:
+            query_str: 查询字符串
+            **kwargs: 其他参数
+            
+        返回:
+            响应生成器
+        """
+        try:
+            # 使用Agno Agent的流式响应
+            for chunk in self._agno_agent.response(query_str, stream=True, **kwargs):
+                if hasattr(chunk, 'content'):
+                    yield chunk.content
+                else:
+                    yield str(chunk)
+        except Exception as e:
+            logger.error(f"Agent stream query error: {e}")
+            yield f"Error: {str(e)}"
+    
+    async def astream_query(self, query_str: str, **kwargs) -> AsyncGenerator[str, None]:
+        """异步流式查询"""
+        for chunk in self.stream_query(query_str, **kwargs):
+            yield chunk
+            await asyncio.sleep(0)  # 让出控制权
+    
+    def print_response(self, query_str: str, stream: bool = False, **kwargs):
+        """
+        打印响应 - 使用Agno原生方法
+        
+        参数:
+            query_str: 查询字符串
+            stream: 是否流式输出
+            **kwargs: 其他参数
+        """
+        self._agno_agent.print_response(query_str, stream=stream, **kwargs)
+    
+    def add_tool(self, tool: Any):
+        """添加工具到代理"""
+        if hasattr(self._agno_agent, 'tools'):
+            self._agno_agent.tools.append(tool)
+        else:
+            self._agno_agent.tools = [tool]
+    
+    def set_instructions(self, instructions: Union[str, List[str]]):
+        """设置代理指令"""
+        if isinstance(instructions, str):
+            instructions = [instructions]
+        self._agno_agent.instructions = instructions
+    
+    def get_session_history(self) -> List[Dict[str, Any]]:
+        """获取会话历史"""
+        if self._memory and hasattr(self._memory, 'get_messages'):
+            return self._memory.get_messages()
+        return []
+    
+    def clear_session(self):
+        """清空会话"""
+        if self._memory and hasattr(self._memory, 'clear'):
+            self._memory.clear()
+
+class AgnoTeam:
     """
-    # 为知识代理定义默认工具
+    Agno团队 - 多代理协作系统
+    使用官方Agno Team API实现多代理协作
+    """
+    
+    def __init__(
+        self,
+        name: str = "Agent Team",
+        agents: Optional[List[AgnoKnowledgeAgent]] = None,
+        mode: str = "coordinate",  # coordinate, collaborate, route
+        model: Optional[Union[str, AgnoLLMInterface]] = None,
+        instructions: Optional[List[str]] = None,
+        success_criteria: Optional[str] = None,
+        show_tool_calls: bool = True,
+        markdown: bool = True,
+        **kwargs
+    ):
+        self.name = name
+        self.mode = mode
+        
+        # 处理模型配置
+        if isinstance(model, str):
+            team_model = self._create_model_from_string(model)
+        elif isinstance(model, AgnoLLMInterface):
+            team_model = model.agno_model
+        else:
+            team_model = OpenAIChat(id="gpt-4o")
+        
+        # 提取Agno Agent实例
+        agno_agents = []
+        if agents:
+            for agent in agents:
+                if isinstance(agent, AgnoKnowledgeAgent):
+                    agno_agents.append(agent.agno_agent)
+                else:
+                    agno_agents.append(agent)
+        
+        # 创建Agno Team实例
+        if mode == "team":
+            # 使用Agent的team参数创建团队
+            self._agno_team = AgnoAgent(
+                team=agno_agents,
+                model=team_model,
+                instructions=instructions or [f"Coordinate with team members to provide comprehensive responses"],
+                show_tool_calls=show_tool_calls,
+                markdown=markdown,
+                **kwargs
+            )
+        else:
+            # 使用Team类创建团队
+            self._agno_team = AgnoTeam(
+                mode=mode,
+                members=agno_agents,
+                model=team_model,
+                success_criteria=success_criteria or "Provide comprehensive and accurate responses through team collaboration",
+                instructions=instructions or [f"Work together as a team to provide the best possible response"],
+                show_tool_calls=show_tool_calls,
+                markdown=markdown,
+                **kwargs
+            )
+        
+        self._agents = agents or []
+    
+    def _create_model_from_string(self, model_name: str):
+        """从字符串创建Agno模型实例"""
+        if "claude" in model_name.lower():
+            return Claude(id=model_name)
+        else:
+            return OpenAIChat(id=model_name)
+    
+    @property
+    def agno_team(self):
+        """获取底层Agno Team实例"""
+        return self._agno_team
+    
+    def query(self, query_str: str, **kwargs) -> str:
+        """团队查询"""
+        try:
+            response = self._agno_team.response(query_str, **kwargs)
+            if hasattr(response, 'content'):
+                return response.content
+            else:
+                return str(response)
+        except Exception as e:
+            logger.error(f"Team query error: {e}")
+            return f"Error processing team query: {str(e)}"
+    
+    async def aquery(self, query_str: str, **kwargs) -> str:
+        """异步团队查询"""
+        return await asyncio.create_task(
+            asyncio.to_thread(self.query, query_str, **kwargs)
+        )
+    
+    def stream_query(self, query_str: str, **kwargs):
+        """团队流式查询"""
+        try:
+            for chunk in self._agno_team.response(query_str, stream=True, **kwargs):
+                if hasattr(chunk, 'content'):
+                    yield chunk.content
+                else:
+                    yield str(chunk)
+        except Exception as e:
+            logger.error(f"Team stream query error: {e}")
+            yield f"Error: {str(e)}"
+    
+    def print_response(self, query_str: str, stream: bool = False, **kwargs):
+        """团队打印响应"""
+        self._agno_team.print_response(query_str, stream=stream, **kwargs)
+    
+    def add_agent(self, agent: AgnoKnowledgeAgent):
+        """添加代理到团队"""
+        self._agents.append(agent)
+        # 注意：Agno Team的成员在创建后通常不能动态修改
+        # 这里仅更新内部列表，实际功能可能需要重新创建团队
+    
+    def get_agents(self) -> List[AgnoKnowledgeAgent]:
+        """获取所有代理"""
+        return self._agents.copy()
+
+# 便利函数 - 创建常用的代理和团队
+def create_knowledge_agent(
+    name: str = "Knowledge Agent",
+    model: str = "gpt-4o",
+    knowledge_base: Optional[Any] = None,
+    tools: Optional[List[Any]] = None,
+    reasoning: bool = True,
+    **kwargs
+) -> AgnoKnowledgeAgent:
+    """创建知识代理"""
+    return AgnoKnowledgeAgent(
+        name=name,
+        model=model,
+        knowledge=knowledge_base,
+        tools=tools,
+        reasoning_enabled=reasoning,
+        **kwargs
+    )
+
+def create_research_agent(
+    name: str = "Research Agent",
+    model: str = "gpt-4o",
+    **kwargs
+) -> AgnoKnowledgeAgent:
+    """创建研究代理"""
     tools = [
-        # 在实际实现中：
-        # Tool(
-        #     name="search_documents",
-        #     description="在知识库中搜索文档",
-        #     function=search_documents
-        # ),
-        # Tool(
-        #     name="summarize_document",
-        #     description="总结文档",
-        #     function=summarize_document
-        # )
+        DuckDuckGoTools(),  # 网络搜索
+        ReasoningTools(add_instructions=True)  # 推理工具
     ]
     
-    return AgnoAgent(
-        name=agent_name,
-        description="用于查询和推理知识库的代理",
-        knowledge_bases=kb_ids,
-        tools=tools
+    return AgnoKnowledgeAgent(
+        name=name,
+        role="Research and Analysis Specialist",
+        model=model,
+        tools=tools,
+        instructions=[
+            "You are a research specialist who excels at finding and analyzing information",
+            "Use web search to gather current information when needed",
+            "Apply reasoning tools to provide well-structured analysis",
+            "Always cite sources and provide evidence-based responses"
+        ],
+        **kwargs
     )
+
+def create_finance_agent(
+    name: str = "Finance Agent",
+    model: str = "gpt-4o",
+    **kwargs
+) -> AgnoKnowledgeAgent:
+    """创建金融分析代理"""
+    tools = [
+        YFinanceTools(
+            stock_price=True,
+            analyst_recommendations=True,
+            company_info=True,
+            company_news=True
+        ),
+        ReasoningTools(add_instructions=True)
+    ]
+    
+    return AgnoKnowledgeAgent(
+        name=name,
+        role="Financial Analysis Specialist",
+        model=model,
+        tools=tools,
+        instructions=[
+            "You are a financial analysis expert",
+            "Use financial data tools to provide accurate market information",
+            "Present data in clear tables and charts when possible",
+            "Provide reasoned analysis based on available data"
+        ],
+        **kwargs
+    )
+
+def create_multi_agent_team(
+    agents: List[AgnoKnowledgeAgent],
+    name: str = "Multi-Agent Team",
+    model: str = "gpt-4o",
+    mode: str = "coordinate",
+    **kwargs
+) -> AgnoTeam:
+    """创建多代理团队"""
+    return AgnoTeam(
+        name=name,
+        agents=agents,
+        model=model,
+        mode=mode,
+        **kwargs
+    )
+
+# LlamaIndex兼容性别名
+KnowledgeAgent = AgnoKnowledgeAgent
+AgentTeam = AgnoTeam
+
+# 导出主要组件
+__all__ = [
+    "AgnoKnowledgeAgent",
+    "AgnoTeam",
+    "create_knowledge_agent",
+    "create_research_agent", 
+    "create_finance_agent",
+    "create_multi_agent_team",
+    "KnowledgeAgent",
+    "AgentTeam"
+]

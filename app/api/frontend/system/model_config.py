@@ -270,51 +270,240 @@ async def update_provider_config(
 @router.get("/available-models")
 async def get_available_models(
     provider: Optional[str] = Query(None, description="指定提供商"),
+    model_type: Optional[str] = Query(None, description="模型类别：chat, embedding, rerank"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """获取可用的模型列表"""
+    """获取可用的模型列表，支持按提供商和模型类别筛选"""
     try:
-        # 模型列表
-        available_models = {
-            "openai": [
-                "gpt-4", "gpt-4-turbo", "gpt-4-vision-preview",
-                "gpt-3.5-turbo", "gpt-3.5-turbo-16k",
-                "text-embedding-ada-002", "text-embedding-3-small", "text-embedding-3-large"
-            ],
-            "zhipu": [
-                "glm-4", "glm-4v", "glm-3-turbo", "embedding-2"
-            ],
-            "anthropic": [
-                "claude-3-opus-20240229", "claude-3-sonnet-20240229", 
-                "claude-3-haiku-20240307", "claude-2.1", "claude-2.0"
-            ],
-            "baidu": [
-                "ernie-bot", "ernie-bot-turbo", "ernie-bot-4.0", "embedding-v1"
-            ],
-            "ollama": [
-                "llama3", "llama2", "mistral", "mixtral", "qwen", "yi", "gemma"
-            ]
+        # 从数据库获取模型提供商和模型信息
+        from app.models.model_provider import ModelProvider, ModelInfo
+        
+        query = db.query(ModelProvider).filter(ModelProvider.is_active == True)
+        if provider:
+            query = query.filter(ModelProvider.provider_type == provider)
+        
+        providers = query.all()
+        
+        # 构建模型列表
+        available_models = {}
+        models_by_type = {"chat": [], "embedding": [], "rerank": []}
+        
+        for provider_obj in providers:
+            provider_name = provider_obj.provider_type
+            provider_models = []
+            
+            # 解析JSON格式的模型列表
+            import json
+            if provider_obj.models:
+                try:
+                    models_data = json.loads(provider_obj.models) if isinstance(provider_obj.models, str) else provider_obj.models
+                    for model_data in models_data:
+                        model_info = {
+                            "id": model_data.get("id"),
+                            "name": model_data.get("name"),
+                            "type": model_data.get("type", "chat"),
+                            "provider": provider_name,
+                            "provider_display_name": provider_obj.name,
+                            "context_window": model_data.get("context_window", 8192),
+                            "is_default": model_data.get("is_default", False),
+                            "description": model_data.get("description", ""),
+                            "is_multimodal": model_data.get("multimodal", False)
+                        }
+                        
+                        # 按类别分类
+                        model_type_key = model_info["type"]
+                        if model_type_key in models_by_type:
+                            models_by_type[model_type_key].append(model_info)
+                        
+                        provider_models.append(model_info)
+                        
+                except json.JSONDecodeError:
+                    logger.error(f"解析提供商 {provider_name} 的模型配置失败")
+                    continue
+            
+            available_models[provider_name] = provider_models
+        
+        # 如果指定了模型类别，只返回该类别的模型
+        if model_type and model_type in models_by_type:
+            return ResponseFormatter.success({
+                "model_type": model_type,
+                "models": models_by_type[model_type],
+                "total_models": len(models_by_type[model_type])
+            })
+        
+        # 返回完整信息
+        result = {
+            "available_models": available_models,
+            "models_by_type": models_by_type,
+            "total_providers": len(available_models),
+            "total_models": sum(len(models) for models in available_models.values()),
+            "supported_types": ["chat", "embedding", "rerank"]
         }
         
         if provider:
-            if provider not in available_models:
-                raise HTTPException(status_code=404, detail=f"不支持的提供商: {provider}")
-            return ResponseFormatter.success({
-                "provider": provider,
-                "models": available_models[provider]
-            })
-        
-        return ResponseFormatter.success({
-            "available_models": available_models,
-            "total_providers": len(available_models),
-            "total_models": sum(len(models) for models in available_models.values())
-        })
+            result["filtered_provider"] = provider
+            
+        return ResponseFormatter.success(result)
         
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取可用模型失败: {str(e)}")
+
+@router.get("/models/by-type/{model_type}")
+async def get_models_by_type(
+    model_type: str = Path(..., description="模型类别：chat, embedding, rerank"),
+    provider: Optional[str] = Query(None, description="指定提供商"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """按模型类别获取模型列表"""
+    if model_type not in ["chat", "embedding", "rerank"]:
+        raise HTTPException(status_code=400, detail="不支持的模型类别，支持：chat, embedding, rerank")
+    
+    try:
+        from app.models.model_provider import ModelProvider
+        import json
+        
+        query = db.query(ModelProvider).filter(ModelProvider.is_active == True)
+        if provider:
+            query = query.filter(ModelProvider.provider_type == provider)
+        
+        providers = query.all()
+        models = []
+        
+        for provider_obj in providers:
+            if provider_obj.models:
+                try:
+                    models_data = json.loads(provider_obj.models) if isinstance(provider_obj.models, str) else provider_obj.models
+                    for model_data in models_data:
+                        if model_data.get("type") == model_type:
+                            models.append({
+                                "id": model_data.get("id"),
+                                "name": model_data.get("name"),
+                                "type": model_type,
+                                "provider": provider_obj.provider_type,
+                                "provider_display_name": provider_obj.name,
+                                "context_window": model_data.get("context_window", 8192),
+                                "is_default": model_data.get("is_default", False),
+                                "description": model_data.get("description", ""),
+                                "api_key_required": provider_obj.auth_type != "none",
+                                "api_key_configured": bool(provider_obj.api_key),
+                                "is_enabled": provider_obj.is_enabled
+                            })
+                except json.JSONDecodeError:
+                    continue
+        
+        return ResponseFormatter.success({
+            "model_type": model_type,
+            "models": models,
+            "total_models": len(models),
+            "filtered_provider": provider
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取{model_type}模型失败: {str(e)}")
+
+@router.post("/models/configure")
+async def configure_models(
+    config_data: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("system:model:write"))
+):
+    """配置模型选择（前端传递的模型配置）"""
+    try:
+        config_manager = SystemConfigManager(db)
+        
+        # 处理三个类别的模型配置
+        if "chat_models" in config_data:
+            await config_manager.set_config_value(
+                "llm.models.chat.selected", 
+                json.dumps(config_data["chat_models"])
+            )
+        
+        if "embedding_models" in config_data:
+            await config_manager.set_config_value(
+                "llm.models.embedding.selected", 
+                json.dumps(config_data["embedding_models"])
+            )
+        
+        if "rerank_models" in config_data:
+            await config_manager.set_config_value(
+                "llm.models.rerank.selected", 
+                json.dumps(config_data["rerank_models"])
+            )
+        
+        # 设置默认模型
+        if "default_chat_model" in config_data:
+            await config_manager.set_config_value(
+                "llm.default_model.chat", 
+                config_data["default_chat_model"]
+            )
+        
+        if "default_embedding_model" in config_data:
+            await config_manager.set_config_value(
+                "llm.default_model.embedding", 
+                config_data["default_embedding_model"]
+            )
+        
+        if "default_rerank_model" in config_data:
+            await config_manager.set_config_value(
+                "llm.default_model.rerank", 
+                config_data["default_rerank_model"]
+            )
+        
+        return ResponseFormatter.success({
+            "message": "模型配置更新成功",
+            "configured_types": list(config_data.keys())
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"配置模型失败: {str(e)}")
+
+@router.get("/models/current-config")
+async def get_current_model_config(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """获取当前的模型配置"""
+    try:
+        config_manager = SystemConfigManager(db)
+        import json
+        
+        # 获取当前配置
+        chat_models = await config_manager.get_config_value("llm.models.chat.selected", "[]")
+        embedding_models = await config_manager.get_config_value("llm.models.embedding.selected", "[]")
+        rerank_models = await config_manager.get_config_value("llm.models.rerank.selected", "[]")
+        
+        default_chat = await config_manager.get_config_value("llm.default_model.chat", "")
+        default_embedding = await config_manager.get_config_value("llm.default_model.embedding", "")
+        default_rerank = await config_manager.get_config_value("llm.default_model.rerank", "")
+        
+        try:
+            chat_models = json.loads(chat_models) if isinstance(chat_models, str) else chat_models
+            embedding_models = json.loads(embedding_models) if isinstance(embedding_models, str) else embedding_models
+            rerank_models = json.loads(rerank_models) if isinstance(rerank_models, str) else rerank_models
+        except json.JSONDecodeError:
+            chat_models = []
+            embedding_models = []
+            rerank_models = []
+        
+        return ResponseFormatter.success({
+            "selected_models": {
+                "chat": chat_models,
+                "embedding": embedding_models,
+                "rerank": rerank_models
+            },
+            "default_models": {
+                "chat": default_chat,
+                "embedding": default_embedding,
+                "rerank": default_rerank
+            }
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取当前模型配置失败: {str(e)}")
 
 @router.post("/test-connection")
 async def test_model_connection(
