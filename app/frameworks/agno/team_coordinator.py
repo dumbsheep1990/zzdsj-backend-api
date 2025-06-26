@@ -21,12 +21,11 @@ import json
 try:
     from agno.agent import Agent
     from agno.team import Team
-    from agno.models.openai import OpenAIChat
-    from agno.models.anthropic import Claude
-    from agno.models.google import Gemini
-    from agno.tools.duckduckgo import DuckDuckGoTools
-    from agno.tools.reasoning import ReasoningTools
     AGNO_AVAILABLE = True
+    
+    # 动态导入模型 - 使用现有的模型适配器
+    from .model_config_adapter import get_model_adapter
+    
 except ImportError:
     AGNO_AVAILABLE = False
     # 创建虚拟类以支持类型提示
@@ -35,6 +34,11 @@ except ImportError:
     
     class Team:
         pass
+
+# 集成现有的工具注册系统
+from app.tools.zzdsj_tool_registry import get_tool_registry, ToolCategory
+from app.services.tools.auto_discovery import get_auto_tool_discovery
+from app.tools.agno import AgnoToolsManager, ZZDSJAgnoToolkit
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +120,11 @@ class ZZDSJTeamCoordinator:
         
         # 性能监控
         self.performance_history: List[CollaborationResult] = []
+        
+        # 工具管理器
+        self.tool_registry = get_tool_registry()
+        self.agno_tool_manager = AgnoToolsManager()
+        self.zzdsj_toolkit = ZZDSJAgnoToolkit()
         
         logger.info("ZZDSJ团队协作管理器已初始化")
 
@@ -322,19 +331,18 @@ class ZZDSJTeamCoordinator:
                 logger.warning(f"无法创建指定模型 {model_name or model_provider}，使用默认模型")
                 model = await self.model_adapter.create_agno_model()
             
-            # 如果仍然失败，使用硬编码的回退模型
+            # 如果仍然失败，使用默认模型配置
             if not model:
-                logger.warning("模型适配器失败，使用硬编码回退模型")
-                model = OpenAIChat(id="gpt-4o")
+                logger.warning("模型适配器失败，使用默认配置创建模型")
+                try:
+                    # 使用现有模型适配器创建默认模型
+                    model = await self.model_adapter.create_agno_model()
+                except:
+                    logger.error("所有模型创建方式都失败了")
+                    return None
             
-            # 根据工具配置创建工具列表
-            tools = []
-            for tool_name in spec.tools:
-                if tool_name == "duckduckgo_search":
-                    tools.append(DuckDuckGoTools())
-                elif tool_name == "reasoning":
-                    tools.append(ReasoningTools())
-                # 可以继续添加更多工具
+            # 根据工具配置创建工具列表 - 使用动态工具发现
+            tools = await self._create_dynamic_tools(spec.tools)
             
             # 创建代理
             agent = Agent(
@@ -355,6 +363,88 @@ class ZZDSJTeamCoordinator:
         except Exception as e:
             logger.error(f"创建代理失败 {spec.name}: {e}")
             return None
+
+    async def _create_dynamic_tools(self, tool_names: List[str]) -> List[Any]:
+        """动态创建工具列表"""
+        tools = []
+        
+        for tool_name in tool_names:
+            try:
+                # 1. 首先从ZZDSJ工具注册系统查找
+                tool_instance = self.tool_registry.get_tool(tool_name)
+                if tool_instance:
+                    tools.append(tool_instance)
+                    logger.info(f"从ZZDSJ工具注册系统获取工具: {tool_name}")
+                    continue
+                
+                # 2. 从AgnoToolsManager查找
+                agno_tool = await self.agno_tool_manager.get_tool(tool_name)
+                if agno_tool:
+                    tools.append(agno_tool)
+                    logger.info(f"从Agno工具管理器获取工具: {tool_name}")
+                    continue
+                
+                # 3. 从ZZDSJ工具包查找
+                zzdsj_tool = getattr(self.zzdsj_toolkit, tool_name, None)
+                if zzdsj_tool and callable(zzdsj_tool):
+                    tools.append(zzdsj_tool)
+                    logger.info(f"从ZZDSJ工具包获取工具: {tool_name}")
+                    continue
+                
+                # 4. 根据工具类别动态查找
+                matching_tools = await self._find_tools_by_category(tool_name)
+                if matching_tools:
+                    tools.extend(matching_tools)
+                    logger.info(f"通过类别匹配获取工具: {tool_name} -> {len(matching_tools)} 个工具")
+                    continue
+                
+                logger.warning(f"未找到工具: {tool_name}")
+                
+            except Exception as e:
+                logger.error(f"创建工具失败 {tool_name}: {str(e)}")
+        
+        return tools
+    
+    async def _find_tools_by_category(self, tool_name: str) -> List[Any]:
+        """根据工具名称查找匹配的分类工具"""
+        matching_tools = []
+        
+        # 工具名称到分类的映射
+        category_mapping = {
+            "search": [ToolCategory.SEARCH],
+            "duckduckgo": [ToolCategory.SEARCH],
+            "web": [ToolCategory.SEARCH],
+            "reasoning": [ToolCategory.REASONING],
+            "analysis": [ToolCategory.REASONING],
+            "knowledge": [ToolCategory.KNOWLEDGE],
+            "file": [ToolCategory.FILE_MANAGEMENT],
+            "document": [ToolCategory.FILE_MANAGEMENT],
+            "system": [ToolCategory.SYSTEM],
+            "communication": [ToolCategory.COMMUNICATION],
+            "data": [ToolCategory.DATA_PROCESSING],
+            "integration": [ToolCategory.INTEGRATION],
+            "advanced": [ToolCategory.ADVANCED],
+            "custom": [ToolCategory.CUSTOM]
+        }
+        
+        # 查找匹配的分类
+        matched_categories = []
+        for key, categories in category_mapping.items():
+            if key in tool_name.lower():
+                matched_categories.extend(categories)
+        
+        # 从匹配的分类中获取工具
+        for category in matched_categories:
+            category_tools = self.tool_registry.get_tools_by_category(category)
+            for tool_name_in_cat in category_tools:
+                try:
+                    tool_instance = self.tool_registry.get_tool(tool_name_in_cat)
+                    if tool_instance:
+                        matching_tools.append(tool_instance)
+                except Exception as e:
+                    logger.warning(f"获取分类工具失败 {tool_name_in_cat}: {str(e)}")
+        
+        return matching_tools
 
     async def create_team_from_spec(self, team_spec: TeamSpec) -> Optional[Team]:
         """根据规格创建团队"""
@@ -379,7 +469,11 @@ class ZZDSJTeamCoordinator:
             # 选择协调模型（通常使用更强的模型作为协调者）
             coordinator_model = await self.model_adapter.create_agno_model(provider_type="openai")
             if not coordinator_model:
-                coordinator_model = OpenAIChat(id="gpt-4o")
+                # 使用默认模型配置
+                coordinator_model = await self.model_adapter.create_agno_model()
+                if not coordinator_model:
+                    logger.error("无法创建协调模型")
+                    return None
             
             # 创建团队 - 使用正确的Agno Team语法
             team = Team(

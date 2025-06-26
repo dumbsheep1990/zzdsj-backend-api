@@ -291,6 +291,14 @@ app.include_router(context_compression.router, prefix="/api", tags=["上下文�
 # 注册前端API路由
 app.include_router(frontend_router)
 
+# 注册智能体编排API路由
+try:
+    from app.api.orchestration.routes import router as orchestration_router
+    app.include_router(orchestration_router, prefix="/api/orchestration", tags=["智能体编排"])
+    logger.info("成功注册智能体编排API路由")
+except ImportError as e:
+    logger.warning(f"导入智能体编排API失败: {str(e)}")
+
 @app.get("/", include_in_schema=False)
 def root():
     return {"message": "欢迎使用知识库问答系统API", "docs": "/docs"}

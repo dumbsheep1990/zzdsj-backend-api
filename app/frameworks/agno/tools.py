@@ -1,397 +1,463 @@
 """
-Agno工具模块：实现可被Agno代理使用的工具，
-用于执行操作和与外部系统集成
-
-基于Agno官方文档语法实现的工具系统
+Agno动态工具模块：与ZZDSJ统一工具注册表集成
+基于系统配置和权限动态获取和创建工具，去除硬编码依赖
 """
 
+import asyncio
+import logging
 from typing import Dict, List, Any, Optional, Callable, Union
-import json
-import os
 from datetime import datetime
-from pydantic import BaseModel, Field
 
+from app.services.tools.tool_service import ToolService
+from app.repositories.tool_repository import ToolRepository
+from app.utils.core.database import get_db
 
-class ZZDSJKnowledgeTools:
-    """ZZDSJ知识库工具包 - 基于Agno工具模式"""
+logger = logging.getLogger(__name__)
+
+class DynamicZZDSJToolsManager:
+    """ZZDSJ动态工具管理器 - 基于系统工具注册表"""
     
-    def __init__(self, kb_id: Optional[str] = None):
+    def __init__(self, user_id: Optional[str] = None, db_session=None):
         """
-        初始化ZZDSJ知识库工具包
+        初始化动态工具管理器
         
-        参数:
-            kb_id: 默认知识库ID
+        Args:
+            user_id: 用户ID，用于权限检查
+            db_session: 数据库会话
         """
-        self.kb_id = kb_id
+        self.user_id = user_id
+        self.db = db_session or next(get_db())
+        self.tool_service = ToolService(self.db)
+        self.tool_repository = ToolRepository(self.db)
         
-    def search_documents(self, query: str, kb_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
+        # 工具实例缓存
+        self._tool_cache: Dict[str, Any] = {}
+        
+    async def get_available_tools(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        在知识库中搜索文档
+        获取用户可用的工具列表
         
-        参数:
-            query: 搜索查询
-            kb_id: 知识库ID（可选，使用默认值）
-            top_k: 返回结果数量
+        Args:
+            category: 工具类别过滤
             
-        返回:
-            搜索结果
+        Returns:
+            可用工具列表
         """
         try:
-            from app.frameworks.agno.knowledge_base import KnowledgeBaseProcessor
+            if self.user_id:
+                # 获取用户有权限的工具
+                tools = await self.tool_service.get_user_available_tools(self.user_id)
+            else:
+                # 系统级别，获取所有启用的工具
+                tools = await self.tool_repository.get_enabled_tools()
             
-            # 使用提供的kb_id或默认值
-            target_kb_id = kb_id or self.kb_id
-            if not target_kb_id:
-                return {"error": "未提供知识库ID", "results": [], "count": 0}
+            # 按类别过滤
+            if category:
+                tools = [tool for tool in tools if tool.category == category]
             
-            # 创建KB处理器实例
-            kb_processor = KnowledgeBaseProcessor(kb_id=target_kb_id)
+            # 转换为工具描述格式
+            tool_list = []
+            for tool in tools:
+                tool_info = {
+                    "id": tool.id,
+                    "name": tool.name,
+                    "description": tool.description,
+                    "category": tool.category,
+                    "framework": tool.framework,
+                    "is_enabled": tool.is_enabled,
+                    "config": tool.config
+                }
+                tool_list.append(tool_info)
             
-            # 执行搜索
-            results = kb_processor.search(query=query, top_k=top_k)
-            
-            return {
-                "results": results,
-                "count": len(results),
-                "kb_id": target_kb_id,
-                "query": query
-            }
+            logger.info(f"获取到 {len(tool_list)} 个可用工具")
+            return tool_list
             
         except Exception as e:
-            return {"error": f"搜索失败: {str(e)}", "results": [], "count": 0}
-
-    def summarize_document(self, document_id: str, max_length: int = 200) -> Dict[str, Any]:
+            logger.error(f"获取可用工具失败: {str(e)}")
+            return []
+    
+    async def create_tool_instance(self, tool_id: str, params: Optional[Dict[str, Any]] = None) -> Optional[Any]:
         """
-        生成文档摘要
+        创建工具实例
         
-        参数:
-            document_id: 文档ID
-            max_length: 摘要最大长度
+        Args:
+            tool_id: 工具ID
+            params: 工具参数
             
-        返回:
-            文档摘要
+        Returns:
+            工具实例
         """
         try:
-            from app.frameworks.agno.document_processor import DocumentProcessor
+            # 检查缓存
+            cache_key = f"{tool_id}_{hash(str(params))}"
+            if cache_key in self._tool_cache:
+                return self._tool_cache[cache_key]
             
-            # 创建文档处理器
-            doc_processor = DocumentProcessor()
+            # 获取工具定义
+            tool_definition = await self.tool_repository.get_tool_by_id(tool_id)
+            if not tool_definition:
+                logger.warning(f"工具 {tool_id} 不存在")
+                return None
             
-            # 生成摘要
-            summary_result = doc_processor.summarize_document(
-                document_id=document_id,
-                max_length=max_length
+            # 检查用户权限
+            if self.user_id:
+                has_permission = await self.tool_service.check_tool_permission(
+                    self.user_id, tool_id
+                )
+                if not has_permission:
+                    logger.warning(f"用户 {self.user_id} 没有工具 {tool_id} 的使用权限")
+                    return None
+            
+            # 根据框架创建工具实例
+            tool_instance = await self._create_framework_tool(tool_definition, params or {})
+            
+            if tool_instance:
+                # 缓存工具实例
+                self._tool_cache[cache_key] = tool_instance
+                logger.info(f"成功创建工具实例: {tool_definition.name}")
+            
+            return tool_instance
+            
+        except Exception as e:
+            logger.error(f"创建工具实例 {tool_id} 失败: {str(e)}")
+            return None
+    
+    async def _create_framework_tool(self, tool_definition, params: Dict[str, Any]) -> Optional[Any]:
+        """根据框架创建工具实例"""
+        framework = tool_definition.framework
+        
+        try:
+            if framework == 'agno':
+                return await self._create_agno_tool(tool_definition, params)
+            elif framework == 'zzdsj':
+                return await self._create_zzdsj_tool(tool_definition, params)
+            else:
+                # 其他框架工具，创建适配器包装
+                return await self._create_adapter_tool(tool_definition, params)
+                
+        except Exception as e:
+            logger.error(f"创建 {framework} 框架工具失败: {str(e)}")
+            return None
+    
+    async def _create_agno_tool(self, tool_definition, params: Dict[str, Any]) -> Optional[Any]:
+        """创建Agno原生工具"""
+        try:
+            # 动态导入工具类
+            import importlib
+            
+            module_path, class_name = tool_definition.class_path.rsplit('.', 1)
+            module = importlib.import_module(module_path)
+            tool_class = getattr(module, class_name)
+            
+            # 合并配置参数
+            init_params = tool_definition.config.copy()
+            init_params.update(params)
+            
+            # 创建工具实例
+            return tool_class(**init_params)
+            
+        except Exception as e:
+            logger.error(f"创建Agno工具失败: {str(e)}")
+            return None
+    
+    async def _create_zzdsj_tool(self, tool_definition, params: Dict[str, Any]) -> Optional[Any]:
+        """创建ZZDSJ自定义工具"""
+        try:
+            # 根据工具类别创建相应的工具
+            category = tool_definition.category
+            
+            if category == 'knowledge':
+                return await self._create_knowledge_tool(tool_definition, params)
+            elif category == 'file':
+                return await self._create_file_tool(tool_definition, params)
+            elif category == 'system':
+                return await self._create_system_tool(tool_definition, params)
+            else:
+                logger.warning(f"未知的ZZDSJ工具类别: {category}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"创建ZZDSJ工具失败: {str(e)}")
+            return None
+    
+    async def _create_knowledge_tool(self, tool_definition, params: Dict[str, Any]) -> Optional[Any]:
+        """创建知识库工具"""
+        class DynamicKnowledgeTool:
+            def __init__(self, tool_def, user_params):
+                self.tool_def = tool_def
+                self.user_params = user_params
+                self.name = tool_def.name
+                self.description = tool_def.description
+            
+            async def search_documents(self, query: str, kb_id: Optional[str] = None, top_k: int = 5) -> Dict[str, Any]:
+                """在知识库中搜索文档"""
+                try:
+                    from app.services.knowledge.knowledge_service import KnowledgeService
+                    
+                    knowledge_service = KnowledgeService()
+                    
+                    # 使用提供的kb_id或配置中的默认值
+                    target_kb_id = kb_id or self.user_params.get('kb_id') or self.tool_def.config.get('default_kb_id')
+                    
+                    if not target_kb_id:
+                        return {"error": "未提供知识库ID", "results": [], "count": 0}
+                    
+                    # 执行搜索
+                    results = await knowledge_service.search_documents(
+                        kb_id=target_kb_id,
+                        query=query,
+                        top_k=top_k
+                    )
+                    
+                    return {
+                        "results": results,
+                        "count": len(results),
+                        "kb_id": target_kb_id,
+                        "query": query
+                    }
+                    
+                except Exception as e:
+                    return {"error": f"搜索失败: {str(e)}", "results": [], "count": 0}
+            
+            async def __call__(self, *args, **kwargs):
+                """工具调用入口"""
+                if len(args) > 0:
+                    query = args[0]
+                    return await self.search_documents(query, **kwargs)
+                elif 'query' in kwargs:
+                    return await self.search_documents(**kwargs)
+                else:
+                    return {"error": "缺少查询参数", "results": [], "count": 0}
+        
+        return DynamicKnowledgeTool(tool_definition, params)
+    
+    async def _create_file_tool(self, tool_definition, params: Dict[str, Any]) -> Optional[Any]:
+        """创建文件管理工具"""
+        class DynamicFileTool:
+            def __init__(self, tool_def, user_params):
+                self.tool_def = tool_def
+                self.user_params = user_params
+                self.name = tool_def.name
+                self.description = tool_def.description
+                self.upload_base_path = user_params.get('upload_base_path', 'uploads/')
+            
+            async def list_files(self, directory: str = "", file_type: Optional[str] = None) -> Dict[str, Any]:
+                """列出目录中的文件"""
+                try:
+                    import os
+                    
+                    full_path = os.path.join(self.upload_base_path, directory)
+                    
+                    if not os.path.exists(full_path):
+                        return {"error": f"目录不存在: {full_path}", "files": []}
+                    
+                    files = []
+                    for item in os.listdir(full_path):
+                        item_path = os.path.join(full_path, item)
+                        
+                        if os.path.isfile(item_path):
+                            file_ext = os.path.splitext(item)[1].lower()
+                            
+                            # 文件类型过滤
+                            if file_type and file_ext != file_type.lower():
+                                continue
+                            
+                            file_stat = os.stat(item_path)
+                            files.append({
+                                "name": item,
+                                "path": os.path.join(directory, item),
+                                "extension": file_ext,
+                                "size": file_stat.st_size,
+                                "modified_at": datetime.fromtimestamp(file_stat.st_mtime).isoformat()
+                            })
+                    
+                    return {
+                        "files": sorted(files, key=lambda x: x["modified_at"], reverse=True),
+                        "count": len(files),
+                        "directory": directory
+                    }
+                    
+                except Exception as e:
+                    return {"error": f"文件列表获取失败: {str(e)}", "files": []}
+            
+            async def __call__(self, *args, **kwargs):
+                """工具调用入口"""
+                return await self.list_files(**kwargs)
+        
+        return DynamicFileTool(tool_definition, params)
+    
+    async def _create_system_tool(self, tool_definition, params: Dict[str, Any]) -> Optional[Any]:
+        """创建系统工具"""
+        class DynamicSystemTool:
+            def __init__(self, tool_def, user_params):
+                self.tool_def = tool_def
+                self.user_params = user_params
+                self.name = tool_def.name
+                self.description = tool_def.description
+            
+            async def get_system_status(self) -> Dict[str, Any]:
+                """获取系统状态信息"""
+                try:
+                    # 返回基本的系统状态
+                    return {
+                        "status": "healthy",
+                        "timestamp": datetime.now().isoformat(),
+                        "system": "ZZDSJ Backend API",
+                        "version": "1.0.0"
+                    }
+                    
+                except Exception as e:
+                    return {"error": f"系统状态获取失败: {str(e)}"}
+            
+            async def __call__(self, *args, **kwargs):
+                """工具调用入口"""
+                return await self.get_system_status()
+        
+        return DynamicSystemTool(tool_definition, params)
+    
+    async def _create_adapter_tool(self, tool_definition, params: Dict[str, Any]) -> Optional[Any]:
+        """创建其他框架工具的适配器"""
+        try:
+            from app.adapters.tool_adapter import UniversalToolAdapter
+            
+            adapter = UniversalToolAdapter()
+            tool_instance = await adapter.create_tool_instance(
+                tool_definition.id, params, tool_definition.framework
             )
             
-            return {
-                "summary": summary_result.get("summary", ""),
-                "document_id": document_id,
-                "length": len(summary_result.get("summary", "")),
-                "metadata": summary_result.get("metadata", {})
-            }
+            # 包装为Agno兼容格式
+            return self._wrap_for_agno(tool_instance, tool_definition)
             
         except Exception as e:
-            return {"error": f"摘要生成失败: {str(e)}", "summary": "", "document_id": document_id}
-
-    def extract_file_metadata(self, file_path: str) -> Dict[str, Any]:
-        """
-        提取文件元数据
-        
-        参数:
-            file_path: 文件路径
+            logger.error(f"创建适配器工具失败: {str(e)}")
+            return None
+    
+    def _wrap_for_agno(self, tool_instance, tool_definition):
+        """包装工具为Agno兼容格式"""
+        class AgnoCompatibleTool:
+            def __init__(self, tool_instance, tool_def):
+                self.tool_instance = tool_instance
+                self.tool_def = tool_def
+                self.name = tool_def.name
+                self.description = tool_def.description
             
-        返回:
-            文件元数据
-        """
+            async def __call__(self, *args, **kwargs):
+                """Agno工具调用接口"""
+                if hasattr(self.tool_instance, 'execute'):
+                    return await self.tool_instance.execute(*args, **kwargs)
+                elif hasattr(self.tool_instance, '__call__'):
+                    return await self.tool_instance(*args, **kwargs)
+                else:
+                    return {"error": "工具不支持调用"}
+        
+        return AgnoCompatibleTool(tool_instance, tool_definition)
+
+class DynamicAgnoToolRegistry:
+    """Agno动态工具注册表"""
+    
+    def __init__(self, user_id: Optional[str] = None):
+        self.user_id = user_id
+        self.tools_manager = DynamicZZDSJToolsManager(user_id)
+        self._registered_tools: Dict[str, Any] = {}
+    
+    async def register_user_tools(self) -> List[Any]:
+        """注册用户可用的工具"""
         try:
-            # 检查文件是否存在
-            if not os.path.exists(file_path):
-                return {"error": f"文件不存在: {file_path}"}
+            available_tools = await self.tools_manager.get_available_tools()
+            registered_tools = []
             
-            # 获取基本文件信息
-            file_stat = os.stat(file_path)
-            file_name = os.path.basename(file_path)
-            file_ext = os.path.splitext(file_name)[1].lower()
+            for tool_info in available_tools:
+                tool_instance = await self.tools_manager.create_tool_instance(tool_info['id'])
+                if tool_instance:
+                    self._registered_tools[tool_info['id']] = tool_instance
+                    registered_tools.append(tool_instance)
             
-            # 构建元数据
-            metadata = {
-                "file_name": file_name,
-                "file_path": file_path,
-                "file_extension": file_ext,
-                "file_size": file_stat.st_size,
-                "file_size_mb": round(file_stat.st_size / (1024 * 1024), 2),
-                "created_at": datetime.fromtimestamp(file_stat.st_ctime).isoformat(),
-                "modified_at": datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
-                "accessed_at": datetime.fromtimestamp(file_stat.st_atime).isoformat(),
-            }
-            
-            # 基于文件类型的内容类型映射
-            content_type_mapping = {
-                '.pdf': 'application/pdf',
-                '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                '.txt': 'text/plain',
-                '.md': 'text/markdown',
-                '.json': 'application/json',
-                '.csv': 'text/csv'
-            }
-            
-            metadata["content_type"] = content_type_mapping.get(file_ext, 'application/octet-stream')
-            
-            # 判断是否为文本文件
-            text_extensions = ['.txt', '.md', '.json', '.csv', '.py', '.js', '.html', '.css']
-            metadata["is_text_file"] = file_ext in text_extensions
-            
-            return metadata
+            logger.info(f"成功注册 {len(registered_tools)} 个工具")
+            return registered_tools
             
         except Exception as e:
-            return {"error": f"元数据提取失败: {str(e)}"}
-
-
-class ZZDSJFileManagementTools:
-    """ZZDSJ文件管理工具包"""
+            logger.error(f"注册用户工具失败: {str(e)}")
+            return []
     
-    def __init__(self, upload_base_path: str = "uploads/"):
-        """
-        初始化文件管理工具包
-        
-        参数:
-            upload_base_path: 上传文件基础路径
-        """
-        self.upload_base_path = upload_base_path
-    
-    def list_files(self, directory: str = "", file_type: Optional[str] = None) -> Dict[str, Any]:
-        """
-        列出目录中的文件
-        
-        参数:
-            directory: 目录路径（相对于base_path）
-            file_type: 文件类型过滤（如 '.pdf', '.docx'）
-            
-        返回:
-            文件列表
-        """
+    async def get_tools_by_category(self, category: str) -> List[Any]:
+        """按类别获取工具"""
         try:
-            full_path = os.path.join(self.upload_base_path, directory)
+            category_tools = await self.tools_manager.get_available_tools(category)
+            tools = []
             
-            if not os.path.exists(full_path):
-                return {"error": f"目录不存在: {full_path}", "files": []}
+            for tool_info in category_tools:
+                tool_instance = await self.tools_manager.create_tool_instance(tool_info['id'])
+                if tool_instance:
+                    tools.append(tool_instance)
             
-            files = []
-            for item in os.listdir(full_path):
-                item_path = os.path.join(full_path, item)
-                
-                if os.path.isfile(item_path):
-                    file_ext = os.path.splitext(item)[1].lower()
-                    
-                    # 文件类型过滤
-                    if file_type and file_ext != file_type.lower():
-                        continue
-                    
-                    file_stat = os.stat(item_path)
-                    files.append({
-                        "name": item,
-                        "path": os.path.join(directory, item),
-                        "extension": file_ext,
-                        "size": file_stat.st_size,
-                        "modified_at": datetime.fromtimestamp(file_stat.st_mtime).isoformat()
-                    })
-            
-            return {
-                "files": sorted(files, key=lambda x: x["modified_at"], reverse=True),
-                "count": len(files),
-                "directory": directory
-            }
+            return tools
             
         except Exception as e:
-            return {"error": f"文件列表获取失败: {str(e)}", "files": []}
+            logger.error(f"获取类别 {category} 工具失败: {str(e)}")
+            return []
+    
+    def get_registered_tool(self, tool_id: str) -> Optional[Any]:
+        """获取已注册的工具"""
+        return self._registered_tools.get(tool_id)
 
-    def get_file_info(self, file_path: str) -> Dict[str, Any]:
-        """
-        获取特定文件的详细信息
+# 全局工具管理器实例
+_global_tools_manager: Optional[DynamicZZDSJToolsManager] = None
+
+def get_tools_manager(user_id: Optional[str] = None) -> DynamicZZDSJToolsManager:
+    """获取工具管理器实例"""
+    return DynamicZZDSJToolsManager(user_id)
+
+async def get_user_tools(user_id: str) -> List[Any]:
+    """获取用户可用的工具列表"""
+    registry = DynamicAgnoToolRegistry(user_id)
+    return await registry.register_user_tools()
+
+async def get_tools_by_category(category: str, user_id: Optional[str] = None) -> List[Any]:
+    """按类别获取工具"""
+    registry = DynamicAgnoToolRegistry(user_id)
+    return await registry.get_tools_by_category(category)
+
+# 便利函数 - 兼容原有接口
+async def get_zzdsj_knowledge_tools(user_id: Optional[str] = None, kb_id: Optional[str] = None) -> List[Any]:
+    """获取ZZDSJ知识库工具"""
+    return await get_tools_by_category("knowledge", user_id)
+
+async def get_zzdsj_file_tools(user_id: Optional[str] = None, upload_base_path: str = "uploads/") -> List[Any]:
+    """获取ZZDSJ文件管理工具"""
+    return await get_tools_by_category("file", user_id)
+
+async def get_zzdsj_system_tools(user_id: Optional[str] = None) -> List[Any]:
+    """获取ZZDSJ系统工具"""
+    return await get_tools_by_category("system", user_id)
+
+async def create_zzdsj_agent_tools(user_id: Optional[str] = None) -> Dict[str, List[Any]]:
+    """为Agno代理创建ZZDSJ工具集合"""
+    try:
+        registry = DynamicAgnoToolRegistry(user_id)
         
-        参数:
-            file_path: 文件路径
-            
-        返回:
-            文件详细信息
-        """
-        try:
-            full_path = os.path.join(self.upload_base_path, file_path)
-            
-            if not os.path.exists(full_path):
-                return {"error": f"文件不存在: {file_path}"}
-            
-            file_stat = os.stat(full_path)
-            file_name = os.path.basename(full_path)
-            file_ext = os.path.splitext(file_name)[1].lower()
-            
-            file_info = {
-                "name": file_name,
-                "path": file_path,
-                "full_path": full_path,
-                "extension": file_ext,
-                "size": file_stat.st_size,
-                "size_mb": round(file_stat.st_size / (1024 * 1024), 2),
-                "created_at": datetime.fromtimestamp(file_stat.st_ctime).isoformat(),
-                "modified_at": datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
-                "is_readable": os.access(full_path, os.R_OK),
-                "is_writable": os.access(full_path, os.W_OK)
-            }
-            
-            return file_info
-            
-        except Exception as e:
-            return {"error": f"文件信息获取失败: {str(e)}"}
-
-
-class ZZDSJSystemTools:
-    """ZZDSJ系统工具包"""
-    
-    def get_system_status(self) -> Dict[str, Any]:
-        """
-        获取系统状态信息
+        tools_by_category = {
+            "knowledge": await registry.get_tools_by_category("knowledge"),
+            "files": await registry.get_tools_by_category("file"),
+            "system": await registry.get_tools_by_category("system"),
+            "search": await registry.get_tools_by_category("search"),
+            "reasoning": await registry.get_tools_by_category("reasoning")
+        }
         
-        返回:
-            系统状态
-        """
-        try:
-            import psutil
-            
-            # 获取系统资源使用情况
-            cpu_percent = psutil.cpu_percent(interval=1)
-            memory = psutil.virtual_memory()
-            disk = psutil.disk_usage('/')
-            
-            status = {
-                "cpu_usage": cpu_percent,
-                "memory": {
-                    "total": memory.total,
-                    "available": memory.available,
-                    "percent": memory.percent,
-                    "used": memory.used
-                },
-                "disk": {
-                    "total": disk.total,
-                    "used": disk.used,
-                    "free": disk.free,
-                    "percent": (disk.used / disk.total) * 100
-                },
-                "timestamp": datetime.now().isoformat()
-            }
-            
-            return status
-            
-        except ImportError:
-            return {"error": "psutil未安装，无法获取系统状态"}
-        except Exception as e:
-            return {"error": f"系统状态获取失败: {str(e)}"}
-
-    def get_service_health(self, service_name: str) -> Dict[str, Any]:
-        """
-        检查特定服务的健康状态
+        return tools_by_category
         
-        参数:
-            service_name: 服务名称
-            
-        返回:
-            服务健康状态
-        """
-        try:
-            # 这里可以扩展为实际的服务健康检查逻辑
-            # 例如检查数据库连接、Redis连接等
-            
-            health_checks = {
-                "database": self._check_database_health,
-                "redis": self._check_redis_health,
-                "vector_db": self._check_vector_db_health,
-                "knowledge_base": self._check_knowledge_base_health
-            }
-            
-            if service_name in health_checks:
-                return health_checks[service_name]()
-            else:
-                return {"error": f"未知服务: {service_name}"}
-                
-        except Exception as e:
-            return {"error": f"服务健康检查失败: {str(e)}"}
-    
-    def _check_database_health(self) -> Dict[str, Any]:
-        """检查数据库健康状态"""
-        # 占位符实现
-        return {"status": "healthy", "service": "database", "response_time_ms": 50}
-    
-    def _check_redis_health(self) -> Dict[str, Any]:
-        """检查Redis健康状态"""
-        # 占位符实现
-        return {"status": "healthy", "service": "redis", "response_time_ms": 10}
-    
-    def _check_vector_db_health(self) -> Dict[str, Any]:
-        """检查向量数据库健康状态"""
-        # 占位符实现
-        return {"status": "healthy", "service": "vector_db", "response_time_ms": 80}
-    
-    def _check_knowledge_base_health(self) -> Dict[str, Any]:
-        """检查知识库健康状态"""
-        # 占位符实现
-        return {"status": "healthy", "service": "knowledge_base", "response_time_ms": 120}
+    except Exception as e:
+        logger.error(f"创建Agent工具集合失败: {str(e)}")
+        return {}
 
-
-# 工具注册函数 - 符合Agno代理使用模式
-def get_zzdsj_knowledge_tools(kb_id: Optional[str] = None) -> ZZDSJKnowledgeTools:
-    """
-    获取ZZDSJ知识库工具包
-    
-    参数:
-        kb_id: 默认知识库ID
-        
-    返回:
-        知识库工具包实例
-    """
-    return ZZDSJKnowledgeTools(kb_id=kb_id)
-
-
-def get_zzdsj_file_tools(upload_base_path: str = "uploads/") -> ZZDSJFileManagementTools:
-    """
-    获取ZZDSJ文件管理工具包
-    
-    参数:
-        upload_base_path: 上传文件基础路径
-        
-    返回:
-        文件管理工具包实例
-    """
-    return ZZDSJFileManagementTools(upload_base_path=upload_base_path)
-
-
-def get_zzdsj_system_tools() -> ZZDSJSystemTools:
-    """
-    获取ZZDSJ系统工具包
-    
-    返回:
-        系统工具包实例
-    """
-    return ZZDSJSystemTools()
-
-
-# 示例：创建自定义工具函数以便于Agno代理使用
-def create_zzdsj_agent_tools(kb_id: Optional[str] = None) -> Dict[str, Any]:
-    """
-    为Agno代理创建ZZDSJ工具集合
-    
-    参数:
-        kb_id: 默认知识库ID
-        
-    返回:
-        工具字典，可直接用于Agno Agent的tools参数
-    """
-    knowledge_tools = get_zzdsj_knowledge_tools(kb_id)
-    file_tools = get_zzdsj_file_tools()
-    system_tools = get_zzdsj_system_tools()
-    
-    return {
-        "knowledge": knowledge_tools,
-        "files": file_tools,
-        "system": system_tools
-    }
+# 导出主要组件
+__all__ = [
+    "DynamicZZDSJToolsManager",
+    "DynamicAgnoToolRegistry",
+    "get_tools_manager",
+    "get_user_tools",
+    "get_tools_by_category",
+    "get_zzdsj_knowledge_tools",
+    "get_zzdsj_file_tools", 
+    "get_zzdsj_system_tools",
+    "create_zzdsj_agent_tools"
+]

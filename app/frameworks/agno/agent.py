@@ -1,435 +1,403 @@
 """
-Agno Agent实现 - 使用正确的官方Agno Agent API
-基于官方文档的真实Agno Agent接口，确保语法和方法调用的正确性
+Agno Agent动态实现 - 基于系统配置的动态Agent
+与动态Agent工厂集成，支持从前端配置和系统配置动态创建Agent
 """
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Union, AsyncGenerator, Callable
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Union, AsyncGenerator
 
-# 使用正确的Agno官方API导入
-from agno.agent import Agent as AgnoAgent
-from agno.team import Team as AgnoTeam
-from agno.models.openai import OpenAIChat
-from agno.models.anthropic import Claude
-from agno.tools.reasoning import ReasoningTools
-from agno.tools.yfinance import YFinanceTools
-from agno.tools.duckduckgo import DuckDuckGoTools
-from agno.memory import Memory as AgnoMemory
-from agno.storage import Storage as AgnoStorage
+from app.frameworks.agno.dynamic_agent_factory import get_agent_factory, create_dynamic_agent
+from app.frameworks.agno.config import get_user_agno_config, get_system_agno_config
+from app.frameworks.agno.model_config_adapter import get_model_adapter, ModelType
 
-from app.frameworks.agno.core import AgnoLLMInterface, AgnoServiceContext
+# 动态导入Agno组件
+try:
+    from agno.agent import Agent as AgnoAgent
+    from agno.team import Team as AgnoTeam
+    AGNO_AVAILABLE = True
+except ImportError:
+    AGNO_AVAILABLE = False
+    AgnoAgent = object
+    AgnoTeam = object
 
 logger = logging.getLogger(__name__)
 
-class AgnoKnowledgeAgent:
+class DynamicAgnoKnowledgeAgent:
     """
-    Agno知识代理 - 使用官方Agno Agent API
-    为知识库查询和推理提供统一接口，保持与LlamaIndex的兼容性
+    动态Agno知识代理 - 基于系统配置
+    不再使用硬编码的模型和工具，而是从系统配置和用户配置动态获取
     """
     
     def __init__(
         self,
         name: str = "Knowledge Agent",
-        role: str = "AI Assistant",
-        model: Optional[Union[str, AgnoLLMInterface]] = None,
-        tools: Optional[List[Any]] = None,
-        knowledge: Optional[Any] = None,
-        memory: Optional[AgnoMemory] = None,
-        storage: Optional[AgnoStorage] = None,
-        instructions: Optional[Union[str, List[str]]] = None,
-        description: Optional[str] = None,
-        reasoning_enabled: bool = True,
-        show_tool_calls: bool = False,
-        markdown: bool = True,
+        role: str = "AI Assistant", 
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
         **kwargs
     ):
         self.name = name
         self.role = role
-        self.reasoning_enabled = reasoning_enabled
+        self.user_id = user_id
+        self.session_id = session_id
+        self.kwargs = kwargs
         
-        # 处理模型配置
-        if isinstance(model, str):
-            self._agno_model = self._create_model_from_string(model)
-        elif isinstance(model, AgnoLLMInterface):
-            self._agno_model = model.agno_model
-        else:
-            # 默认使用GPT-4o
-            self._agno_model = OpenAIChat(id="gpt-4o")
-        
-        # 处理工具配置
-        self._tools = self._prepare_tools(tools, reasoning_enabled)
-        
-        # 处理指令配置
-        if isinstance(instructions, str):
-            instructions = [instructions]
-        elif instructions is None:
-            instructions = [f"You are {name}, {role}. Provide helpful and accurate responses."]
-        
-        # 创建Agno Agent实例
-        self._agno_agent = AgnoAgent(
-            name=name,
-            role=role,
-            model=self._agno_model,
-            tools=self._tools,
-            knowledge=knowledge,
-            memory=memory,
-            storage=storage,
-            instructions=instructions,
-            description=description or f"An AI agent specialized in {role.lower()}",
-            show_tool_calls=show_tool_calls,
-            markdown=markdown,
-            **kwargs
-        )
-        
-        # 存储配置以便后续使用
-        self._knowledge = knowledge
-        self._memory = memory
-        self._storage = storage
+        # 动态创建的Agent实例
+        self._agent_instance: Optional[AgnoAgent] = None
+        self._is_initialized = False
     
-    def _create_model_from_string(self, model_name: str):
-        """从字符串创建Agno模型实例"""
-        if "claude" in model_name.lower():
-            return Claude(id=model_name)
-        else:
-            return OpenAIChat(id=model_name)
-    
-    def _prepare_tools(self, tools: Optional[List[Any]], reasoning_enabled: bool) -> List[Any]:
-        """准备工具列表"""
-        agno_tools = []
+    async def initialize(self):
+        """异步初始化Agent"""
+        if self._is_initialized:
+            return
         
-        # 添加推理工具（如果启用）
-        if reasoning_enabled:
-            agno_tools.append(ReasoningTools(add_instructions=True))
-        
-        # 添加自定义工具
-        if tools:
-            agno_tools.extend(tools)
-        
-        return agno_tools
-    
-    @property
-    def agno_agent(self) -> AgnoAgent:
-        """获取底层Agno Agent实例"""
-        return self._agno_agent
-    
-    def query(self, query_str: str, **kwargs) -> str:
-        """
-        执行查询 - 兼容LlamaIndex接口
-        
-        参数:
-            query_str: 查询字符串
-            **kwargs: 其他参数
-            
-        返回:
-            响应字符串
-        """
         try:
-            # 使用Agno Agent的response方法
-            response = self._agno_agent.response(query_str, **kwargs)
+            # 从系统配置创建Agent配置
+            agent_config = await self._build_agent_config()
             
-            # 处理响应格式
-            if hasattr(response, 'content'):
-                return response.content
+            # 使用动态工厂创建Agent
+            self._agent_instance = await create_dynamic_agent(
+                agent_config=agent_config,
+                user_id=self.user_id or "system",
+                session_id=self.session_id
+            )
+            
+            if self._agent_instance:
+                self._is_initialized = True
+                logger.info(f"成功初始化动态Agent: {self.name}")
             else:
-                return str(response)
+                logger.error(f"初始化动态Agent失败: {self.name}")
                 
         except Exception as e:
-            logger.error(f"Agent query error: {e}")
+            logger.error(f"初始化Agent失败: {str(e)}", exc_info=True)
+    
+    async def _build_agent_config(self) -> Dict[str, Any]:
+        """构建Agent配置"""
+        try:
+            # 获取用户配置或系统配置
+            if self.user_id:
+                agno_config = await get_user_agno_config(self.user_id)
+            else:
+                agno_config = await get_system_agno_config()
+            
+            # 构建基础配置
+            agent_config = {
+                "name": self.name,
+                "role": self.role,
+                "description": self.kwargs.get("description", f"A {self.role} assistant"),
+                "instructions": self.kwargs.get("instructions", []),
+                "model_config": {
+                    "model_id": agno_config.models.default_chat_model,
+                    "type": "chat"
+                },
+                "tools": await self._get_enabled_tools(agno_config),
+                "knowledge_bases": self.kwargs.get("knowledge_bases", []),
+                "show_tool_calls": agno_config.features.show_tool_calls,
+                "markdown": agno_config.features.markdown,
+                "max_loops": self.kwargs.get("max_loops", 10)
+            }
+            
+            return agent_config
+            
+        except Exception as e:
+            logger.error(f"构建Agent配置失败: {str(e)}")
+            # 返回最小配置
+            return {
+                "name": self.name,
+                "role": self.role,
+                "model_config": {"type": "chat"},
+                "tools": [],
+                "knowledge_bases": []
+            }
+    
+    async def _get_enabled_tools(self, agno_config) -> List[Dict[str, Any]]:
+        """获取启用的工具配置"""
+        tools = []
+        
+        try:
+            # 从系统配置获取启用的工具
+            enabled_tool_ids = agno_config.tools.enabled_tools
+            
+            if self.user_id:
+                # 获取用户有权限的工具
+                from app.services.tools.tool_service import ToolService
+                from app.utils.core.database import get_db
+                
+                db = next(get_db())
+                tool_service = ToolService(db)
+                
+                for tool_id in enabled_tool_ids:
+                    has_permission = await tool_service.check_tool_permission(
+                        self.user_id, tool_id
+                    )
+                    if has_permission:
+                        tools.append({
+                            "tool_id": tool_id,
+                            "params": {}
+                        })
+            else:
+                # 系统级别，直接使用所有启用的工具
+                for tool_id in enabled_tool_ids:
+                    tools.append({
+                        "tool_id": tool_id,
+                        "params": {}
+                    })
+            
+            logger.info(f"为Agent {self.name} 配置了 {len(tools)} 个工具")
+            return tools
+            
+        except Exception as e:
+            logger.error(f"获取启用工具失败: {str(e)}")
+            return []
+    
+    @property
+    async def agno_agent(self) -> Optional[AgnoAgent]:
+        """获取底层Agno Agent实例"""
+        if not self._is_initialized:
+            await self.initialize()
+        return self._agent_instance
+    
+    async def query(self, query_str: str, **kwargs) -> str:
+        """
+        执行查询 - 兼容原接口
+        """
+        agent = await self.agno_agent
+        if not agent:
+            return "Error: Agent not initialized"
+        
+        try:
+            # 使用动态Agent执行查询
+            if hasattr(agent, 'aquery'):
+                response = await agent.aquery(query_str, **kwargs)
+            else:
+                # 兼容同步接口
+                response = await asyncio.create_task(
+                    asyncio.to_thread(agent.query, query_str, **kwargs)
+                )
+            
+            return str(response)
+                
+        except Exception as e:
+            logger.error(f"Agent查询失败: {str(e)}")
             return f"Error processing query: {str(e)}"
     
     async def aquery(self, query_str: str, **kwargs) -> str:
         """异步查询"""
-        return await asyncio.create_task(
-            asyncio.to_thread(self.query, query_str, **kwargs)
-        )
+        return await self.query(query_str, **kwargs)
     
-    def stream_query(self, query_str: str, **kwargs):
+    async def stream_query(self, query_str: str, **kwargs) -> AsyncGenerator[str, None]:
         """
         流式查询 - 生成器接口
-        
-        参数:
-            query_str: 查询字符串
-            **kwargs: 其他参数
-            
-        返回:
-            响应生成器
         """
+        agent = await self.agno_agent
+        if not agent:
+            yield "Error: Agent not initialized"
+            return
+        
         try:
-            # 使用Agno Agent的流式响应
-            for chunk in self._agno_agent.response(query_str, stream=True, **kwargs):
-                if hasattr(chunk, 'content'):
-                    yield chunk.content
-                else:
+            # 使用动态Agent的流式查询
+            if hasattr(agent, 'astream_query'):
+                async for chunk in agent.astream_query(query_str, **kwargs):
                     yield str(chunk)
+            else:
+                # 兜底方案
+                response = await self.query(query_str, **kwargs)
+                yield response
+                
         except Exception as e:
-            logger.error(f"Agent stream query error: {e}")
+            logger.error(f"Agent流式查询失败: {str(e)}")
             yield f"Error: {str(e)}"
-    
-    async def astream_query(self, query_str: str, **kwargs) -> AsyncGenerator[str, None]:
-        """异步流式查询"""
-        for chunk in self.stream_query(query_str, **kwargs):
-            yield chunk
-            await asyncio.sleep(0)  # 让出控制权
-    
-    def print_response(self, query_str: str, stream: bool = False, **kwargs):
-        """
-        打印响应 - 使用Agno原生方法
-        
-        参数:
-            query_str: 查询字符串
-            stream: 是否流式输出
-            **kwargs: 其他参数
-        """
-        self._agno_agent.print_response(query_str, stream=stream, **kwargs)
-    
-    def add_tool(self, tool: Any):
-        """添加工具到代理"""
-        if hasattr(self._agno_agent, 'tools'):
-            self._agno_agent.tools.append(tool)
-        else:
-            self._agno_agent.tools = [tool]
-    
-    def set_instructions(self, instructions: Union[str, List[str]]):
-        """设置代理指令"""
-        if isinstance(instructions, str):
-            instructions = [instructions]
-        self._agno_agent.instructions = instructions
-    
-    def get_session_history(self) -> List[Dict[str, Any]]:
-        """获取会话历史"""
-        if self._memory and hasattr(self._memory, 'get_messages'):
-            return self._memory.get_messages()
-        return []
-    
-    def clear_session(self):
-        """清空会话"""
-        if self._memory and hasattr(self._memory, 'clear'):
-            self._memory.clear()
 
-class AgnoTeam:
+class DynamicAgnoTeam:
     """
-    Agno团队 - 多代理协作系统
-    使用官方Agno Team API实现多代理协作
+    动态Agno团队 - 基于系统配置
+    支持动态创建多Agent协作团队
     """
     
     def __init__(
         self,
         name: str = "Agent Team",
-        agents: Optional[List[AgnoKnowledgeAgent]] = None,
-        mode: str = "coordinate",  # coordinate, collaborate, route
-        model: Optional[Union[str, AgnoLLMInterface]] = None,
-        instructions: Optional[List[str]] = None,
-        success_criteria: Optional[str] = None,
-        show_tool_calls: bool = True,
-        markdown: bool = True,
+        agents_config: Optional[List[Dict[str, Any]]] = None,
+        user_id: Optional[str] = None,
         **kwargs
     ):
         self.name = name
-        self.mode = mode
+        self.agents_config = agents_config or []
+        self.user_id = user_id
+        self.kwargs = kwargs
         
-        # 处理模型配置
-        if isinstance(model, str):
-            team_model = self._create_model_from_string(model)
-        elif isinstance(model, AgnoLLMInterface):
-            team_model = model.agno_model
-        else:
-            team_model = OpenAIChat(id="gpt-4o")
+        self._team_instance: Optional[AgnoTeam] = None
+        self._agents: List[DynamicAgnoKnowledgeAgent] = []
+        self._is_initialized = False
+    
+    async def initialize(self):
+        """初始化团队"""
+        if self._is_initialized:
+            return
         
-        # 提取Agno Agent实例
-        agno_agents = []
-        if agents:
-            for agent in agents:
-                if isinstance(agent, AgnoKnowledgeAgent):
-                    agno_agents.append(agent.agno_agent)
-                else:
-                    agno_agents.append(agent)
-        
-        # 创建Agno Team实例
-        if mode == "team":
-            # 使用Agent的team参数创建团队
-            self._agno_team = AgnoAgent(
-                team=agno_agents,
-                model=team_model,
-                instructions=instructions or [f"Coordinate with team members to provide comprehensive responses"],
-                show_tool_calls=show_tool_calls,
-                markdown=markdown,
-                **kwargs
+        try:
+            # 创建团队成员
+            for agent_config in self.agents_config:
+                agent = DynamicAgnoKnowledgeAgent(
+                    name=agent_config.get("name", "Team Member"),
+                    role=agent_config.get("role", "Assistant"),
+                    user_id=self.user_id,
+                    **agent_config
+                )
+                await agent.initialize()
+                self._agents.append(agent)
+            
+            # 创建团队配置
+            team_config = await self._build_team_config()
+            
+            # 使用动态工厂创建团队
+            factory = get_agent_factory()
+            self._team_instance = await factory.create_team_from_config(
+                team_config, self.user_id or "system"
             )
-        else:
-            # 使用Team类创建团队
-            self._agno_team = AgnoTeam(
-                mode=mode,
-                members=agno_agents,
-                model=team_model,
-                success_criteria=success_criteria or "Provide comprehensive and accurate responses through team collaboration",
-                instructions=instructions or [f"Work together as a team to provide the best possible response"],
-                show_tool_calls=show_tool_calls,
-                markdown=markdown,
-                **kwargs
-            )
-        
-        self._agents = agents or []
+            
+            if self._team_instance:
+                self._is_initialized = True
+                logger.info(f"成功初始化动态团队: {self.name}")
+            
+        except Exception as e:
+            logger.error(f"初始化团队失败: {str(e)}", exc_info=True)
     
-    def _create_model_from_string(self, model_name: str):
-        """从字符串创建Agno模型实例"""
-        if "claude" in model_name.lower():
-            return Claude(id=model_name)
-        else:
-            return OpenAIChat(id=model_name)
+    async def _build_team_config(self) -> Dict[str, Any]:
+        """构建团队配置"""
+        return {
+            "name": self.name,
+            "agents": self.agents_config,
+            "model_config": {"type": "chat"},
+            "mode": self.kwargs.get("mode", "sequential"),
+            "instructions": self.kwargs.get("instructions", []),
+            "success_criteria": self.kwargs.get("success_criteria")
+        }
     
-    @property
-    def agno_team(self):
-        """获取底层Agno Team实例"""
-        return self._agno_team
-    
-    def query(self, query_str: str, **kwargs) -> str:
+    async def query(self, query_str: str, **kwargs) -> str:
         """团队查询"""
+        if not self._is_initialized:
+            await self.initialize()
+        
+        if not self._team_instance:
+            return "Error: Team not initialized"
+        
         try:
-            response = self._agno_team.response(query_str, **kwargs)
-            if hasattr(response, 'content'):
-                return response.content
+            if hasattr(self._team_instance, 'aquery'):
+                response = await self._team_instance.aquery(query_str, **kwargs)
             else:
-                return str(response)
+                response = await asyncio.create_task(
+                    asyncio.to_thread(self._team_instance.query, query_str, **kwargs)
+                )
+            return str(response)
+            
         except Exception as e:
-            logger.error(f"Team query error: {e}")
+            logger.error(f"团队查询失败: {str(e)}")
             return f"Error processing team query: {str(e)}"
-    
-    async def aquery(self, query_str: str, **kwargs) -> str:
-        """异步团队查询"""
-        return await asyncio.create_task(
-            asyncio.to_thread(self.query, query_str, **kwargs)
-        )
-    
-    def stream_query(self, query_str: str, **kwargs):
-        """团队流式查询"""
-        try:
-            for chunk in self._agno_team.response(query_str, stream=True, **kwargs):
-                if hasattr(chunk, 'content'):
-                    yield chunk.content
-                else:
-                    yield str(chunk)
-        except Exception as e:
-            logger.error(f"Team stream query error: {e}")
-            yield f"Error: {str(e)}"
-    
-    def print_response(self, query_str: str, stream: bool = False, **kwargs):
-        """团队打印响应"""
-        self._agno_team.print_response(query_str, stream=stream, **kwargs)
-    
-    def add_agent(self, agent: AgnoKnowledgeAgent):
-        """添加代理到团队"""
-        self._agents.append(agent)
-        # 注意：Agno Team的成员在创建后通常不能动态修改
-        # 这里仅更新内部列表，实际功能可能需要重新创建团队
-    
-    def get_agents(self) -> List[AgnoKnowledgeAgent]:
-        """获取所有代理"""
-        return self._agents.copy()
 
-# 便利函数 - 创建常用的代理和团队
-def create_knowledge_agent(
+# 动态Agent创建函数
+async def create_dynamic_knowledge_agent(
     name: str = "Knowledge Agent",
-    model: str = "gpt-4o",
-    knowledge_base: Optional[Any] = None,
-    tools: Optional[List[Any]] = None,
-    reasoning: bool = True,
+    role: str = "AI Assistant",
+    user_id: Optional[str] = None,
+    session_id: Optional[str] = None,
     **kwargs
-) -> AgnoKnowledgeAgent:
-    """创建知识代理"""
-    return AgnoKnowledgeAgent(
+) -> DynamicAgnoKnowledgeAgent:
+    """创建动态知识Agent"""
+    agent = DynamicAgnoKnowledgeAgent(
         name=name,
-        model=model,
-        knowledge=knowledge_base,
-        tools=tools,
-        reasoning_enabled=reasoning,
+        role=role, 
+        user_id=user_id,
+        session_id=session_id,
         **kwargs
     )
+    await agent.initialize()
+    return agent
 
-def create_research_agent(
+async def create_dynamic_research_agent(
     name: str = "Research Agent",
-    model: str = "gpt-4o",
+    user_id: Optional[str] = None,
     **kwargs
-) -> AgnoKnowledgeAgent:
-    """创建研究代理"""
-    tools = [
-        DuckDuckGoTools(),  # 网络搜索
-        ReasoningTools(add_instructions=True)  # 推理工具
-    ]
+) -> DynamicAgnoKnowledgeAgent:
+    """创建动态研究Agent"""
+    # 从系统配置获取研究相关的工具
+    if user_id:
+        agno_config = await get_user_agno_config(user_id)
+    else:
+        agno_config = await get_system_agno_config()
     
-    return AgnoKnowledgeAgent(
+    # 过滤出搜索和推理相关的工具
+    research_tools = []
+    for tool_id in agno_config.tools.enabled_tools:
+        # 这里可以根据工具类别过滤
+        if "search" in tool_id.lower() or "reasoning" in tool_id.lower():
+            research_tools.append(tool_id)
+    
+    return await create_dynamic_knowledge_agent(
         name=name,
         role="Research and Analysis Specialist",
-        model=model,
-        tools=tools,
+        user_id=user_id,
         instructions=[
             "You are a research specialist who excels at finding and analyzing information",
-            "Use web search to gather current information when needed",
+            "Use available search tools to gather current information when needed",
             "Apply reasoning tools to provide well-structured analysis",
             "Always cite sources and provide evidence-based responses"
         ],
         **kwargs
     )
 
-def create_finance_agent(
-    name: str = "Finance Agent",
-    model: str = "gpt-4o",
+async def create_dynamic_assistant_agent(
+    name: str = "AI Assistant",
+    user_id: Optional[str] = None,
     **kwargs
-) -> AgnoKnowledgeAgent:
-    """创建金融分析代理"""
-    tools = [
-        YFinanceTools(
-            stock_price=True,
-            analyst_recommendations=True,
-            company_info=True,
-            company_news=True
-        ),
-        ReasoningTools(add_instructions=True)
-    ]
-    
-    return AgnoKnowledgeAgent(
+) -> DynamicAgnoKnowledgeAgent:
+    """创建动态助手Agent"""
+    return await create_dynamic_knowledge_agent(
         name=name,
-        role="Financial Analysis Specialist",
-        model=model,
-        tools=tools,
+        role="General AI Assistant",
+        user_id=user_id,
         instructions=[
-            "You are a financial analysis expert",
-            "Use financial data tools to provide accurate market information",
-            "Present data in clear tables and charts when possible",
-            "Provide reasoned analysis based on available data"
+            "You are a helpful AI assistant",
+            "Provide accurate and helpful responses",
+            "Use available tools when necessary",
+            "Be friendly and professional"
         ],
         **kwargs
     )
 
-def create_multi_agent_team(
-    agents: List[AgnoKnowledgeAgent],
+async def create_dynamic_multi_agent_team(
+    agents_config: List[Dict[str, Any]],
     name: str = "Multi-Agent Team",
-    model: str = "gpt-4o",
-    mode: str = "coordinate",
+    user_id: Optional[str] = None,
     **kwargs
-) -> AgnoTeam:
-    """创建多代理团队"""
-    return AgnoTeam(
+) -> DynamicAgnoTeam:
+    """创建动态多Agent团队"""
+    team = DynamicAgnoTeam(
         name=name,
-        agents=agents,
-        model=model,
-        mode=mode,
+        agents_config=agents_config,
+        user_id=user_id,
         **kwargs
     )
+    await team.initialize()
+    return team
 
-# LlamaIndex兼容性别名
-KnowledgeAgent = AgnoKnowledgeAgent
-AgentTeam = AgnoTeam
+# 兼容性别名
+AgnoKnowledgeAgent = DynamicAgnoKnowledgeAgent
+AgnoTeam = DynamicAgnoTeam
+KnowledgeAgent = DynamicAgnoKnowledgeAgent
+AgentTeam = DynamicAgnoTeam
 
 # 导出主要组件
 __all__ = [
+    "DynamicAgnoKnowledgeAgent",
+    "DynamicAgnoTeam",
+    "create_dynamic_knowledge_agent",
+    "create_dynamic_research_agent", 
+    "create_dynamic_assistant_agent",
+    "create_dynamic_multi_agent_team",
     "AgnoKnowledgeAgent",
     "AgnoTeam",
-    "create_knowledge_agent",
-    "create_research_agent", 
-    "create_finance_agent",
-    "create_multi_agent_team",
     "KnowledgeAgent",
     "AgentTeam"
 ]

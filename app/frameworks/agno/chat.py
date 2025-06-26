@@ -1,391 +1,469 @@
 """
-Agno Chat模块 - 使用正确的官方Agno API
-基于Agno的Agent和Memory系统实现聊天功能
+Agno聊天模块动态实现
+基于系统配置和用户权限的动态聊天功能，与ZZDSJ聊天管理器集成
 """
 
 import asyncio
 import logging
-import uuid
-from typing import Any, Dict, List, Optional, Union, AsyncGenerator, Callable
+from typing import Dict, List, Any, Optional, AsyncGenerator, Union
 from datetime import datetime
+import uuid
 
-# 使用正确的Agno官方API导入
-from agno.agent import Agent as AgnoAgent
-from agno.models.openai import OpenAIChat
-from agno.models.anthropic import Claude
-from agno.memory import Memory as AgnoMemory
-from agno.storage import Storage as AgnoStorage
+from app.frameworks.agno.dynamic_agent_factory import get_agent_factory
+from app.frameworks.agno.config import get_user_agno_config, get_system_agno_config
+from app.frameworks.agno.model_config_adapter import get_model_adapter, ModelType
 
-from app.frameworks.agno.core import AgnoLLMInterface, AgnoServiceContext
+# 动态导入Agno组件
+try:
+    from agno.agent import Agent as AgnoAgent
+    from agno.memory import Memory as AgnoMemory
+    from agno.storage import Storage as AgnoStorage
+    AGNO_AVAILABLE = True
+except ImportError:
+    AGNO_AVAILABLE = False
+    AgnoAgent = object
+    AgnoMemory = object
+    AgnoStorage = object
 
 logger = logging.getLogger(__name__)
 
-class AgnoChatEngine:
+class DynamicAgnoChatManager:
     """
-    Agno聊天引擎 - 基于官方Agno Agent API
-    提供完整的对话管理和流式响应功能
+    动态Agno聊天管理器 - 基于系统配置
+    与ZZDSJ聊天系统集成，支持动态模型和工具配置
     """
     
     def __init__(
         self,
-        agent: Optional[AgnoAgent] = None,
-        model: Optional[Union[str, AgnoLLMInterface]] = None,
-        memory: Optional[AgnoMemory] = None,
-        storage: Optional[AgnoStorage] = None,
-        instructions: Optional[Union[str, List[str]]] = None,
-        system_prompt: Optional[str] = None,
-        chat_mode: str = "best",  # best, context, simple
+        user_id: Optional[str] = None,
         session_id: Optional[str] = None,
-        **kwargs
+        chat_config: Optional[Dict[str, Any]] = None
     ):
-        self.chat_mode = chat_mode
+        self.user_id = user_id
         self.session_id = session_id or str(uuid.uuid4())
+        self.chat_config = chat_config or {}
         
-        # 如果没有提供agent，创建默认agent
-        if agent is None:
-            # 处理模型配置
-            if isinstance(model, str):
-                agno_model = self._create_model_from_string(model)
-            elif isinstance(model, AgnoLLMInterface):
-                agno_model = model.agno_model
+        # 动态组件
+        self._agent_factory = get_agent_factory()
+        self._model_adapter = get_model_adapter()
+        self._current_agent = None
+        self._is_initialized = False
+        
+        # 聊天状态
+        self._conversation_history: List[Dict[str, Any]] = []
+        self._agent_config: Optional[Dict[str, Any]] = None
+    
+    async def initialize(self):
+        """初始化聊天管理器"""
+        if self._is_initialized:
+            return
+        
+        try:
+            # 获取配置
+            if self.user_id:
+                agno_config = await get_user_agno_config(self.user_id)
             else:
-                agno_model = OpenAIChat(id="gpt-4o")
+                agno_config = await get_system_agno_config()
             
-            # 处理指令配置
-            if isinstance(instructions, str):
-                instructions = [instructions]
-            elif instructions is None:
-                instructions = ["You are a helpful AI assistant. Provide clear, accurate, and helpful responses."]
+            # 构建默认Agent配置
+            self._agent_config = await self._build_chat_agent_config(agno_config)
             
-            # 如果有系统提示，添加到指令中
-            if system_prompt:
-                instructions.insert(0, system_prompt)
+            # 创建默认聊天Agent
+            await self._create_chat_agent()
             
-            # 创建Agno Agent
-            self._agno_agent = AgnoAgent(
-                model=agno_model,
-                memory=memory,
-                storage=storage,
-                instructions=instructions,
-                markdown=True,
-                show_tool_calls=False,
-                **kwargs
-            )
-        else:
-            self._agno_agent = agent
-        
-        # 存储会话信息
-        self._chat_history = []
-        self._memory = memory
-        self._storage = storage
-    
-    def _create_model_from_string(self, model_name: str):
-        """从字符串创建Agno模型实例"""
-        if "claude" in model_name.lower():
-            return Claude(id=model_name)
-        else:
-            return OpenAIChat(id=model_name)
-    
-    @property
-    def agno_agent(self) -> AgnoAgent:
-        """获取底层Agno Agent实例"""
-        return self._agno_agent
-    
-    def chat(self, message: str, **kwargs) -> str:
-        """
-        同步聊天方法
-        
-        参数:
-            message: 用户消息
-            **kwargs: 其他参数
-            
-        返回:
-            AI响应
-        """
-        try:
-            # 添加到聊天历史
-            self._add_to_history("user", message)
-            
-            # 使用Agno Agent处理消息
-            response = self._agno_agent.response(message, **kwargs)
-            
-            # 提取响应内容
-            response_content = response.content if hasattr(response, 'content') else str(response)
-            
-            # 添加到聊天历史
-            self._add_to_history("assistant", response_content)
-            
-            return response_content
+            self._is_initialized = True
+            logger.info(f"聊天管理器初始化成功 - Session: {self.session_id}")
             
         except Exception as e:
-            logger.error(f"Chat error: {e}")
-            error_response = f"Sorry, I encountered an error: {str(e)}"
-            self._add_to_history("assistant", error_response)
-            return error_response
+            logger.error(f"聊天管理器初始化失败: {str(e)}")
     
-    async def achat(self, message: str, **kwargs) -> str:
-        """异步聊天方法"""
-        return await asyncio.create_task(
-            asyncio.to_thread(self.chat, message, **kwargs)
-        )
-    
-    def stream_chat(self, message: str, **kwargs):
-        """
-        流式聊天方法
-        
-        参数:
-            message: 用户消息
-            **kwargs: 其他参数
-            
-        返回:
-            响应生成器
-        """
-        try:
-            # 添加到聊天历史
-            self._add_to_history("user", message)
-            
-            # 收集完整响应
-            full_response = ""
-            
-            # 使用Agno Agent的流式响应
-            for chunk in self._agno_agent.response(message, stream=True, **kwargs):
-                chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
-                full_response += chunk_content
-                yield chunk_content
-            
-            # 添加完整响应到聊天历史
-            self._add_to_history("assistant", full_response)
-            
-        except Exception as e:
-            logger.error(f"Stream chat error: {e}")
-            error_response = f"Error: {str(e)}"
-            self._add_to_history("assistant", error_response)
-            yield error_response
-    
-    async def astream_chat(self, message: str, **kwargs) -> AsyncGenerator[str, None]:
-        """异步流式聊天方法"""
-        for chunk in self.stream_chat(message, **kwargs):
-            yield chunk
-            await asyncio.sleep(0)  # 让出控制权
-    
-    def _add_to_history(self, role: str, content: str):
-        """添加消息到聊天历史"""
-        message = {
-            "role": role,
-            "content": content,
-            "timestamp": datetime.now().isoformat()
+    async def _build_chat_agent_config(self, agno_config) -> Dict[str, Any]:
+        """构建聊天Agent配置"""
+        return {
+            "name": self.chat_config.get("agent_name", "Chat Assistant"),
+            "role": self.chat_config.get("agent_role", "AI Assistant"),
+            "description": "A conversational AI assistant",
+            "instructions": [
+                "You are a helpful AI assistant",
+                "Provide accurate and helpful responses",
+                "Maintain conversation context",
+                "Use available tools when necessary"
+            ],
+            "model_config": {
+                "model_id": agno_config.models.default_chat_model,
+                "type": "chat",
+                "temperature": agno_config.models.temperature,
+                "max_tokens": agno_config.models.max_tokens
+            },
+            "tools": await self._get_enabled_tools(agno_config),
+            "knowledge_bases": self.chat_config.get("knowledge_bases", []),
+            "show_tool_calls": agno_config.features.show_tool_calls,
+            "markdown": agno_config.features.markdown,
+            "memory_config": {
+                "type": agno_config.memory.memory_type,
+                "max_size": agno_config.memory.max_memory_size
+            }
         }
-        self._chat_history.append(message)
+    
+    async def _get_enabled_tools(self, agno_config) -> List[Dict[str, Any]]:
+        """获取启用的工具"""
+        tools = []
         
-        # 如果有内存系统，也添加到内存中
-        if self._memory:
-            try:
-                if hasattr(self._memory, 'add'):
-                    self._memory.add(message)
-                elif hasattr(self._memory, 'add_message'):
-                    self._memory.add_message(message)
-            except Exception as e:
-                logger.debug(f"Failed to add message to memory: {e}")
-    
-    def get_chat_history(self) -> List[Dict[str, Any]]:
-        """获取聊天历史"""
-        return self._chat_history.copy()
-    
-    def clear_history(self):
-        """清空聊天历史"""
-        self._chat_history.clear()
-        if self._memory and hasattr(self._memory, 'clear'):
-            try:
-                self._memory.clear()
-            except Exception as e:
-                logger.debug(f"Failed to clear memory: {e}")
-    
-    def set_system_prompt(self, system_prompt: str):
-        """设置系统提示"""
-        current_instructions = getattr(self._agno_agent, 'instructions', [])
-        if isinstance(current_instructions, str):
-            current_instructions = [current_instructions]
-        elif not current_instructions:
-            current_instructions = []
-        
-        # 将系统提示添加到指令开头
-        new_instructions = [system_prompt] + current_instructions
-        self._agno_agent.instructions = new_instructions
-    
-    def reset_conversation(self):
-        """重置对话"""
-        self.clear_history()
-        self.session_id = str(uuid.uuid4())
-
-class AgnoContextChatEngine:
-    """
-    Agno上下文聊天引擎 - 支持知识库检索
-    结合Agent和Knowledge Base实现上下文感知的聊天
-    """
-    
-    def __init__(
-        self,
-        agent: Optional[AgnoAgent] = None,
-        knowledge_base: Optional[Any] = None,
-        model: Optional[Union[str, AgnoLLMInterface]] = None,
-        memory: Optional[AgnoMemory] = None,
-        system_prompt: Optional[str] = None,
-        context_mode: str = "auto",  # auto, always, on_demand
-        **kwargs
-    ):
-        self.knowledge_base = knowledge_base
-        self.context_mode = context_mode
-        
-        # 如果没有提供agent，创建默认agent
-        if agent is None:
-            # 处理模型配置
-            if isinstance(model, str):
-                agno_model = self._create_model_from_string(model)
-            elif isinstance(model, AgnoLLMInterface):
-                agno_model = model.agno_model
+        try:
+            if self.user_id:
+                # 获取用户权限的工具
+                from app.services.tools.tool_service import ToolService
+                from app.utils.core.database import get_db
+                
+                db = next(get_db())
+                tool_service = ToolService(db)
+                
+                for tool_id in agno_config.tools.enabled_tools:
+                    has_permission = await tool_service.check_tool_permission(
+                        self.user_id, tool_id
+                    )
+                    if has_permission:
+                        tools.append({"tool_id": tool_id, "params": {}})
             else:
-                agno_model = OpenAIChat(id="gpt-4o")
+                # 系统级别工具
+                for tool_id in agno_config.tools.enabled_tools:
+                    tools.append({"tool_id": tool_id, "params": {}})
             
-            # 设置指令
-            instructions = [
-                system_prompt or "You are a helpful AI assistant with access to knowledge resources.",
-                "Use your knowledge base to provide accurate and detailed responses when relevant.",
-                "If information is not available in your knowledge base, use your general knowledge."
-            ]
+            return tools
             
-            # 创建Agno Agent with knowledge
-            self._agno_agent = AgnoAgent(
-                model=agno_model,
-                knowledge=knowledge_base,
-                memory=memory,
-                instructions=instructions,
-                search_knowledge=True,  # 启用知识库搜索
-                markdown=True,
-                show_tool_calls=True,
-                **kwargs
+        except Exception as e:
+            logger.error(f"获取启用工具失败: {str(e)}")
+            return []
+    
+    async def _create_chat_agent(self):
+        """创建聊天Agent"""
+        try:
+            from app.frameworks.agno.dynamic_agent_factory import create_dynamic_agent
+            
+            self._current_agent = await create_dynamic_agent(
+                agent_config=self._agent_config,
+                user_id=self.user_id or "system",
+                session_id=self.session_id
             )
-        else:
-            self._agno_agent = agent
+            
+            if self._current_agent:
+                logger.info(f"聊天Agent创建成功")
+            else:
+                logger.error(f"聊天Agent创建失败")
+                
+        except Exception as e:
+            logger.error(f"创建聊天Agent失败: {str(e)}")
+    
+    async def send_message(
+        self,
+        message: str,
+        stream: bool = False,
+        include_history: bool = True,
+        **kwargs
+    ) -> Union[str, AsyncGenerator[str, None]]:
+        """
+        发送消息到聊天Agent
         
-        # 创建基础聊天引擎
-        self._chat_engine = AgnoChatEngine(
-            agent=self._agno_agent,
-            memory=memory,
-            **kwargs
-        )
+        Args:
+            message: 用户消息
+            stream: 是否流式响应
+            include_history: 是否包含历史上下文
+            **kwargs: 其他参数
+            
+        Returns:
+            响应结果或流式生成器
+        """
+        if not self._is_initialized:
+            await self.initialize()
+        
+        if not self._current_agent:
+            return "Error: Chat agent not available"
+        
+        try:
+            # 构建完整的对话上下文
+            if include_history and self._conversation_history:
+                # 构建包含历史的提示
+                context_prompt = self._build_context_prompt(message)
+            else:
+                context_prompt = message
+            
+            # 记录用户消息
+            user_message = {
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.now().isoformat(),
+                "session_id": self.session_id
+            }
+            self._conversation_history.append(user_message)
+            
+            # 获取Agent响应
+            if stream:
+                return self._stream_chat_response(context_prompt, **kwargs)
+            else:
+                response = await self._get_chat_response(context_prompt, **kwargs)
+                
+                # 记录Agent响应
+                agent_message = {
+                    "role": "assistant",
+                    "content": response,
+                    "timestamp": datetime.now().isoformat(),
+                    "session_id": self.session_id
+                }
+                self._conversation_history.append(agent_message)
+                
+                return response
+                
+        except Exception as e:
+            logger.error(f"发送消息失败: {str(e)}")
+            return f"Error processing message: {str(e)}"
     
-    def _create_model_from_string(self, model_name: str):
-        """从字符串创建Agno模型实例"""
-        if "claude" in model_name.lower():
-            return Claude(id=model_name)
-        else:
-            return OpenAIChat(id=model_name)
+    def _build_context_prompt(self, current_message: str) -> str:
+        """构建包含历史的上下文提示"""
+        try:
+            # 获取最近的几条对话
+            recent_history = self._conversation_history[-10:]  # 最近10条
+            
+            context_parts = ["Previous conversation context:"]
+            for msg in recent_history:
+                role = "User" if msg["role"] == "user" else "Assistant"
+                context_parts.append(f"{role}: {msg['content']}")
+            
+            context_parts.append(f"\nCurrent message:\nUser: {current_message}")
+            
+            return "\n".join(context_parts)
+            
+        except Exception as e:
+            logger.error(f"构建上下文提示失败: {str(e)}")
+            return current_message
     
-    def chat(self, message: str, **kwargs) -> str:
-        """上下文感知聊天"""
-        return self._chat_engine.chat(message, **kwargs)
+    async def _get_chat_response(self, prompt: str, **kwargs) -> str:
+        """获取聊天响应"""
+        try:
+            # 使用Agent处理消息
+            if hasattr(self._current_agent, 'aquery'):
+                response = await self._current_agent.aquery(prompt, **kwargs)
+            elif hasattr(self._current_agent, 'query'):
+                response = await asyncio.create_task(
+                    asyncio.to_thread(self._current_agent.query, prompt, **kwargs)
+                )
+            else:
+                response = "Error: Agent does not support querying"
+            
+            return str(response)
+            
+        except Exception as e:
+            logger.error(f"获取聊天响应失败: {str(e)}")
+            return f"Error generating response: {str(e)}"
     
-    async def achat(self, message: str, **kwargs) -> str:
-        """异步上下文感知聊天"""
-        return await self._chat_engine.achat(message, **kwargs)
+    async def _stream_chat_response(self, prompt: str, **kwargs) -> AsyncGenerator[str, None]:
+        """流式聊天响应"""
+        try:
+            if hasattr(self._current_agent, 'astream_query'):
+                # 收集所有响应内容用于历史记录
+                response_content = ""
+                
+                async for chunk in self._current_agent.astream_query(prompt, **kwargs):
+                    chunk_str = str(chunk)
+                    response_content += chunk_str
+                    yield chunk_str
+                
+                # 记录完整响应到历史
+                agent_message = {
+                    "role": "assistant",
+                    "content": response_content,
+                    "timestamp": datetime.now().isoformat(),
+                    "session_id": self.session_id
+                }
+                self._conversation_history.append(agent_message)
+                
+            else:
+                # 兜底：非流式响应
+                response = await self._get_chat_response(prompt, **kwargs)
+                yield response
+                
+        except Exception as e:
+            logger.error(f"流式响应失败: {str(e)}")
+            yield f"Error: {str(e)}"
     
-    def stream_chat(self, message: str, **kwargs):
-        """流式上下文感知聊天"""
-        return self._chat_engine.stream_chat(message, **kwargs)
+    async def update_agent_config(self, config_updates: Dict[str, Any]):
+        """更新Agent配置"""
+        try:
+            # 更新配置
+            if self._agent_config:
+                self._agent_config.update(config_updates)
+            
+            # 重新创建Agent
+            await self._create_chat_agent()
+            
+            logger.info(f"Agent配置更新成功")
+            
+        except Exception as e:
+            logger.error(f"更新Agent配置失败: {str(e)}")
     
-    async def astream_chat(self, message: str, **kwargs) -> AsyncGenerator[str, None]:
-        """异步流式上下文感知聊天"""
-        async for chunk in self._chat_engine.astream_chat(message, **kwargs):
+    async def switch_model(self, model_id: str):
+        """切换聊天模型"""
+        try:
+            config_updates = {
+                "model_config": {
+                    "model_id": model_id,
+                    "type": "chat"
+                }
+            }
+            await self.update_agent_config(config_updates)
+            
+        except Exception as e:
+            logger.error(f"切换模型失败: {str(e)}")
+    
+    async def add_tools(self, tool_ids: List[str]):
+        """添加工具到当前Agent"""
+        try:
+            # 验证工具权限
+            validated_tools = []
+            
+            if self.user_id:
+                from app.services.tools.tool_service import ToolService
+                from app.utils.core.database import get_db
+                
+                db = next(get_db())
+                tool_service = ToolService(db)
+                
+                for tool_id in tool_ids:
+                    has_permission = await tool_service.check_tool_permission(
+                        self.user_id, tool_id
+                    )
+                    if has_permission:
+                        validated_tools.append({"tool_id": tool_id, "params": {}})
+            else:
+                validated_tools = [{"tool_id": tid, "params": {}} for tid in tool_ids]
+            
+            # 更新配置
+            current_tools = self._agent_config.get("tools", [])
+            updated_tools = current_tools + validated_tools
+            
+            config_updates = {"tools": updated_tools}
+            await self.update_agent_config(config_updates)
+            
+            logger.info(f"成功添加 {len(validated_tools)} 个工具")
+            
+        except Exception as e:
+            logger.error(f"添加工具失败: {str(e)}")
+    
+    def get_conversation_history(self) -> List[Dict[str, Any]]:
+        """获取对话历史"""
+        return self._conversation_history.copy()
+    
+    def clear_conversation_history(self):
+        """清空对话历史"""
+        self._conversation_history.clear()
+        logger.info(f"会话历史已清空 - Session: {self.session_id}")
+    
+    async def get_agent_status(self) -> Dict[str, Any]:
+        """获取Agent状态"""
+        return {
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "is_initialized": self._is_initialized,
+            "agent_available": self._current_agent is not None,
+            "agent_config": self._agent_config,
+            "conversation_length": len(self._conversation_history),
+            "last_activity": self._conversation_history[-1]["timestamp"] if self._conversation_history else None
+        }
+
+class DynamicAgnoChatSession:
+    """动态Agno聊天会话"""
+    
+    def __init__(self, user_id: str, session_id: Optional[str] = None):
+        self.user_id = user_id
+        self.session_id = session_id or str(uuid.uuid4())
+        self.chat_manager = DynamicAgnoChatManager(user_id, self.session_id)
+        self.created_at = datetime.now()
+        self.last_activity = datetime.now()
+    
+    async def send(self, message: str, **kwargs) -> str:
+        """发送消息"""
+        self.last_activity = datetime.now()
+        return await self.chat_manager.send_message(message, **kwargs)
+    
+    async def stream(self, message: str, **kwargs) -> AsyncGenerator[str, None]:
+        """流式发送消息"""
+        self.last_activity = datetime.now()
+        async for chunk in await self.chat_manager.send_message(message, stream=True, **kwargs):
             yield chunk
     
-    def get_chat_history(self) -> List[Dict[str, Any]]:
-        """获取聊天历史"""
-        return self._chat_engine.get_chat_history()
+    def get_history(self) -> List[Dict[str, Any]]:
+        """获取历史记录"""
+        return self.chat_manager.get_conversation_history()
     
     def clear_history(self):
-        """清空聊天历史"""
-        self._chat_engine.clear_history()
-    
-    def reset_conversation(self):
-        """重置对话"""
-        self._chat_engine.reset_conversation()
+        """清空历史记录"""
+        self.chat_manager.clear_conversation_history()
 
-# 便利函数 - 创建常用的聊天引擎
-def create_chat_engine(
-    model: str = "gpt-4o",
-    system_prompt: Optional[str] = None,
-    memory: bool = True,
-    **kwargs
-) -> AgnoChatEngine:
-    """创建基础聊天引擎"""
-    agno_memory = None
-    if memory:
-        # 创建简单的内存存储
-        try:
-            agno_memory = AgnoMemory()
-        except Exception as e:
-            logger.debug(f"Failed to create memory: {e}")
+# 会话管理器
+class DynamicAgnoChatSessionManager:
+    """动态Agno聊天会话管理器"""
     
-    return AgnoChatEngine(
-        model=model,
-        memory=agno_memory,
-        system_prompt=system_prompt,
-        **kwargs
-    )
-
-def create_context_chat_engine(
-    model: str = "gpt-4o",
-    knowledge_base: Optional[Any] = None,
-    system_prompt: Optional[str] = None,
-    memory: bool = True,
-    **kwargs
-) -> AgnoContextChatEngine:
-    """创建上下文聊天引擎"""
-    agno_memory = None
-    if memory:
-        try:
-            agno_memory = AgnoMemory()
-        except Exception as e:
-            logger.debug(f"Failed to create memory: {e}")
+    def __init__(self):
+        self._sessions: Dict[str, DynamicAgnoChatSession] = {}
     
-    return AgnoContextChatEngine(
-        model=model,
-        knowledge_base=knowledge_base,
-        memory=agno_memory,
-        system_prompt=system_prompt,
-        **kwargs
-    )
-
-def create_agent_chat_engine(
-    agent: AgnoAgent,
-    memory: bool = True,
-    **kwargs
-) -> AgnoChatEngine:
-    """从现有Agent创建聊天引擎"""
-    agno_memory = None
-    if memory:
-        try:
-            agno_memory = AgnoMemory()
-        except Exception as e:
-            logger.debug(f"Failed to create memory: {e}")
+    async def create_session(self, user_id: str, session_id: Optional[str] = None) -> DynamicAgnoChatSession:
+        """创建聊天会话"""
+        session = DynamicAgnoChatSession(user_id, session_id)
+        await session.chat_manager.initialize()
+        
+        self._sessions[session.session_id] = session
+        return session
     
-    return AgnoChatEngine(
-        agent=agent,
-        memory=agno_memory,
-        **kwargs
-    )
+    def get_session(self, session_id: str) -> Optional[DynamicAgnoChatSession]:
+        """获取聊天会话"""
+        return self._sessions.get(session_id)
+    
+    def remove_session(self, session_id: str):
+        """删除聊天会话"""
+        if session_id in self._sessions:
+            del self._sessions[session_id]
+    
+    def get_user_sessions(self, user_id: str) -> List[DynamicAgnoChatSession]:
+        """获取用户的所有会话"""
+        return [session for session in self._sessions.values() if session.user_id == user_id]
 
-# LlamaIndex兼容性别名
-ChatEngine = AgnoChatEngine
-ContextChatEngine = AgnoContextChatEngine
+# 全局会话管理器
+_global_session_manager: Optional[DynamicAgnoChatSessionManager] = None
+
+def get_session_manager() -> DynamicAgnoChatSessionManager:
+    """获取全局会话管理器"""
+    global _global_session_manager
+    if _global_session_manager is None:
+        _global_session_manager = DynamicAgnoChatSessionManager()
+    return _global_session_manager
+
+# 便利函数
+async def create_chat_session(user_id: str, session_id: Optional[str] = None) -> DynamicAgnoChatSession:
+    """创建聊天会话"""
+    manager = get_session_manager()
+    return await manager.create_session(user_id, session_id)
+
+async def create_simple_chat(user_id: Optional[str] = None, **kwargs) -> DynamicAgnoChatManager:
+    """创建简单聊天实例"""
+    chat_manager = DynamicAgnoChatManager(user_id=user_id, **kwargs)
+    await chat_manager.initialize()
+    return chat_manager
+
+# 兼容性别名
+AgnoChatEngine = DynamicAgnoChatManager
+AgnoContextChatEngine = DynamicAgnoChatManager
+ChatEngine = DynamicAgnoChatManager
+ContextChatEngine = DynamicAgnoChatManager
 
 # 导出主要组件
 __all__ = [
+    "DynamicAgnoChatManager",
+    "DynamicAgnoChatSession",
+    "DynamicAgnoChatSessionManager",
+    "get_session_manager",
+    "create_chat_session",
+    "create_simple_chat",
     "AgnoChatEngine",
-    "AgnoContextChatEngine", 
-    "create_chat_engine",
-    "create_context_chat_engine",
-    "create_agent_chat_engine",
+    "AgnoContextChatEngine",
     "ChatEngine",
     "ContextChatEngine"
 ] 

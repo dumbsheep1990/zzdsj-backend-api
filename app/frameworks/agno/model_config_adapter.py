@@ -9,19 +9,28 @@ from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, field
 from enum import Enum
 
+# 动态导入Agno模型组件
 try:
-    from agno import Agent, Team, OpenAIChat, AnthropicChat, Model
-    from agno.models.base import ModelConfig
-    AGNO_AVAILABLE = True
-except ImportError:
+    from agno.models.openai import OpenAIChat
+    from agno.models.anthropic import Claude
+    from agno.models.google import Gemini
+    from agno.models.cohere import Cohere
+    from agno.models.groq import Groq
+    from agno.models.deepseek import DeepSeek
+    from agno.models.ollama import Ollama
+    from agno.models.together import Together
+    from agno.models.azure import AzureOpenAI
+    from agno.models.base import Model as AgnoBaseModel
+    AGNO_MODELS_AVAILABLE = True
+except ImportError as e:
     # 降级处理，避免在没有Agno的环境中崩溃
-    AGNO_AVAILABLE = False
-    Agent = object
-    Team = object
-    OpenAIChat = object
-    AnthropicChat = object
-    Model = object
-    ModelConfig = object
+    logging.warning(f"Agno models not available: {e}")
+    AGNO_MODELS_AVAILABLE = False
+    OpenAIChat = None
+    Claude = None
+    Gemini = None
+    Cohere = None
+    AgnoBaseModel = object
 
 from sqlalchemy.orm import Session
 from app.models.model_provider import ModelProvider
@@ -198,6 +207,104 @@ class ZZDSJAgnoModelAdapter:
             cache_key = f"{model_config.provider.value}:{model_config.model_id}:{model_type.value}"
             if cache_key in self._model_cache:
                 return self._model_cache[cache_key]
+            
+            # 创建Agno模型实例
+            agno_model = await self._create_agno_model_instance(model_config)
+            
+            if agno_model:
+                # 缓存模型实例
+                self._model_cache[cache_key] = agno_model
+                logger.info(f"成功创建并缓存 {model_type.value} 模型: {model_config.model_name}")
+                return agno_model
+            else:
+                logger.error(f"创建 {model_type.value} 模型失败: {model_config.model_name}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"创建 {model_type.value} 模型失败: {str(e)}")
+            return None
+    
+    async def _create_agno_model_instance(self, config: ModelConfiguration) -> Optional[AgnoBaseModel]:
+        """创建Agno模型实例"""
+        if not AGNO_MODELS_AVAILABLE:
+            logger.warning("Agno模型组件不可用")
+            return None
+        
+        provider = config.provider
+        model_id = config.model_id
+        
+        try:
+            # 准备通用参数
+            model_params = {
+                "id": model_id,
+                "api_key": config.api_key,
+            }
+            
+            # 添加可选参数
+            if config.api_base:
+                model_params["api_base"] = config.api_base
+            if config.api_version:
+                model_params["api_version"] = config.api_version
+            
+            # 根据提供商创建对应的模型
+            if provider == SupportedProvider.OPENAI:
+                if not OpenAIChat:
+                    raise RuntimeError("OpenAI模型不可用")
+                return OpenAIChat(**model_params)
+            
+            elif provider == SupportedProvider.ANTHROPIC:
+                if not Claude:
+                    raise RuntimeError("Anthropic模型不可用")
+                return Claude(**model_params)
+            
+            elif provider == SupportedProvider.COHERE:
+                if not Cohere:
+                    raise RuntimeError("Cohere模型不可用")
+                return Cohere(**model_params)
+            
+            elif provider == SupportedProvider.GROQ:
+                if not Groq:
+                    raise RuntimeError("Groq模型不可用")
+                return Groq(**model_params)
+            
+            elif provider == SupportedProvider.DEEPSEEK:
+                if not DeepSeek:
+                    raise RuntimeError("DeepSeek模型不可用")
+                return DeepSeek(**model_params)
+            
+            elif provider == SupportedProvider.OLLAMA:
+                if not Ollama:
+                    raise RuntimeError("Ollama模型不可用")
+                return Ollama(**model_params)
+            
+            elif provider == SupportedProvider.TOGETHER:
+                if not Together:
+                    raise RuntimeError("Together模型不可用")
+                return Together(**model_params)
+            
+            elif provider in [SupportedProvider.ZHIPU, SupportedProvider.GLM]:
+                if not Gemini:
+                    logger.warning(f"{provider.value} 使用Gemini作为替代")
+                    return Gemini(**model_params)
+                
+            elif provider == SupportedProvider.BAIDU:
+                # 百度使用通用聊天模型配置
+                logger.warning("百度模型暂时使用OpenAI兼容接口")
+                if OpenAIChat:
+                    model_params["api_base"] = config.api_base or "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop"
+                    return OpenAIChat(**model_params)
+            
+            else:
+                # 未知提供商，尝试使用OpenAI兼容接口
+                logger.warning(f"未知提供商 {provider.value}，尝试使用OpenAI兼容接口")
+                if OpenAIChat:
+                    return OpenAIChat(**model_params)
+                    
+            return None
+            
+        except Exception as e:
+            logger.error(f"创建 {provider.value} 模型实例失败: {str(e)}")
+            return None
             
             # 创建Agno模型实例
             model_instance = None

@@ -158,6 +158,107 @@ from .model_config_usage_example import (
     run_all_examples
 )
 
+# Phase 5: 智能体模版化系统 - 三种内置模版和执行图引擎
+from .templates import (
+    # 模版定义
+    AgentTemplate,
+    TemplateType,
+    ExecutionGraph,
+    ExecutionNode,
+    ExecutionEdge,
+    get_template,
+    list_available_templates,
+    BASIC_CONVERSATION_TEMPLATE,
+    KNOWLEDGE_BASE_TEMPLATE,
+    DEEP_THINKING_TEMPLATE,
+    AVAILABLE_TEMPLATES
+)
+
+from .template_manager import (
+    # 模版管理器
+    AgnoTemplateManager,
+    get_template_manager,
+    create_agent_from_template,
+    get_available_templates as get_template_list,
+    recommend_templates
+)
+
+from .frontend_config_parser import (
+    # 前端配置解析
+    AgnoConfigParser,
+    get_config_parser,
+    parse_frontend_config,
+    validate_frontend_config,
+    TemplateSelection,
+    BasicConfiguration,
+    ModelConfiguration,
+    CapabilityConfiguration,
+    AdvancedConfiguration,
+    FrontendConfig,
+    PersonalityType,
+    ResponseLength,
+    CostTier,
+    PrivacyLevel
+)
+
+from .execution_engine import (
+    # 执行图引擎
+    AgnoExecutionEngine,
+    NodeType,
+    NodeProcessor,
+    ProcessorNode,
+    ClassifierNode,
+    GeneratorNode,
+    RetrieverNode,
+    FormatterNode,
+    create_execution_engine,
+    execute_with_graph
+)
+
+# Phase 6: 编排系统 - 完全解耦合的智能Agent编排
+from .orchestration import (
+    # 核心编排组件
+    AgnoToolRegistry,
+    AgnoConfigParser as OrchestrationConfigParser,
+    AgnoMatchingEngine,
+    
+    # 类型定义
+    ToolFramework,
+    ToolCategory,
+    ExecutionStatus,
+    AgentRole as OrchestrationAgentRole,
+    ResponseFormat,
+    OrchestrationEvent,
+    ErrorCode,
+    ToolMetadata,
+    ToolInstance,
+    AgentConfig as OrchestrationAgentConfig,
+    OrchestrationRequest,
+    ToolCallResult,
+    ExecutionContext,
+    OrchestrationResult,
+    EventData,
+    
+    # 工厂函数和快捷接口
+    get_tool_registry,
+    get_config_parser,
+    get_matching_engine,
+    initialize_registry,
+    cleanup_registry,
+    initialize_orchestration_system,
+    create_agent_from_frontend_config,
+    get_system_status as get_orchestration_status,
+    
+    # 常量
+    DEFAULT_TOOL_TIMEOUT,
+    DEFAULT_AGENT_MAX_LOOPS,
+    DEFAULT_EXECUTION_TIMEOUT,
+    DEFAULT_CACHE_TTL,
+    MAX_CONCURRENT_EXECUTIONS,
+    MAX_TOOL_CALLS_PER_REQUEST,
+    MAX_REQUEST_SIZE
+)
+
 # 版本信息
 __version__ = "1.0.0"
 __author__ = "ZZDSJ Development Team"
@@ -298,6 +399,83 @@ __all__ = [
     "example_validate_model_configuration",
     "example_model_fallback_mechanism",
     "run_all_examples",
+    
+    # Phase 5: 智能体模版化系统
+    "AgentTemplate",
+    "TemplateType",
+    "ExecutionGraph", 
+    "ExecutionNode",
+    "ExecutionEdge",
+    "get_template",
+    "list_available_templates",
+    "BASIC_CONVERSATION_TEMPLATE",
+    "KNOWLEDGE_BASE_TEMPLATE", 
+    "DEEP_THINKING_TEMPLATE",
+    "AVAILABLE_TEMPLATES",
+    "AgnoTemplateManager",
+    "get_template_manager",
+    "create_agent_from_template",
+    "get_template_list",
+    "recommend_templates",
+    "AgnoConfigParser",
+    "get_config_parser",
+    "parse_frontend_config",
+    "validate_frontend_config",
+    "TemplateSelection",
+    "BasicConfiguration",
+    "ModelConfiguration", 
+    "CapabilityConfiguration",
+    "AdvancedConfiguration",
+    "FrontendConfig",
+    "PersonalityType",
+    "ResponseLength",
+    "CostTier",
+    "PrivacyLevel",
+    "AgnoExecutionEngine",
+    "NodeType",
+    "NodeProcessor",
+    "ProcessorNode",
+    "ClassifierNode", 
+    "GeneratorNode",
+    "RetrieverNode",
+    "FormatterNode",
+    "create_execution_engine",
+    "execute_with_graph",
+    
+    # Phase 6: 编排系统
+    "AgnoToolRegistry",
+    "OrchestrationConfigParser", 
+    "AgnoMatchingEngine",
+    "ToolFramework",
+    "ToolCategory",
+    "ExecutionStatus",
+    "OrchestrationAgentRole",
+    "ResponseFormat",
+    "OrchestrationEvent",
+    "ErrorCode",
+    "ToolMetadata",
+    "ToolInstance",
+    "OrchestrationAgentConfig",
+    "OrchestrationRequest",
+    "ToolCallResult",
+    "ExecutionContext",
+    "OrchestrationResult",
+    "EventData",
+    "get_tool_registry",
+    "get_config_parser",
+    "get_matching_engine",
+    "initialize_registry",
+    "cleanup_registry",
+    "initialize_orchestration_system",
+    "create_agent_from_frontend_config",
+    "get_orchestration_status",
+    "DEFAULT_TOOL_TIMEOUT",
+    "DEFAULT_AGENT_MAX_LOOPS",
+    "DEFAULT_EXECUTION_TIMEOUT",
+    "DEFAULT_CACHE_TTL",
+    "MAX_CONCURRENT_EXECUTIONS",
+    "MAX_TOOL_CALLS_PER_REQUEST",
+    "MAX_REQUEST_SIZE",
     
     # 元信息
     "__version__",

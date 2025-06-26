@@ -8,14 +8,19 @@ import logging
 from typing import Any, Dict, List, Optional, Union, AsyncGenerator, Callable
 from datetime import datetime
 
-# 使用正确的Agno官方API导入
-from agno.agent import Agent as AgnoAgent
-from agno.models.openai import OpenAIChat
-from agno.models.anthropic import Claude
-from agno.tools.reasoning import ReasoningTools
+# 动态导入Agno组件
+try:
+    from agno.agent import Agent as AgnoAgent
+    from agno.tools.reasoning import ReasoningTools
+    AGNO_AVAILABLE = True
+except ImportError:
+    AGNO_AVAILABLE = False
+    AgnoAgent = object
+    ReasoningTools = None
 
 from app.frameworks.agno.core import AgnoLLMInterface, AgnoServiceContext
-from app.frameworks.agno.agent import AgnoKnowledgeAgent
+from app.frameworks.agno.agent import DynamicAgnoKnowledgeAgent
+from app.frameworks.agno.model_config_adapter import get_model_adapter, ModelType
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +32,7 @@ class AgnoQueryEngine:
     
     def __init__(
         self,
-        agent: Optional[Union[AgnoAgent, AgnoKnowledgeAgent]] = None,
+        agent: Optional[Union[AgnoAgent, DynamicAgnoKnowledgeAgent]] = None,
         knowledge_base: Optional[Any] = None,
         model: Optional[Union[str, AgnoLLMInterface]] = None,
         instructions: Optional[Union[str, List[str]]] = None,
@@ -35,70 +40,101 @@ class AgnoQueryEngine:
         response_mode: str = "compact",  # compact, tree_summarize, refine
         similarity_threshold: float = 0.7,
         top_k: int = 5,
+        user_id: Optional[str] = None,
         **kwargs
     ):
         self.query_mode = query_mode
         self.response_mode = response_mode
         self.similarity_threshold = similarity_threshold
         self.top_k = top_k
+        self.user_id = user_id
+        self._model_adapter = get_model_adapter()
         
         # 如果没有提供agent，创建默认agent
         if agent is None:
-            # 处理模型配置
-            if isinstance(model, str):
-                agno_model = self._create_model_from_string(model)
-            elif isinstance(model, AgnoLLMInterface):
-                agno_model = model.agno_model
-            else:
-                agno_model = OpenAIChat(id="gpt-4o")
-            
-            # 准备工具
-            tools = []
-            if query_mode == "reasoning":
-                tools.append(ReasoningTools(add_instructions=True))
-            
-            # 处理指令配置
-            if isinstance(instructions, str):
-                instructions = [instructions]
-            elif instructions is None:
-                instructions = [
-                    "You are a helpful AI assistant that provides accurate and informative responses.",
-                    "Use available knowledge and reasoning capabilities to answer questions thoroughly."
-                ]
-            
-            # 创建Agno Agent
-            self._agno_agent = AgnoAgent(
-                model=agno_model,
-                knowledge=knowledge_base,
-                tools=tools,
-                instructions=instructions,
-                search_knowledge=True if knowledge_base else False,
-                markdown=True,
-                show_tool_calls=False,
-                **kwargs
-            )
+            # 使用动态Agent创建
+            self._agno_agent = None  # 延迟初始化
+            self._agent_config = {
+                "model": model,
+                "knowledge_base": knowledge_base,
+                "instructions": instructions,
+                "query_mode": query_mode,
+                "kwargs": kwargs
+            }
         else:
             # 使用提供的agent
-            if isinstance(agent, AgnoKnowledgeAgent):
-                self._agno_agent = agent.agno_agent
+            if isinstance(agent, DynamicAgnoKnowledgeAgent):
+                self._agno_agent = None  # 将在需要时获取
+                self._dynamic_agent = agent
             else:
                 self._agno_agent = agent
         
         self.knowledge_base = knowledge_base
     
-    def _create_model_from_string(self, model_name: str):
-        """从字符串创建Agno模型实例"""
-        if "claude" in model_name.lower():
-            return Claude(id=model_name)
+    async def _create_agent_from_config(self):
+        """从配置创建Agno Agent实例"""
+        if not AGNO_AVAILABLE:
+            raise RuntimeError("Agno框架不可用")
+        
+        config = self._agent_config
+        
+        # 动态创建模型
+        model = config.get("model")
+        if isinstance(model, str):
+            agno_model = await self._model_adapter.create_agno_model_by_type(
+                ModelType.CHAT, model
+            )
+        elif isinstance(model, AgnoLLMInterface):
+            agno_model = await model.agno_model
         else:
-            return OpenAIChat(id=model_name)
+            # 使用默认模型
+            agno_model = await self._model_adapter.create_agno_model_by_type(ModelType.CHAT)
+        
+        if not agno_model:
+            raise RuntimeError("无法创建聊天模型")
+        
+        # 准备工具
+        tools = []
+        if config.get("query_mode") == "reasoning" and ReasoningTools:
+            tools.append(ReasoningTools(add_instructions=True))
+        
+        # 处理指令配置
+        instructions = config.get("instructions")
+        if isinstance(instructions, str):
+            instructions = [instructions]
+        elif instructions is None:
+            instructions = [
+                "You are a helpful AI assistant that provides accurate and informative responses.",
+                "Use available knowledge and reasoning capabilities to answer questions thoroughly."
+            ]
+        
+        # 创建Agno Agent
+        return AgnoAgent(
+            model=agno_model,
+            knowledge=config.get("knowledge_base"),
+            tools=tools,
+            instructions=instructions,
+            search_knowledge=True if config.get("knowledge_base") else False,
+            markdown=True,
+            show_tool_calls=False,
+            **config.get("kwargs", {})
+        )
     
-    @property
-    def agno_agent(self) -> AgnoAgent:
+    async def get_agno_agent(self) -> AgnoAgent:
         """获取底层Agno Agent实例"""
+        if self._agno_agent is None:
+            if hasattr(self, '_dynamic_agent'):
+                # 使用动态Agent
+                self._agno_agent = await self._dynamic_agent.agno_agent
+            elif hasattr(self, '_agent_config'):
+                # 从配置创建Agent
+                self._agno_agent = await self._create_agent_from_config()
+            else:
+                raise RuntimeError("无法获取Agent实例")
+        
         return self._agno_agent
     
-    def query(self, query_str: str, **kwargs) -> Dict[str, Any]:
+    async def query(self, query_str: str, **kwargs) -> Dict[str, Any]:
         """
         执行查询并返回结构化响应
         
@@ -110,9 +146,12 @@ class AgnoQueryEngine:
             结构化查询响应
         """
         try:
+            # 获取Agno Agent实例
+            agent = await self.get_agno_agent()
+            
             # 使用Agno Agent处理查询
             start_time = datetime.now()
-            response = self._agno_agent.response(query_str, **kwargs)
+            response = agent.response(query_str, **kwargs)
             end_time = datetime.now()
             
             # 提取响应内容
@@ -168,9 +207,7 @@ class AgnoQueryEngine:
     
     async def aquery(self, query_str: str, **kwargs) -> Dict[str, Any]:
         """异步查询"""
-        return await asyncio.create_task(
-            asyncio.to_thread(self.query, query_str, **kwargs)
-        )
+        return await self.query(query_str, **kwargs)
     
     def stream_query(self, query_str: str, **kwargs):
         """
